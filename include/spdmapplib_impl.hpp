@@ -74,6 +74,7 @@ typedef struct
     uint32_t reqasym;
     uint32_t dhe;
     uint32_t aead;
+    uint32_t slotcount;
 
     /* Requester configurations */
     uint32_t transportTimeouts;
@@ -368,7 +369,7 @@ class spdmRequesterImpl : public spdmRequester
     uint8_t m_use_measurement_summary_hash_type;
     uint8_t m_use_measurement_operation;
     uint8_t m_use_measurement_attribute;
-    spdmConfiguration spdmResponderCfg;
+    spdmConfiguration spdmRequesterCfg;
     spdmItem spdmResponder; // only one instance for requester.
     spdmtransport::transportEndPoint transResponder;
     std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;

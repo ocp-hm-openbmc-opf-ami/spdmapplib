@@ -70,11 +70,10 @@ int spdmRequesterImpl::initRequester(
     spdmtransport::transportEndPoint* pTmp;
     int intResult = -1;
     bResponderFound = false; // init member variable.
-    useSlotCount = 3;
     pio = io;
-    spdmResponderCfg =
+    spdmRequesterCfg =
         spdmapplib::getConfigurationFromEntityManager(conn, "SPDM_requester");
-    if (spdmResponderCfg.version)
+    if (spdmRequesterCfg.version)
     {
         m_exe_connection = (0 |
                             EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
@@ -149,15 +148,15 @@ int spdmRequesterImpl::settingFromConfig(void)
     return_status status;
 
     uintn data_size;
-    useSlotCount = 3;
+    useSlotCount = static_cast<uint8_t>(spdmRequesterCfg.slotcount);
+    std::cerr << "Requester useSlotCount: " << spdmRequesterCfg.slotcount << std::endl;
+
     useSlotId = 0;
     m_use_measurement_summary_hash_type =
         SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH;
     useRequesterCapabilityFlags =
         (0 |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP | /* conflict with
-                                                           SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PUB_KEY_ID_CAP
-                                                         */
+         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHAL_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCRYPT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP |
@@ -167,10 +166,8 @@ int spdmRequesterImpl::settingFromConfig(void)
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP |
-         /* SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PUB_KEY_ID_CAP |    conflict
-            with SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP   */
-         0);
+         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP
+         );
     m_use_measurement_operation =
         SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
     m_use_measurement_attribute = 0;
@@ -186,7 +183,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                      LIBSPDM_DATA_CAPABILITY_CT_EXPONENT, &parameter, &u8Value,
                      sizeof(u8Value));
 
-    useRequesterCapabilityFlags = spdmResponderCfg.capability;
+    useRequesterCapabilityFlags = spdmRequesterCfg.capability;
     u32Value = useRequesterCapabilityFlags;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_CAPABILITY_FLAGS,
                      &parameter, &u32Value, sizeof(u32Value));
@@ -195,31 +192,31 @@ int spdmRequesterImpl::settingFromConfig(void)
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_MEASUREMENT_SPEC,
                      &parameter, &u8Value, sizeof(u8Value));
 
-    u32Value = spdmResponderCfg.measHash;
+    u32Value = spdmRequesterCfg.measHash;
     libspdm_set_data(spdmResponder.pspdmContext,
                      LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter, &u32Value,
                      sizeof(u32Value));
 
-    u32Value = spdmResponderCfg.asym;
-    m_use_asym_algo = spdmResponderCfg.asym;
+    u32Value = spdmRequesterCfg.asym;
+    m_use_asym_algo = spdmRequesterCfg.asym;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_BASE_ASYM_ALGO,
                      &parameter, &u32Value, sizeof(u32Value));
 
-    u16Value = (uint16_t)spdmResponderCfg.reqasym;
-    m_use_req_asym_algo = (uint16_t)spdmResponderCfg.reqasym;
+    u16Value = (uint16_t)spdmRequesterCfg.reqasym;
+    m_use_req_asym_algo = (uint16_t)spdmRequesterCfg.reqasym;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_REQ_BASE_ASYM_ALG,
                      &parameter, &u16Value, sizeof(u16Value));
 
-    u32Value = spdmResponderCfg.hash;
-    m_use_hash_algo = spdmResponderCfg.hash;
+    u32Value = spdmRequesterCfg.hash;
+    m_use_hash_algo = spdmRequesterCfg.hash;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_BASE_HASH_ALGO,
                      &parameter, &u32Value, sizeof(u32Value));
 
-    u16Value = (uint16_t)spdmResponderCfg.dhe;
+    u16Value = (uint16_t)spdmRequesterCfg.dhe;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_DHE_NAME_GROUP,
                      &parameter, &u16Value, sizeof(u16Value));
 
-    u16Value = (uint16_t)spdmResponderCfg.aead;
+    u16Value = (uint16_t)spdmRequesterCfg.aead;
     libspdm_set_data(spdmResponder.pspdmContext, LIBSPDM_DATA_AEAD_CIPHER_SUITE,
                      &parameter, &u16Value, sizeof(u16Value));
 
@@ -548,7 +545,7 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
     uint8_t index;
     uint8_t request_attribute;
 
-    std::cerr << "starting do_measurement in " << __func__ << std::endl;
+    std::cerr << "Requesting all the Measurements in " << __func__ << std::endl;
     if (bResponderFound && (spdmResponder.pspdmContext != NULL))
     {
         if (m_use_measurement_operation ==

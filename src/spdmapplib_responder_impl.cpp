@@ -129,7 +129,6 @@ int spdmResponderImpl::initResponder(
 {
     using namespace std::placeholders;
     curIndex = 0;
-    useSlotCount = 3;
     auto conn = std::make_shared<sdbusplus::asio::connection>(*io);
     pio = io;
     spdmResponderCfg =
@@ -244,6 +243,9 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
     uint16_t u16Value; // Value that size is uint16_t
     uint32_t u32Value; // Value that size is uint32_t
     void* tmpThis = static_cast<void*>(this);
+
+    useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
+    std::cerr << "Responder useSlotCount: " << spdmResponderCfg.slotcount << std::endl;
 
     memset(&parameter, 0, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
@@ -477,13 +479,13 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_VERSION:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CAPABILITIES:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
-
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
-            // TODO
             if (spdmPool[i].useVersion == 0)
             {
                 memset(&parameter, 0, sizeof(parameter));
@@ -532,7 +534,7 @@ void spdmResponderImpl::processConnectionState(
                                  LIBSPDM_DATA_LOCAL_SLOT_COUNT, &parameter,
                                  &u8Value, sizeof(u8Value));
 
-                for (index = 0; index < 3; index++)
+                for (index = 0; index < useSlotCount; index++)
                 {
                     parameter.additional_data[0] = index;
                     libspdm_set_data(spdmPool[i].pspdmContext,
@@ -544,12 +546,15 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CERTIFICATE:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AUTHENTICATED:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
         default:
             break;
@@ -585,8 +590,8 @@ void spdmResponderImpl::processSessionState(
     {
         case LIBSPDM_SESSION_STATE_NOT_STARTED:
             // TODO
+            //Pre created for some actions needed in this state in the furture.
             break;
-
         case LIBSPDM_SESSION_STATE_HANDSHAKING:
             /* collect session policy*/
             spdmPool[i].sessonId = sessionID;
@@ -606,12 +611,10 @@ void spdmResponderImpl::processSessionState(
                           << std::endl;
             }
             break;
-
         case LIBSPDM_SESSION_STATE_ESTABLISHED:
             // TODO
-            /* no action*/
+            //Pre created for some actions needed in this state in the furture.
             break;
-
         default:
             ASSERT(false);
             break;

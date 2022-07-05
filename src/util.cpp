@@ -391,19 +391,6 @@ spdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    // Get version
-    std::string version;
-    if (!getField(map, "Version", version))
-    {
-        return spdmConfig;
-    }
-    if (!getValueFromName(versionValueStringTable,
-                          sizeof(versionValueStringTable), version,
-                          &(spdmConfig.version)))
-    {
-        return spdmConfig;
-    }
-
     // Get cert file path
     std::string certPath;
     if (!getField(map, "CertPath", certPath))
@@ -541,6 +528,26 @@ spdmConfiguration getConfigurationFromEntityManager(
             return spdmConfig;
         spdmConfig.aead = spdmConfig.aead | u32Data;
     }
+    // get SlotCount
+    uint64_t slotcount;
+    if (!getField(map, "SlotCount", slotcount))
+    {
+        return spdmConfig;
+    }
+    spdmConfig.slotcount = (uint32_t)slotcount;
+    // Get version
+    std::string version;
+    if (!getField(map, "Version", version))
+    {
+        return spdmConfig;
+    }
+    if (!getValueFromName(versionValueStringTable,
+                          sizeof(versionValueStringTable), version,
+                          &(spdmConfig.version)))
+    {
+        return spdmConfig;
+    }
+
 #if 0
     // get BasicMutAuth
     std::string basicMutAuth;
