@@ -141,6 +141,7 @@ class spdmTransportMCTP : public spdmTransport
   protected:
     TransportIdentifier transType; /*MCTP over PCIe, MCTP over SMBus, SDSi*/
     std::shared_ptr<boost::asio::io_service> pio;
+    std::shared_ptr<sdbusplus::asio::connection> pconn;
     std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper;
 };
 } // namespace spdmtransport

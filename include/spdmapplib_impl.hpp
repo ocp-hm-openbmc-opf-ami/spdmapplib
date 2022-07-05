@@ -240,6 +240,7 @@ class spdmRequesterImpl : public spdmRequester
      **/
     int initRequester(
         std::shared_ptr<boost::asio::io_service> io,
+        std::shared_ptr<sdbusplus::asio::connection> conn,
         std::shared_ptr<spdmtransport::spdmTransport> trans,
         spdmtransport::transportEndPoint* ptransResponder) override;
     /**

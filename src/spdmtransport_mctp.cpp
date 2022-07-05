@@ -87,6 +87,7 @@ int spdmTransportMCTP::initTransport(
 {
     using namespace std::placeholders;
     pio = io;
+    pconn = conn;
     addNewDeviceCB = addCB;
     removeDeviceCB = delCB;
     msgReceiveCB = msgRcvCB;
@@ -149,12 +150,12 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
         auto it = mctpWrapper->getEndpointMap().find(eid);
         if (mctpWrapper->getEndpointMap().end() == it)
         {
-            std::cout << "Error add device: " << eid << std::endl;
+            std::cerr << "Error add device: " << eid << std::endl;
             free(pnewEP);
             pnewEP = NULL;
             return false;
         }
-        std::cout << "Adding device: " << static_cast<uint16_t>(eid)
+        std::cerr << "Adding device: " << static_cast<uint16_t>(eid)
                   << " Service: " << it->second.second << std::endl;
     }
     catch (std::exception& e)
@@ -235,7 +236,7 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
     mctpw::eid_t eid = ptransEP->deviceEID;
-    std::cout << __func__ << ": eid: " << static_cast<uint16_t>(eid)
+    std::cerr << __func__ << ": eid: " << static_cast<uint16_t>(eid)
               << ", data size: " << data.size() << ", timeout: " << timeout
               << std::endl;
     auto it = mctpWrapper->getEndpointMap().find(eid);
@@ -245,19 +246,15 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
         return -1;
     }
 
-    using namespace sdbusplus;
-
-    auto b = bus::new_default_system();
-
     std::vector<uint8_t> responsePacket;
-    auto msg = b.new_method_call(
+    auto msg = pconn->new_method_call(
         it->second.second.c_str(), "/xyz/openbmc_project/mctp",
         "xyz.openbmc_project.MCTP.Base", "SendReceiveMctpMessagePayload");
     // parameter yayq
     msg.append(eid, data, static_cast<uint16_t>(timeout < 500 ? 500 : timeout));
     try
     {
-        auto reply = b.call(msg);
+        auto reply = pconn->call(msg);
         if (reply.is_method_error())
         {
             std::cerr << __func__ << "SendReceiveMctpMessagePayload error!"
@@ -271,18 +268,18 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
         std::cerr << __func__ << ":" << e.what() << std::endl;
         return -EIO;
     }
-    std::cout << "send recv :response_vector.size():" << responsePacket.size()
+    std::cerr << "send recv :response_vector.size():" << responsePacket.size()
               << std::endl;
-    std::cout << std::hex;
+    std::cerr << std::hex;
     for (unsigned int i = 0; i < responsePacket.size(); ++i)
     {
-        std::cout << std::setw(3) << static_cast<uint16_t>(responsePacket[i]);
+        std::cerr << std::setw(3) << static_cast<uint16_t>(responsePacket[i]);
         if ((i % 32) == 0)
         {
-            std::cout << std::endl;
+            std::cerr << std::endl;
         }
     }
-    std::cout << std::dec << std::endl;
+    std::cerr << std::dec << std::endl;
 
     rspRcvCB(ptransEP, responsePacket);
 

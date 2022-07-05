@@ -60,20 +60,21 @@ int main(int argc, char* argv[])
     spdmtransport::transportEndPoint responderCfg = {
         spdmtransport::TransportIdentifier::mctpOverSmBus, 0, 0};
     auto ioc = std::make_shared<boost::asio::io_context>();
+    auto conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
     auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
         spdmtransport::TransportIdentifier::mctpOverSmBus);
     boost::asio::steady_timer timer(*ioc);
-    uint8_t EID;
+    uint8_t eid;
     CLI::App app("SPDM requester verify tool");
-    app.add_option("--eid", EID, "Responder MCTP EID    : uint8_t")->required();
+    app.add_option("--eid", eid, "Responder MCTP EID    : uint8_t")->required();
     CLI11_PARSE(app, argc, argv);
 
-    std::cerr << "Assigned responder EID: " << static_cast<uint16_t>(EID)
+    std::cerr << "Assigned responder EID: " << static_cast<uint16_t>(eid)
               << std::endl;
-    responderCfg.deviceEID = EID;
+    responderCfg.deviceEID = eid;
 
     if (pspdmRequester->initRequester(
-            ioc, trans,
+            ioc, conn, trans,
             static_cast<spdmtransport::transportEndPoint*>(&responderCfg)) == 0)
     {
         std::cerr << "spdm_requester started." << std::endl;

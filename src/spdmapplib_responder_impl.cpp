@@ -144,7 +144,7 @@ int spdmResponderImpl::initResponder(
     }
     else
     {
-        std::cout << __func__ << " getConfigurationFromEntityManager failed!"
+        std::cerr << __func__ << " getConfigurationFromEntityManager failed!"
                   << std::endl;
         return static_cast<int>(errorCodes::errGetCFG);
     }

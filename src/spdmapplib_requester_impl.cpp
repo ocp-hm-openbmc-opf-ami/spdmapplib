@@ -62,22 +62,21 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
  **/
 int spdmRequesterImpl::initRequester(
     std::shared_ptr<boost::asio::io_service> io,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
     spdmtransport::transportEndPoint* ptransResponder)
 {
     using namespace std::placeholders;
     spdmtransport::transportEndPoint* pTmp;
     int intResult = -1;
-    bResponderFound = false; //init member variable.
+    bResponderFound = false; // init member variable.
     useSlotCount = 3;
-    auto conn = std::make_shared<sdbusplus::asio::connection>(*io);
     pio = io;
     spdmResponderCfg =
         spdmapplib::getConfigurationFromEntityManager(conn, "SPDM_requester");
     if (spdmResponderCfg.version)
     {
         m_exe_connection = (0 |
-                            /* EXE_CONNECTION_VERSION_ONLY |*/
                             EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                             EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS | 0);
         pTmp = static_cast<spdmtransport::transportEndPoint*>(&transResponder);
@@ -95,13 +94,13 @@ int spdmRequesterImpl::initRequester(
                     std::bind(&spdmRequesterImpl::MsgRecvCallback, this, _1,
                               _2));
             }
-            std::cout << __func__ << " intResult: " << intResult
+            std::cerr << __func__ << " intResult: " << intResult
                       << ", bResponderFound: " << bResponderFound << std::endl;
         }
     }
     else
     {
-        std::cout << __func__ << " getConfigurationFromEntityManager failed!"
+        std::cerr << __func__ << " getConfigurationFromEntityManager failed!"
                   << std::endl;
         intResult = static_cast<int>(errorCodes::errGetCFG);
     }
@@ -125,7 +124,7 @@ int spdmRequesterImpl::checkResponderDevice(void* ptransEP)
     if (matchDevice(&spdmResponder.transEP,
                     static_cast<spdmtransport::transportEndPoint*>(ptransEP)))
     {
-        std::cout << "Found Responder!!" << std::endl;
+        std::cerr << "Found Responder!!" << std::endl;
         this->bResponderFound = true;
         return true;
     }
@@ -248,7 +247,7 @@ int spdmRequesterImpl::settingFromConfig(void)
     }
     else
     {
-        std::cout << __func__ << " libspdm_init_connection completed!"
+        std::cerr << __func__ << " libspdm_init_connection completed!"
                   << std::endl;
     }
 
@@ -264,7 +263,7 @@ int spdmRequesterImpl::settingFromConfig(void)
     libspdm_get_data(spdmResponder.pspdmContext,
                      LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter, &u32Value,
                      &data_size);
-    std::cout << "use measurement hash algo: 0x" << std::hex << u32Value
+    std::cerr << "use measurement hash algo: 0x" << std::hex << u32Value
               << std::dec << std::endl;
     data_size = sizeof(u32Value);
     libspdm_get_data(spdmResponder.pspdmContext, LIBSPDM_DATA_BASE_ASYM_ALGO,
@@ -279,10 +278,10 @@ int spdmRequesterImpl::settingFromConfig(void)
                      &parameter, &u16Value, &data_size);
     m_use_req_asym_algo = u16Value;
 
-    std::cout << std::hex << "m_use_asym_algo: 0x" << m_use_asym_algo
+    std::cerr << std::hex << "m_use_asym_algo: 0x" << m_use_asym_algo
               << std::endl;
-    std::cout << "m_use_hash_algo: 0x" << m_use_hash_algo << std::endl;
-    std::cout << "m_use_req_asym_algo: 0x" << m_use_req_asym_algo << std::dec
+    std::cerr << "m_use_hash_algo: 0x" << m_use_hash_algo << std::endl;
+    std::cerr << "m_use_req_asym_algo: 0x" << m_use_req_asym_algo << std::dec
               << std::endl;
 
     return RETURN_SUCCESS;
@@ -304,7 +303,7 @@ int spdmRequesterImpl::setupResponder(
     {
         return -1;
     }
-    std::cout << "spdmRequesterImpl::setupResponder" << std::endl;
+    std::cerr << "spdmRequesterImpl::setupResponder" << std::endl;
     copyDevice(&spdmResponder.transEP, ptransEP);
     spdmResponder.useSlotId = 0;
     spdmResponder.sessonId = 0;
@@ -376,18 +375,16 @@ int spdmRequesterImpl::MsgRecvCallback(void* ptransEP,
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmRequesterImpl::deviceReceiveMessage(void* spdmContext,
+return_status spdmRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
                                                       uintn* responseSize,
                                                       void* response,
-                                                      uint64_t timeout)
+                                                      uint64_t /*timeout*/)
 {
-    UNUSED(spdmContext);
-    UNUSED(timeout);
     *responseSize = spdmResponder.data.size() - 1;
     std::copy(spdmResponder.data.begin() + 1, spdmResponder.data.end(),
               (uint8_t*)response);
     spdmResponder.data.clear();
-    std::cout << "deviceReceiveMessage responseSize: 0x" << std::hex
+    std::cerr << "deviceReceiveMessage responseSize: 0x" << std::hex
               << *responseSize << std::dec << std::endl;
     return 0;
 }
@@ -402,14 +399,13 @@ return_status spdmRequesterImpl::deviceReceiveMessage(void* spdmContext,
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmRequesterImpl::deviceSendMessage(void* spdmContext,
+return_status spdmRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
                                                    uintn requestSize,
                                                    const void* request,
                                                    uint64_t timeout)
 {
     using namespace std::placeholders;
-    UNUSED(spdmContext);
-    std::cout << "deviceSendMessage requestSize: 0x" << std::hex << requestSize
+    std::cerr << "deviceSendMessage requestSize: 0x" << std::hex << requestSize
               << std::dec << std::endl;
     return spdmTrans->syncSendRecvData(
         &spdmResponder.transEP, requestSize, request, timeout,
@@ -439,7 +435,7 @@ int spdmRequesterImpl::do_authentication(void)
         return_status status;
         if (settingFromConfig() == RETURN_SUCCESS)
         {
-            std::cout << __func__ << " starting..." << std::endl;
+            std::cerr << __func__ << " starting..." << std::endl;
             /** Executing following functions.
                 get_digest
                 get_certificate
@@ -483,7 +479,7 @@ int spdmRequesterImpl::do_authentication(void)
                     }
                     else
                     {
-                        std::cout << __func__
+                        std::cerr << __func__
                                   << " libspdm_get_certificate completed!"
                                   << std::endl;
                         // Keep certificate to reserved vector.
@@ -513,11 +509,11 @@ int spdmRequesterImpl::do_authentication(void)
                 }
                 else
                 {
-                    std::cout << __func__ << " libspdm_challenge completed!"
+                    std::cerr << __func__ << " libspdm_challenge completed!"
                               << std::endl;
                 }
             }
-            std::cout << __func__ << " Pass!!" << std::endl;
+            std::cerr << __func__ << " Pass!!" << std::endl;
         }
         else
         {
@@ -543,7 +539,6 @@ int spdmRequesterImpl::do_authentication(void)
  **/
 int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
 {
-    UNUSED(session_id);
     return_status status;
     uint8_t number_of_blocks;
     uint8_t number_of_block;
@@ -553,48 +548,49 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
     uint8_t index;
     uint8_t request_attribute;
 
-    std::cout << "starting do_measurement in " << __func__ << std::endl;
+    std::cerr << "starting do_measurement in " << __func__ << std::endl;
     if (bResponderFound && (spdmResponder.pspdmContext != NULL))
     {
         if (m_use_measurement_operation ==
             SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS)
         {
-    
+
             /* request all at one time.*/
-    
+
             request_attribute =
                 SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE;
             measurement_record_length = sizeof(measurement_record);
             status = libspdm_get_measurement(
                 spdmResponder.pspdmContext, session_id, request_attribute,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS,
-                useSlotId & 0xF, NULL, &number_of_block, &measurement_record_length,
-                measurement_record);
+                useSlotId & 0xF, NULL, &number_of_block,
+                &measurement_record_length, measurement_record);
             if (RETURN_ERROR(status))
             {
                 spdmResponder.dataMeas = {};
                 return status;
             }
-            std::cout << __func__ << " number_of_block - 0x" << std::hex
-                    << static_cast<uint16_t>(number_of_block) << std::dec
-                    << std::endl;
-            std::cout << __func__ << " measurement_record_length - 0x" << std::hex
-                    << measurement_record_length << std::dec << std::endl;
-            std::cout << __func__ << " Reset measurement vector." << std::endl;
+            std::cerr << __func__ << " number_of_block - 0x" << std::hex
+                      << static_cast<uint16_t>(number_of_block) << std::dec
+                      << std::endl;
+            std::cerr << __func__ << " measurement_record_length - 0x"
+                      << std::hex << measurement_record_length << std::dec
+                      << std::endl;
+            std::cerr << __func__ << " Reset measurement vector." << std::endl;
             // Keep measurement to reserved vector.
             spdmResponder.dataMeas = {};
-            {
-                spdmResponder.dataMeas.insert(
-                    spdmResponder.dataMeas.end(), measurement_record,
-                    measurement_record + measurement_record_length);
-            }
+            
+            spdmResponder.dataMeas.insert(
+                spdmResponder.dataMeas.end(), measurement_record,
+                measurement_record + measurement_record_length);
+            
         }
         else
         {
             request_attribute = m_use_measurement_attribute;
-    
+
             /* 1. query the total number of measurements available.*/
-    
+
             status = libspdm_get_measurement(
                 spdmResponder.pspdmContext, session_id, request_attribute,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS,
@@ -604,9 +600,9 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
             {
                 return status;
             }
-            std::cout << __func__ << " number_of_blocks - 0x" << std::hex
-                    << static_cast<uint16_t>(number_of_blocks) << std::dec
-                    << std::endl;
+            std::cerr << __func__ << " number_of_blocks - 0x" << std::hex
+                      << static_cast<uint16_t>(number_of_blocks) << std::dec
+                      << std::endl;
             received_number_of_block = 0;
             for (index = 1; index <= 0xFE; index++)
             {
@@ -614,12 +610,13 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 {
                     break;
                 }
-                std::cout << __func__ << " index - 0x" << std::hex
-                        << static_cast<uint16_t>(index) << std::dec << std::endl;
-    
+                std::cerr << __func__ << " index - 0x" << std::hex
+                          << static_cast<uint16_t>(index) << std::dec
+                          << std::endl;
+
                 /* 2. query measurement one by one*/
                 /* get signature in last message only.*/
-    
+
                 if (received_number_of_block == number_of_blocks - 1)
                 {
                     request_attribute =
@@ -636,15 +633,15 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                     continue;
                 }
                 received_number_of_block += 1;
-                std::cout << __func__ << " measurement_record_length - 0x"
-                        << std::hex << measurement_record_length << std::dec
-                        << std::endl;
+                std::cerr << __func__ << " measurement_record_length - 0x"
+                          << std::hex << measurement_record_length << std::dec
+                          << std::endl;
                 // Keep measurement to reserved vector.
-                {
-                    spdmResponder.dataMeas.insert(
-                        spdmResponder.dataMeas.end(), measurement_record,
-                        measurement_record + measurement_record_length);
-                }
+                
+                spdmResponder.dataMeas.insert(
+                    spdmResponder.dataMeas.end(), measurement_record,
+                    measurement_record + measurement_record_length);
+                
             }
             if (received_number_of_block != number_of_blocks)
             {
@@ -653,7 +650,8 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
             }
         }
         return 0;
-    }else
+    }
+    else
     {
         std::cerr << __func__ << " error!" << std::endl;
         return -1;
