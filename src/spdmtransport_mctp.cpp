@@ -28,19 +28,15 @@ namespace spdmtransport
  *
  **/
 void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
-                                             bool tagOwner, uint8_t msgTag,
+                                             bool , uint8_t ,
                                              const std::vector<uint8_t>& data,
                                              int)
 {
-    UNUSED(tagOwner);
-
-    if (msgTag == static_cast<uint8_t>(mctpw::MessageType::spdm))
-    {
-        transportEndPoint tmpEP;
-        tmpEP.deviceEID = srcEid;
-        tmpEP.transType = getTransType();
-        msgReceiveCB(&tmpEP, data);
-    } // skip not spdm packet
+    //only SPDM message arrive here.
+    transportEndPoint tmpEP;
+    tmpEP.devIdentifer = srcEid;
+    tmpEP.transType = getTransType();
+    msgReceiveCB(&tmpEP, data);
 };
 
 /**
@@ -127,7 +123,7 @@ int spdmTransportMCTP::initTransport(
 int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
     transportEndPoint newEP;
-    newEP.deviceEID = eid;
+    newEP.devIdentifer = eid;
     return removeDeviceCB == nullptr ? false : removeDeviceCB(&newEP);
 }
 
@@ -163,7 +159,7 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
         std::cerr << __func__ << ":" << e.what() << std::endl;
         return false;
     }
-    pnewEP->deviceEID = eid;
+    pnewEP->devIdentifer = eid;
     pnewEP->transType = transType;
     return addNewDeviceCB == nullptr ? false : addNewDeviceCB(pnewEP);
 }
@@ -195,7 +191,7 @@ int spdmTransportMCTP::asyncSendData(transportEndPoint* ptransEP,
 
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->deviceEID;
+    mctpw::eid_t eid = ptransEP->devIdentifer;
 
     boost::asio::spawn(*(pio), [this, eid,
                                 data](boost::asio::yield_context yield) {
@@ -235,7 +231,7 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
 
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->deviceEID;
+    mctpw::eid_t eid = ptransEP->devIdentifer;
     std::cerr << __func__ << ": eid: " << static_cast<uint16_t>(eid)
               << ", data size: " << data.size() << ", timeout: " << timeout
               << std::endl;

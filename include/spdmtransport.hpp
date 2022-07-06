@@ -34,8 +34,7 @@ enum class TransportIdentifier : uint8_t
 typedef struct
 {
     TransportIdentifier transType; /*interface type.*/
-    uint8_t deviceEID;             /*for MCTP interface*/
-    uint8_t sdsiID;                /*for SDSi interface, predefined*/
+    uint8_t devIdentifer;
 } transportEndPoint;
 
 /**

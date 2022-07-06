@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 {
     auto pspdmRequester = spdmapplib::createRequester();
     spdmtransport::transportEndPoint responderCfg = {
-        spdmtransport::TransportIdentifier::mctpOverSmBus, 0, 0};
+        spdmtransport::TransportIdentifier::mctpOverSmBus, 0};
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
     auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 
     std::cerr << "Assigned responder EID: " << static_cast<uint16_t>(eid)
               << std::endl;
-    responderCfg.deviceEID = eid;
+    responderCfg.devIdentifer = eid;
 
     if (pspdmRequester->initRequester(
             ioc, conn, trans,

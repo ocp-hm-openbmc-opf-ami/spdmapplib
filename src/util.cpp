@@ -588,15 +588,9 @@ bool matchDevice(spdmtransport::transportEndPoint* pOne,
 {
     if (pOne == NULL || pTwo == NULL)
         return false;
-    if (pOne->transType == spdmtransport::TransportIdentifier::mctpOverSmBus &&
-        pTwo->transType == spdmtransport::TransportIdentifier::mctpOverSmBus)
+    if (pOne->transType == pTwo->transType)
     {
-        return (pOne->deviceEID == pTwo->deviceEID);
-    }
-    else if (pOne->transType == spdmtransport::TransportIdentifier::SDSi &&
-             pTwo->transType == spdmtransport::TransportIdentifier::SDSi)
-    {
-        return (pOne->sdsiID == pTwo->sdsiID);
+        return (pOne->devIdentifer == pTwo->devIdentifer);
     }
     else
     {
