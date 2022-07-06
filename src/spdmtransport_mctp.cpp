@@ -27,16 +27,19 @@ namespace spdmtransport
  * @brief Function registered to mctpwrapper as receiving message Callback.
  *
  **/
-void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
-                                             bool , uint8_t ,
+void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid, bool,
+                                             uint8_t,
                                              const std::vector<uint8_t>& data,
                                              int)
 {
-    //only SPDM message arrive here.
-    transportEndPoint tmpEP;
-    tmpEP.devIdentifer = srcEid;
-    tmpEP.transType = getTransType();
-    msgReceiveCB(&tmpEP, data);
+    if (!data.empty() &&
+        data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
+    { // only SPDM message arrive here.
+        transportEndPoint tmpEP;
+        tmpEP.devIdentifer = srcEid;
+        tmpEP.transType = getTransType();
+        msgReceiveCB(&tmpEP, data);
+    }
 };
 
 /**
@@ -235,51 +238,33 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
     std::cerr << __func__ << ": eid: " << static_cast<uint16_t>(eid)
               << ", data size: " << data.size() << ", timeout: " << timeout
               << std::endl;
-    auto it = mctpWrapper->getEndpointMap().find(eid);
-    if (mctpWrapper->getEndpointMap().end() == it)
+    auto reply = mctpWrapper->sendReceiveBlocked(
+        eid, data, std::chrono::milliseconds(500));
+    if (reply.first)
     {
-        std::cerr << "Error find device: " << eid << std::endl;
-        return -1;
+        return reply.first.value();
     }
-
-    std::vector<uint8_t> responsePacket;
-    auto msg = pconn->new_method_call(
-        it->second.second.c_str(), "/xyz/openbmc_project/mctp",
-        "xyz.openbmc_project.MCTP.Base", "SendReceiveMctpMessagePayload");
-    // parameter yayq
-    msg.append(eid, data, static_cast<uint16_t>(timeout < 500 ? 500 : timeout));
-    try
+    else
     {
-        auto reply = pconn->call(msg);
-        if (reply.is_method_error())
+        std::vector<uint8_t> responsePacket = reply.second;
+        std::cerr << "send recv :response_vector.size():"
+                  << responsePacket.size() << std::endl;
+        std::cerr << std::hex;
+        for (unsigned int i = 0; i < responsePacket.size(); ++i)
         {
-            std::cerr << __func__ << "SendReceiveMctpMessagePayload error!"
-                      << std::endl;
-            return -1;
+            std::cerr << std::setw(3)
+                      << static_cast<uint16_t>(responsePacket[i]);
+            if ((i % 32) == 0)
+            {
+                std::cerr << std::endl;
+            }
         }
-        reply.read(responsePacket);
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << __func__ << ":" << e.what() << std::endl;
-        return -EIO;
-    }
-    std::cerr << "send recv :response_vector.size():" << responsePacket.size()
-              << std::endl;
-    std::cerr << std::hex;
-    for (unsigned int i = 0; i < responsePacket.size(); ++i)
-    {
-        std::cerr << std::setw(3) << static_cast<uint16_t>(responsePacket[i]);
-        if ((i % 32) == 0)
-        {
-            std::cerr << std::endl;
-        }
-    }
-    std::cerr << std::dec << std::endl;
+        std::cerr << std::dec << std::endl;
 
-    rspRcvCB(ptransEP, responsePacket);
+        rspRcvCB(ptransEP, responsePacket);
 
-    return 0;
+        return 0;
+    }
 }
 
 } // namespace spdmtransport

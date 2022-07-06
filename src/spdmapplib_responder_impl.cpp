@@ -245,7 +245,8 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
     void* tmpThis = static_cast<void*>(this);
 
     useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
-    std::cerr << "Responder useSlotCount: " << spdmResponderCfg.slotcount << std::endl;
+    std::cerr << "Responder useSlotCount: " << spdmResponderCfg.slotcount
+              << std::endl;
 
     memset(&parameter, 0, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
@@ -479,11 +480,11 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_VERSION:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CAPABILITIES:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
             if (spdmPool[i].useVersion == 0)
@@ -546,15 +547,15 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CERTIFICATE:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_CONNECTION_STATE_AUTHENTICATED:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         default:
             break;
@@ -590,7 +591,7 @@ void spdmResponderImpl::processSessionState(
     {
         case LIBSPDM_SESSION_STATE_NOT_STARTED:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         case LIBSPDM_SESSION_STATE_HANDSHAKING:
             /* collect session policy*/
@@ -613,7 +614,7 @@ void spdmResponderImpl::processSessionState(
             break;
         case LIBSPDM_SESSION_STATE_ESTABLISHED:
             // TODO
-            //Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the furture.
             break;
         default:
             ASSERT(false);

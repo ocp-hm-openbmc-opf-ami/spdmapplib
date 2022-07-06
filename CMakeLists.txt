@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 # Set project name here
-# project (spdmapplib CXX)
 PROJECT(spdmapplib VERSION 1.0.0 LANGUAGES CXX 
   DESCRIPTION "Library for SPDM applications.")
 SET (BUILD_SHARED_LIBRARIES ON)

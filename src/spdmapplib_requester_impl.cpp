@@ -75,8 +75,7 @@ int spdmRequesterImpl::initRequester(
         spdmapplib::getConfigurationFromEntityManager(conn, "SPDM_requester");
     if (spdmRequesterCfg.version)
     {
-        m_exe_connection = (0 |
-                            EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
+        m_exe_connection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                             EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS | 0);
         pTmp = static_cast<spdmtransport::transportEndPoint*>(&transResponder);
         spdmTrans = trans;
@@ -149,14 +148,14 @@ int spdmRequesterImpl::settingFromConfig(void)
 
     uintn data_size;
     useSlotCount = static_cast<uint8_t>(spdmRequesterCfg.slotcount);
-    std::cerr << "Requester useSlotCount: " << spdmRequesterCfg.slotcount << std::endl;
+    std::cerr << "Requester useSlotCount: " << spdmRequesterCfg.slotcount
+              << std::endl;
 
     useSlotId = 0;
     m_use_measurement_summary_hash_type =
         SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH;
     useRequesterCapabilityFlags =
-        (0 |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP |
+        (0 | SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHAL_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCRYPT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP |
@@ -166,8 +165,7 @@ int spdmRequesterImpl::settingFromConfig(void)
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP |
          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP
-         );
+         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP);
     m_use_measurement_operation =
         SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
     m_use_measurement_attribute = 0;
@@ -576,11 +574,10 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
             std::cerr << __func__ << " Reset measurement vector." << std::endl;
             // Keep measurement to reserved vector.
             spdmResponder.dataMeas = {};
-            
+
             spdmResponder.dataMeas.insert(
                 spdmResponder.dataMeas.end(), measurement_record,
                 measurement_record + measurement_record_length);
-            
         }
         else
         {
@@ -634,11 +631,10 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                           << std::hex << measurement_record_length << std::dec
                           << std::endl;
                 // Keep measurement to reserved vector.
-                
+
                 spdmResponder.dataMeas.insert(
                     spdmResponder.dataMeas.end(), measurement_record,
                     measurement_record + measurement_record_length);
-                
             }
             if (received_number_of_block != number_of_blocks)
             {
