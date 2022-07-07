@@ -11,7 +11,9 @@ namespace spdmapplib
  */
 enum class errorCodes : int
 {
-    errGetCFG = 1, // SPDM configuration not found in EntityManager.
+    spdmConfigurationNotFoundInEntityManager =
+        1,                 // SPDM configuration not found in EntityManager.
+    libspdmReturnError = 2 // libspdm function calls return error.
 };
 
 /**

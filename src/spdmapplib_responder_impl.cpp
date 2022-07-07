@@ -17,6 +17,7 @@
 #include "library/spdm_transport_none_lib.h"
 
 #include "spdmapplib_impl.hpp"
+
 #include <phosphor-logging/log.hpp>
 
 #include <cstdint>
@@ -146,9 +147,10 @@ int spdmResponderImpl::initResponder(
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmResponderImpl::initResponder getConfigurationFromEntityManager failed!");
-        return static_cast<int>(errorCodes::errGetCFG);
+        return static_cast<int>(
+            errorCodes::spdmConfigurationNotFoundInEntityManager);
     }
-    return 0;
+    return RETURN_SUCCESS;
 }
 
 /**
@@ -177,7 +179,7 @@ int spdmResponderImpl::removeDevice(void* ptransEndpoint)
     }
     spdmPool.erase(spdmPool.begin() + i);
     curIndex = curIndex - 1;
-    return true;
+    return RETURN_SUCCESS;
 }
 
 /**
@@ -193,12 +195,15 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
 
     spdmItem newItem;
     uint8_t newIndex;
+    return_status status;
+
     newItem.pspdmContext = (void*)malloc(libspdm_get_context_size());
     if (newItem.pspdmContext == NULL)
     {
         return false;
     }
-    phosphor::logging::log<phosphor::logging::level::DEBUG>("spdmResponderImpl::addNewDevice");
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        "spdmResponderImpl::addNewDevice");
     copyDevice(&newItem.transEP,
                static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint));
     newItem.useSlotId = 0;
@@ -213,21 +218,44 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
     spdmPool.push_back(newItem);
     newIndex = curIndex;
     curIndex++;
-    libspdm_init_context(spdmPool[newIndex].pspdmContext);
+    status = libspdm_init_context(spdmPool[newIndex].pspdmContext);
+    if (RETURN_ERROR(status))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("spdmResponderImpl::addNewDevice libspdm_init_context failed" +
+             std::to_string(status))
+                .c_str());
+        return -1;
+    }
     libspdm_register_device_io_func(spdmPool[newIndex].pspdmContext,
                                     responderDeviceSendMessage,
                                     responderDeviceReceiveMessage);
-    libspdm_register_session_state_callback_func(
-        spdmPool[newIndex].pspdmContext, spdmServerSessionStateCallback);
-    libspdm_register_connection_state_callback_func(
-        spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
-
     libspdm_register_transport_layer_func(spdmPool[newIndex].pspdmContext,
                                           spdm_transport_none_encode_message,
                                           spdm_transport_none_decode_message);
 
-    settingFromConfig(newIndex);
-    return true;
+    status = libspdm_register_session_state_callback_func(
+        spdmPool[newIndex].pspdmContext, spdmServerSessionStateCallback);
+    if (RETURN_ERROR(status))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("spdmResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
+             std::to_string(status))
+                .c_str());
+        return -1;
+    }
+    status = libspdm_register_connection_state_callback_func(
+        spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
+    if (RETURN_ERROR(status))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("spdmResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
+             std::to_string(status))
+                .c_str());
+        return -1;
+    }
+
+    return settingFromConfig(newIndex);
 }
 
 /**
@@ -244,75 +272,126 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
     uint16_t u16Value; // Value that size is uint16_t
     uint32_t u32Value; // Value that size is uint32_t
     void* tmpThis = static_cast<void*>(this);
+    return_status status;
 
     useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("spdmResponderImpl::settingFromConfig Responder useSlotCount: " + std::to_string(spdmResponderCfg.slotcount)).c_str());
+        ("spdmResponderImpl::settingFromConfig Responder useSlotCount: " +
+         std::to_string(spdmResponderCfg.slotcount))
+            .c_str());
 
     memset(&parameter, 0, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
 
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter, &tmpThis,
-                     sizeof(void*));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
+                              &tmpThis, sizeof(void*));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u8Value = 0;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_CAPABILITY_CT_EXPONENT, &parameter, &u8Value,
-                     sizeof(u8Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_CAPABILITY_CT_EXPONENT, &parameter,
+                              &u8Value, sizeof(u8Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     useResponderCapabilityFlags = spdmResponderCfg.capability;
     u32Value = useResponderCapabilityFlags;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter, &u32Value,
-                     sizeof(u32Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
+                              &u32Value, sizeof(u32Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_MEASUREMENT_SPEC, &parameter, &u8Value,
-                     sizeof(u8Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_MEASUREMENT_SPEC, &parameter,
+                              &u8Value, sizeof(u8Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u32Value = spdmResponderCfg.measHash;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter, &u32Value,
-                     sizeof(u32Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter,
+                              &u32Value, sizeof(u32Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u32Value = spdmResponderCfg.asym;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter, &u32Value,
-                     sizeof(u32Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
+                              &u32Value, sizeof(u32Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u16Value = (uint16_t)spdmResponderCfg.reqasym;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter, &u16Value,
-                     sizeof(u16Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
+                              &u16Value, sizeof(u16Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u32Value = spdmResponderCfg.hash;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_BASE_HASH_ALGO, &parameter, &u32Value,
-                     sizeof(u32Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
+                              &u32Value, sizeof(u32Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u16Value = (uint16_t)spdmResponderCfg.dhe;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_DHE_NAME_GROUP, &parameter, &u16Value,
-                     sizeof(u16Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_DHE_NAME_GROUP, &parameter,
+                              &u16Value, sizeof(u16Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u16Value = (uint16_t)spdmResponderCfg.aead;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_AEAD_CIPHER_SUITE, &parameter, &u16Value,
-                     sizeof(u16Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_AEAD_CIPHER_SUITE, &parameter,
+                              &u16Value, sizeof(u16Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u16Value = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_KEY_SCHEDULE, &parameter, &u16Value,
-                     sizeof(u16Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_KEY_SCHEDULE, &parameter, &u16Value,
+                              sizeof(u16Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
     u8Value = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
-    libspdm_set_data(spdmPool[itemIndex].pspdmContext,
-                     LIBSPDM_DATA_OTHER_PARAMS_SUPPORT, &parameter, &u8Value,
-                     sizeof(u8Value));
+    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+                              LIBSPDM_DATA_OTHER_PARAMS_SUPPORT, &parameter,
+                              &u8Value, sizeof(u8Value));
+    if (RETURN_ERROR(status))
+    {
+        return static_cast<int>(errorCodes::libspdmReturnError);
+    }
 
-    return true;
+    return RETURN_SUCCESS;
 }
 
 /**
@@ -341,7 +420,7 @@ int spdmResponderImpl::addData(void* ptransEndpoint,
         return false;
 
     spdmPool[i].data = data;
-    return true;
+    return RETURN_SUCCESS;
 }
 
 /**
@@ -355,15 +434,23 @@ int spdmResponderImpl::addData(void* ptransEndpoint,
 int spdmResponderImpl::processSPDMMessage()
 {
     uint8_t i;
+    return_status status;
     for (i = 0; i < curIndex; i++)
     {
         if (spdmPool[i].data.size() > 0)
         {
-            libspdm_responder_dispatch_message(spdmPool[i].pspdmContext);
+            status =
+                libspdm_responder_dispatch_message(spdmPool[i].pspdmContext);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("spdmRequesterImpl::setupResponder libspdm_responder_dispatch_message failed at: " +
+                     std::to_string(i) + " status: " + std::to_string(status))
+                        .c_str());
+            }
         }
     }
-    fflush(stdout);
-    return true;
+    return RETURN_SUCCESS;
 }
 
 /**
@@ -394,10 +481,8 @@ int spdmResponderImpl::MsgRecvCallback(void* ptransEP,
 return_status spdmResponderImpl::deviceReceiveMessage(void* spdmContext,
                                                       uintn* responseSize,
                                                       void* response,
-                                                      uint64_t timeout)
+                                                      uint64_t /*timeout*/)
 {
-
-    UNUSED(timeout);
     uint8_t i;
 
     for (i = 0; i < curIndex; i++)
@@ -465,6 +550,7 @@ void spdmResponderImpl::processConnectionState(
     uint8_t index;
     spdm_version_number_t spdmVersion;
     uint8_t i;
+    return_status status;
 
     for (i = 0; i < curIndex; i++)
     {
@@ -493,9 +579,17 @@ void spdmResponderImpl::processConnectionState(
                 memset(&parameter, 0, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
                 dataSize = sizeof(spdmVersion);
-                libspdm_get_data(spdmPool[i].pspdmContext,
-                                 LIBSPDM_DATA_SPDM_VERSION, &parameter,
-                                 &spdmVersion, &dataSize);
+                status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                          LIBSPDM_DATA_SPDM_VERSION, &parameter,
+                                          &spdmVersion, &dataSize);
+                if (RETURN_ERROR(status))
+                {
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get Version failed:" +
+                         std::to_string(status))
+                            .c_str());
+                    break;
+                }
                 spdmPool[i].useVersion =
                     (uint8_t)(spdmVersion >> SPDM_VERSION_NUMBER_SHIFT_BIT);
             }
@@ -504,25 +598,57 @@ void spdmResponderImpl::processConnectionState(
             parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
 
             dataSize = sizeof(u32Value);
-            libspdm_get_data(spdmPool[i].pspdmContext,
-                             LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter,
-                             &u32Value, &dataSize);
+            status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                      LIBSPDM_DATA_MEASUREMENT_HASH_ALGO,
+                                      &parameter, &u32Value, &dataSize);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get MeasurementHashAlgo failed:" +
+                     std::to_string(status))
+                        .c_str());
+                break;
+            }
             spdmPool[i].useMeasurementHashAlgo = u32Value;
             dataSize = sizeof(u32Value);
-            libspdm_get_data(spdmPool[i].pspdmContext,
-                             LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter, &u32Value,
-                             &dataSize);
+            status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                      LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
+                                      &u32Value, &dataSize);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get AsymAlgo failed:" +
+                     std::to_string(status))
+                        .c_str());
+                break;
+            }
             spdmPool[i].useAsymAlgo = u32Value;
             dataSize = sizeof(u32Value);
-            libspdm_get_data(spdmPool[i].pspdmContext,
-                             LIBSPDM_DATA_BASE_HASH_ALGO, &parameter, &u32Value,
-                             &dataSize);
+            status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                      LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
+                                      &u32Value, &dataSize);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get HashAlgo failed:" +
+                     std::to_string(status))
+                        .c_str());
+                break;
+            }
             spdmPool[i].useHashAlgo = u32Value;
 
             dataSize = sizeof(u16Value);
-            libspdm_get_data(spdmPool[i].pspdmContext,
-                             LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
-                             &u16Value, &dataSize);
+            status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                      LIBSPDM_DATA_REQ_BASE_ASYM_ALG,
+                                      &parameter, &u16Value, &dataSize);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get ReqAsymAlgo failed:" +
+                     std::to_string(status))
+                        .c_str());
+                break;
+            }
             spdmPool[i].useReqAsymAlgo = u16Value;
             res = read_responder_public_certificate_chain(
                 spdmPool[i].useHashAlgo, spdmPool[i].useAsymAlgo, &data,
@@ -532,16 +658,34 @@ void spdmResponderImpl::processConnectionState(
                 memset(&parameter, 0, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
                 u8Value = useSlotCount;
-                libspdm_set_data(spdmPool[i].pspdmContext,
-                                 LIBSPDM_DATA_LOCAL_SLOT_COUNT, &parameter,
-                                 &u8Value, sizeof(u8Value));
+                status = libspdm_set_data(
+                    spdmPool[i].pspdmContext, LIBSPDM_DATA_LOCAL_SLOT_COUNT,
+                    &parameter, &u8Value, sizeof(u8Value));
+                if (RETURN_ERROR(status))
+                {
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set slotcount failed:" +
+                         std::to_string(status))
+                            .c_str());
+                    break;
+                }
 
                 for (index = 0; index < useSlotCount; index++)
                 {
                     parameter.additional_data[0] = index;
-                    libspdm_set_data(spdmPool[i].pspdmContext,
-                                     LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
-                                     &parameter, data, dataSize);
+                    status =
+                        libspdm_set_data(spdmPool[i].pspdmContext,
+                                         LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                                         &parameter, data, dataSize);
+                    if (RETURN_ERROR(status))
+                    {
+                        phosphor::logging::log<phosphor::logging::level::ERR>(
+                            ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set CertChain failed:" +
+                             std::to_string(status) +
+                             " slot index: " + std::to_string(index))
+                                .c_str());
+                        break;
+                    }
                 }
                 /* do not free it*/
             }
@@ -579,6 +723,7 @@ void spdmResponderImpl::processSessionState(
     libspdm_data_parameter_t parameter;
     uint8_t u8Value;
     uint8_t i;
+    return_status status;
 
     for (i = 0; i < curIndex; i++)
     {
@@ -605,11 +750,24 @@ void spdmResponderImpl::processSessionState(
 
                 u8Value = 0;
                 dataSize = sizeof(u8Value);
-                libspdm_get_data(spdmPool[i].pspdmContext,
-                                 LIBSPDM_DATA_SESSION_POLICY, &parameter,
-                                 &u8Value, &dataSize);
-                phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                    ("spdmResponderImpl::processSessionState session policy - " + std::to_string(u8Value)).c_str());
+                status = libspdm_get_data(spdmPool[i].pspdmContext,
+                                          LIBSPDM_DATA_SESSION_POLICY,
+                                          &parameter, &u8Value, &dataSize);
+                if (RETURN_ERROR(status))
+                {
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get session policy failed:" +
+                         std::to_string(status))
+                            .c_str());
+                    break;
+                }
+                else
+                {
+                    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                        ("spdmResponderImpl::processSessionState session policy - " +
+                         std::to_string(u8Value))
+                            .c_str());
+                }
             }
             break;
         case LIBSPDM_SESSION_STATE_ESTABLISHED:
