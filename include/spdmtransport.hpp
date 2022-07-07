@@ -23,7 +23,7 @@ using MsgReceiveCallback =
 enum class TransportIdentifier : uint8_t
 {
     mctpOverSmBus = 0x01,
-    pmtWatcher = 0x02, /*Intel specific transpot*/
+    pmtWatcher = 0x02, /*Intel specific transport*/
     SDSi = 0x03        // SDSi
 };
 
@@ -80,7 +80,7 @@ class spdmTransport
     ******************************************************/
     /**
      * @brief The async send data function for responder
-     *  nonblocing function to send message to remote endpoint.
+     *  nonblocking function to send message to remote endpoint.
      *
      * @param  ptransEP          pointer to destination endpoint.
      * @param  requestSize       The size of data to be sent.

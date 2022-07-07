@@ -68,7 +68,7 @@ class spdmRequester
     /**
      * @brief The measurement function
      *
-     * @param  sessionid          The session id pointer(reserved for futher
+     * @param  sessionid          The session id pointer(reserved for further
      *use).
      * @return 0: success, other: failed.
      *

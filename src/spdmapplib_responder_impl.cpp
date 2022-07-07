@@ -49,7 +49,7 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
 }
 
 /**
- * @brief Register to libspdm for receivng SPDM response payload.
+ * @brief Register to libspdm for receiving SPDM response payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
  * @param  responseSize     The variable pointer for received data size.
@@ -346,7 +346,7 @@ int spdmResponderImpl::addData(void* ptransEndpoint,
 /**
  * @brief Called when message received.
  *
- * The function is called in MsgRecvCallback to process incoming receviced
+ * The function is called in MsgRecvCallback to process incoming received
  *data.
  * @return 0: success, other: failed.
  *
@@ -381,7 +381,7 @@ int spdmResponderImpl::MsgRecvCallback(void* ptransEP,
 };
 
 /**
- * @brief Register to libspdm for receivng SPDM response payload.
+ * @brief Register to libspdm for receiving SPDM response payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
  * @param  responseSize     The variable pointer for received data size.
@@ -480,11 +480,11 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_VERSION:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CAPABILITIES:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
             if (spdmPool[i].useVersion == 0)
@@ -547,15 +547,15 @@ void spdmResponderImpl::processConnectionState(
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_CERTIFICATE:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         case LIBSPDM_CONNECTION_STATE_AUTHENTICATED:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         default:
             break;
@@ -591,7 +591,7 @@ void spdmResponderImpl::processSessionState(
     {
         case LIBSPDM_SESSION_STATE_NOT_STARTED:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         case LIBSPDM_SESSION_STATE_HANDSHAKING:
             /* collect session policy*/
@@ -614,7 +614,7 @@ void spdmResponderImpl::processSessionState(
             break;
         case LIBSPDM_SESSION_STATE_ESTABLISHED:
             // TODO
-            // Pre created for some actions needed in this state in the furture.
+            // Pre created for some actions needed in this state in the future.
             break;
         default:
             ASSERT(false);

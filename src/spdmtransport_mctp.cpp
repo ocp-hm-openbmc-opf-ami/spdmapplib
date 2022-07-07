@@ -169,7 +169,7 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 
 /**
  * @brief The async send data function for responder
- *  nonblocing function to send message to remote endpoint.
+ *  nonblocking function to send message to remote endpoint.
  *
  * @param  ptransEP          pointer to destination endpoint.
  * @param  requestSize       The size of data to be sent.

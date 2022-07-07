@@ -286,7 +286,7 @@ int spdmRequesterImpl::settingFromConfig(void)
  * @brief Setup the configuration of user assigned endpoint as target
  *responder.
  *
- * @param  ptransEP          Pointer of endpoint object to be configed.
+ * @param  ptransEP          Pointer of endpoint object to be configured.
  * @return return_status defined in libspdm.
  *
  **/
@@ -347,9 +347,9 @@ int spdmRequesterImpl::addData(void* ptransEP, const std::vector<uint8_t>& data)
  *
  *  The function will be called when send/receive is completed in transport
  *layer.
- * @param  ptransEP         Pointer to the endpoint the receviced data send
+ * @param  ptransEP         Pointer to the endpoint the received data send
  *to.
- * @param  data             The receviced data buffer.
+ * @param  data             The received data buffer.
  * @return 0: success, other: failed.
  *
  **/
@@ -361,7 +361,7 @@ int spdmRequesterImpl::MsgRecvCallback(void* ptransEP,
 };
 
 /**
- * @brief Register to libspdm for receivng SPDM response payload.
+ * @brief Register to libspdm for receiving SPDM response payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
  * @param  responseSize     The variable pointer for received data size.
@@ -527,7 +527,7 @@ int spdmRequesterImpl::do_authentication(void)
 /**
  * @brief The measurement function
  *
- * @param  sessionid          The session id pointer(reserved for futher
+ * @param  sessionid          The session id pointer(reserved for further
  *use).
  * @return 0: success, other: failed.
  *
@@ -654,7 +654,7 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
 /**
  * @brief Get all measurement function
  *
- * The do_measurement should be executed  succeffully before calling this
+ * The do_measurement should be executed  successfully before calling this
  *function.
  * @return vector of all measurements.
  **/
@@ -666,7 +666,7 @@ std::optional<std::vector<uint8_t>> spdmRequesterImpl::get_measurements()
 /**
  * @brief Get certification function
  *
- * The do_authentication should be executed  succeffully before calling this
+ * The do_authentication should be executed  successfully before calling this
  *function.
  * @return vector of certification.
  **/

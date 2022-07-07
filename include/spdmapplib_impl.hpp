@@ -93,7 +93,7 @@ class spdmResponderImpl : public spdmResponder
      * @brief Initial function of SPDM responder.
      *
      * The function will enter daemon mode. Accept request from assigned
-     *trasport layer.
+     *transport layer.
      *
      * @param  io                boost io_service object..
      * @param  trans             The pointer of transport instance.
@@ -135,7 +135,7 @@ class spdmResponderImpl : public spdmResponder
     /**
      * @brief Called when message received.
      *
-     * The function is called in MsgRecvCallback to process incoming receviced
+     * The function is called in MsgRecvCallback to process incoming received
      *data.
      * @return 0: success, other: failed.
      *
@@ -166,7 +166,7 @@ class spdmResponderImpl : public spdmResponder
                                     const void* request, uint64_t timeout);
 
     /**
-     * @brief Register to libspdm for receivng SPDM response payload.
+     * @brief Register to libspdm for receiving SPDM response payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
      * @param  responseSize     The variable pointer for received data size.
@@ -253,7 +253,7 @@ class spdmRequesterImpl : public spdmRequester
     /**
      * @brief The measurement function
      *
-     * @param  sessionid          The session id pointer(reserved for futher
+     * @param  sessionid          The session id pointer(reserved for further
      *use).
      *
      * @return 0: success, other: failed.
@@ -299,9 +299,9 @@ class spdmRequesterImpl : public spdmRequester
      *
      *  The function will be called when send/receive is completed in transport
      *layer.
-     * @param  ptransEP         Pointer to the endpoint the receviced data send
+     * @param  ptransEP         Pointer to the endpoint the received data send
      *to.
-     * @param  data             The receviced data buffer.
+     * @param  data             The received data buffer.
      * @return 0: success, other: failed.
      *
      **/
@@ -322,7 +322,7 @@ class spdmRequesterImpl : public spdmRequester
                                     const void* request, uint64_t timeout);
 
     /**
-     * @brief Register to libspdm for receivng SPDM response payload.
+     * @brief Register to libspdm for receiving SPDM response payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
      * @param  responseSize     The variable pointer for received data size.
@@ -340,7 +340,7 @@ class spdmRequesterImpl : public spdmRequester
      * @brief Setup the configuration of user assigned endpoint as target
      *responder.
      *
-     * @param  ptransEP          Pointer of endpoint object to be configed.
+     * @param  ptransEP          Pointer of endpoint object to be configured.
      * @return return_status defined in libspdm.
      *
      **/
