@@ -14,6 +14,7 @@
  * limitation
  */
 #include "spdmtransport_mctp.hpp"
+#include <phosphor-logging/log.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -149,17 +150,20 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
         auto it = mctpWrapper->getEndpointMap().find(eid);
         if (mctpWrapper->getEndpointMap().end() == it)
         {
-            std::cerr << "Error add device: " << eid << std::endl;
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("spdmTransportMCTP::transAddNewDevice Error add device: " + std::to_string(eid)).c_str());
             free(pnewEP);
             pnewEP = NULL;
             return false;
         }
-        std::cerr << "Adding device: " << static_cast<uint16_t>(eid)
-                  << " Service: " << it->second.second << std::endl;
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            ("spdmTransportMCTP::transAddNewDevice Adding device: " + std::to_string(eid) + " Service: " + it->second.second).c_str());
     }
     catch (std::exception& e)
     {
-        std::cerr << __func__ << ":" << e.what() << std::endl;
+        std::string exceptionStr = e.what();
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("spdmTransportMCTP::transAddNewDevice Exception : " + exceptionStr ).c_str());
         return false;
     }
     pnewEP->devIdentifer = eid;
@@ -235,9 +239,8 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
     mctpw::eid_t eid = ptransEP->devIdentifer;
-    std::cerr << __func__ << ": eid: " << static_cast<uint16_t>(eid)
-              << ", data size: " << data.size() << ", timeout: " << timeout
-              << std::endl;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("spdmTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) + ", data size: " + std::to_string(data.size()) + ", timeout: " + std::to_string(timeout)).c_str());
     auto reply = mctpWrapper->sendReceiveBlocked(
         eid, data, std::chrono::milliseconds(500));
     if (reply.first)
@@ -247,19 +250,25 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
     else
     {
         std::vector<uint8_t> responsePacket = reply.second;
-        std::cerr << "send recv :response_vector.size():"
-                  << responsePacket.size() << std::endl;
-        std::cerr << std::hex;
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            ("spdmTransportMCTP::syncSendRecvData send recv :response_vector.size():" + std::to_string(responsePacket.size())).c_str());
+        std::stringstream ss;
+        ss << std::uppercase << std::hex << std::endl;
         for (unsigned int i = 0; i < responsePacket.size(); ++i)
         {
-            std::cerr << std::setw(3)
-                      << static_cast<uint16_t>(responsePacket[i]);
+            ss << std::setfill('0') << std::setw(3) << static_cast<uint16_t>(responsePacket[i]);
             if ((i % 32) == 0)
             {
-                std::cerr << std::endl;
+                ss << std::endl;
+            }
+            else
+            {
+                ss << ' ';
             }
         }
-        std::cerr << std::dec << std::endl;
+        ss << std::endl;
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            ss.str().c_str());
 
         rspRcvCB(ptransEP, responsePacket);
 

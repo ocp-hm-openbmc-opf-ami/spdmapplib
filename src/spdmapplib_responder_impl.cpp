@@ -17,6 +17,7 @@
 #include "library/spdm_transport_none_lib.h"
 
 #include "spdmapplib_impl.hpp"
+#include <phosphor-logging/log.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -143,8 +144,8 @@ int spdmResponderImpl::initResponder(
     }
     else
     {
-        std::cerr << __func__ << " getConfigurationFromEntityManager failed!"
-                  << std::endl;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "spdmResponderImpl::initResponder getConfigurationFromEntityManager failed!");
         return static_cast<int>(errorCodes::errGetCFG);
     }
     return 0;
@@ -197,7 +198,7 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
     {
         return false;
     }
-    std::cerr << "addNewDevice" << std::endl;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>("spdmResponderImpl::addNewDevice");
     copyDevice(&newItem.transEP,
                static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint));
     newItem.useSlotId = 0;
@@ -245,8 +246,8 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
     void* tmpThis = static_cast<void*>(this);
 
     useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
-    std::cerr << "Responder useSlotCount: " << spdmResponderCfg.slotcount
-              << std::endl;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("spdmResponderImpl::settingFromConfig Responder useSlotCount: " + std::to_string(spdmResponderCfg.slotcount)).c_str());
 
     memset(&parameter, 0, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
@@ -607,9 +608,8 @@ void spdmResponderImpl::processSessionState(
                 libspdm_get_data(spdmPool[i].pspdmContext,
                                  LIBSPDM_DATA_SESSION_POLICY, &parameter,
                                  &u8Value, &dataSize);
-                std::cerr << "session policy - 0x" << std::hex
-                          << static_cast<uint16_t>(u8Value) << std::dec
-                          << std::endl;
+                phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                    ("spdmResponderImpl::processSessionState session policy - " + std::to_string(u8Value)).c_str());
             }
             break;
         case LIBSPDM_SESSION_STATE_ESTABLISHED:

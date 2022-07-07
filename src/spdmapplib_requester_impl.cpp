@@ -16,7 +16,7 @@
 #include "library/spdm_transport_none_lib.h"
 
 #include "spdmapplib_impl.hpp"
-
+#include <phosphor-logging/log.hpp>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -92,14 +92,15 @@ int spdmRequesterImpl::initRequester(
                     std::bind(&spdmRequesterImpl::MsgRecvCallback, this, _1,
                               _2));
             }
-            std::cerr << __func__ << " intResult: " << intResult
-                      << ", bResponderFound: " << bResponderFound << std::endl;
+            phosphor::logging::log<phosphor::logging::level::INFO>(
+                ("spdmRequesterImpl::initRequester intResult: " + std::to_string(intResult) + ", bResponderFound: " + std::to_string(bResponderFound))
+                    .c_str());
         }
     }
     else
     {
-        std::cerr << __func__ << " getConfigurationFromEntityManager failed!"
-                  << std::endl;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "spdmRequesterImpl::initRequester getConfigurationFromEntityManager failed!");
         intResult = static_cast<int>(errorCodes::errGetCFG);
     }
     return intResult;
@@ -122,7 +123,8 @@ int spdmRequesterImpl::checkResponderDevice(void* ptransEP)
     if (matchDevice(&spdmResponder.transEP,
                     static_cast<spdmtransport::transportEndPoint*>(ptransEP)))
     {
-        std::cerr << "Found Responder!!" << std::endl;
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "Found Responder!!");
         this->bResponderFound = true;
         return true;
     }
@@ -148,8 +150,9 @@ int spdmRequesterImpl::settingFromConfig(void)
 
     uintn data_size;
     useSlotCount = static_cast<uint8_t>(spdmRequesterCfg.slotcount);
-    std::cerr << "Requester useSlotCount: " << spdmRequesterCfg.slotcount
-              << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("spdmRequesterImpl::settingFromConfig Requester useSlotCount: " + std::to_string(spdmRequesterCfg.slotcount))
+            .c_str());
 
     useSlotId = 0;
     m_use_measurement_summary_hash_type =
@@ -234,16 +237,19 @@ int spdmRequesterImpl::settingFromConfig(void)
     status = libspdm_init_connection(spdmResponder.pspdmContext, false);
     if (RETURN_ERROR(status))
     {
-        std::cerr << "libspdm_init_connection Error!- 0x" << std::hex << status
-                  << std::dec << std::endl;
+        std::stringstream ss;
+        ss << "0x" << std::uppercase << std::setfill('0') << std::setw(4) << std::hex << status;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("spdmRequesterImpl::settingFromConfig libspdm_init_connection Error!- " + ss.str())
+            .c_str());
         free(spdmResponder.pspdmContext);
         spdmResponder.pspdmContext = NULL;
         return -1;
     }
     else
     {
-        std::cerr << __func__ << " libspdm_init_connection completed!"
-                  << std::endl;
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "spdmRequesterImpl::settingFromConfig libspdm_init_connection completed!");
     }
 
     zero_mem(&parameter, sizeof(parameter));
@@ -258,8 +264,9 @@ int spdmRequesterImpl::settingFromConfig(void)
     libspdm_get_data(spdmResponder.pspdmContext,
                      LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter, &u32Value,
                      &data_size);
-    std::cerr << "use measurement hash algo: 0x" << std::hex << u32Value
-              << std::dec << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("spdmRequesterImpl::settingFromConfig use measurement hash algo: " + std::to_string(u32Value))
+        .c_str());
     data_size = sizeof(u32Value);
     libspdm_get_data(spdmResponder.pspdmContext, LIBSPDM_DATA_BASE_ASYM_ALGO,
                      &parameter, &u32Value, &data_size);
@@ -273,11 +280,15 @@ int spdmRequesterImpl::settingFromConfig(void)
                      &parameter, &u16Value, &data_size);
     m_use_req_asym_algo = u16Value;
 
-    std::cerr << std::hex << "m_use_asym_algo: 0x" << m_use_asym_algo
-              << std::endl;
-    std::cerr << "m_use_hash_algo: 0x" << m_use_hash_algo << std::endl;
-    std::cerr << "m_use_req_asym_algo: 0x" << m_use_req_asym_algo << std::dec
-              << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("spdmRequesterImpl::settingFromConfig m_use_asym_algo: " + std::to_string(m_use_asym_algo))
+        .c_str());
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("spdmRequesterImpl::settingFromConfig m_use_hash_algo: " + std::to_string(m_use_hash_algo))
+        .c_str());
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("spdmRequesterImpl::settingFromConfig m_use_req_asym_algo: " + std::to_string(m_use_req_asym_algo))
+        .c_str());
 
     return RETURN_SUCCESS;
 }
@@ -298,7 +309,7 @@ int spdmRequesterImpl::setupResponder(
     {
         return -1;
     }
-    std::cerr << "spdmRequesterImpl::setupResponder" << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>("spdmRequesterImpl::setupResponder");
     copyDevice(&spdmResponder.transEP, ptransEP);
     spdmResponder.useSlotId = 0;
     spdmResponder.sessonId = 0;
@@ -379,8 +390,9 @@ return_status spdmRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
     std::copy(spdmResponder.data.begin() + 1, spdmResponder.data.end(),
               (uint8_t*)response);
     spdmResponder.data.clear();
-    std::cerr << "deviceReceiveMessage responseSize: 0x" << std::hex
-              << *responseSize << std::dec << std::endl;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("deviceReceiveMessage responseSize: " + std::to_string(*responseSize))
+        .c_str());
     return 0;
 }
 
@@ -400,8 +412,9 @@ return_status spdmRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
                                                    uint64_t timeout)
 {
     using namespace std::placeholders;
-    std::cerr << "deviceSendMessage requestSize: 0x" << std::hex << requestSize
-              << std::dec << std::endl;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("deviceSendMessage requestSize: " + std::to_string(requestSize))
+        .c_str());
     return spdmTrans->syncSendRecvData(
         &spdmResponder.transEP, requestSize, request, timeout,
         std::bind(&spdmRequesterImpl::MsgRecvCallback, this, _1, _2));
@@ -430,7 +443,8 @@ int spdmRequesterImpl::do_authentication(void)
         return_status status;
         if (settingFromConfig() == RETURN_SUCCESS)
         {
-            std::cerr << __func__ << " starting..." << std::endl;
+            phosphor::logging::log<phosphor::logging::level::INFO>(
+                "spdmRequesterImpl::do_authentication starting...");
             /** Executing following functions.
                 get_digest
                 get_certificate
@@ -442,16 +456,16 @@ int spdmRequesterImpl::do_authentication(void)
                                             &slot_mask, total_digest_buffer);
                 if (RETURN_ERROR(status))
                 {
-                    std::cerr << "libspdm_get_digest Error!- 0x" << std::hex
-                              << status << std::dec << std::endl;
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        ("spdmRequesterImpl::do_authentication libspdm_get_digest Error!- " + std::to_string(status)).c_str());
                     free(spdmResponder.pspdmContext);
                     spdmResponder.pspdmContext = NULL;
                     return status;
                 }
                 else
                 {
-                    std::cerr << __func__ << " libspdm_get_digest completed!"
-                              << std::endl;
+                    phosphor::logging::log<phosphor::logging::level::INFO>(
+                        "spdmRequesterImpl::do_authentication libspdm_get_digest completed!");
                 }
             }
 
@@ -464,9 +478,8 @@ int spdmRequesterImpl::do_authentication(void)
                         cert_chain);
                     if (RETURN_ERROR(status))
                     {
-                        std::cerr << "libspdm_get_certificate Error!- 0x"
-                                  << std::hex << status << std::dec
-                                  << std::endl;
+                        phosphor::logging::log<phosphor::logging::level::ERR>(
+                            ("spdmRequesterImpl::do_authentication libspdm_get_certificate Error! - " + std::to_string(status)).c_str());
                         free(spdmResponder.pspdmContext);
                         spdmResponder.pspdmContext = NULL;
                         spdmResponder.dataCert = {};
@@ -474,9 +487,8 @@ int spdmRequesterImpl::do_authentication(void)
                     }
                     else
                     {
-                        std::cerr << __func__
-                                  << " libspdm_get_certificate completed!"
-                                  << std::endl;
+                        phosphor::logging::log<phosphor::logging::level::INFO>(
+                            "spdmRequesterImpl::do_authentication libspdm_get_certificate completed!");
                         // Keep certificate to reserved vector.
                         if (spdmResponder.dataCert.size() == 0)
                         {
@@ -496,29 +508,32 @@ int spdmRequesterImpl::do_authentication(void)
                                       measurement_hash, NULL);
                 if (RETURN_ERROR(status))
                 {
-                    std::cerr << __func__ << " libspdm_challenge Error!- 0x"
-                              << std::hex << status << std::dec << std::endl;
+                    phosphor::logging::log<phosphor::logging::level::ERR>(
+                        ("spdmRequesterImpl::do_authentication libspdm_challenge Error! - " + std::to_string(status)).c_str());
                     free(spdmResponder.pspdmContext);
                     spdmResponder.pspdmContext = NULL;
                     return status;
                 }
                 else
                 {
-                    std::cerr << __func__ << " libspdm_challenge completed!"
-                              << std::endl;
+                    phosphor::logging::log<phosphor::logging::level::INFO>(
+                        "spdmRequesterImpl::do_authentication libspdm_challenge completed!");
                 }
             }
-            std::cerr << __func__ << " Pass!!" << std::endl;
+                phosphor::logging::log<phosphor::logging::level::INFO>(
+                    "spdmRequesterImpl::do_authentication Pass!!");
         }
         else
         {
-            std::cerr << __func__ << " responder setting error!" << std::endl;
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "spdmRequesterImpl::do_authentication responder setting error!");
             return -1;
         }
     }
     else
     {
-        std::cerr << __func__ << " responder not found yet!" << std::endl;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "spdmRequesterImpl::do_authentication responder not found yet!");
         return -1;
     }
     return 0;
@@ -543,7 +558,8 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
     uint8_t index;
     uint8_t request_attribute;
 
-    std::cerr << "Requesting all the Measurements in " << __func__ << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        "Requesting all the Measurements in do_measurement!!");
     if (bResponderFound && (spdmResponder.pspdmContext != NULL))
     {
         if (m_use_measurement_operation ==
@@ -565,13 +581,12 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 spdmResponder.dataMeas = {};
                 return status;
             }
-            std::cerr << __func__ << " number_of_block - 0x" << std::hex
-                      << static_cast<uint16_t>(number_of_block) << std::dec
-                      << std::endl;
-            std::cerr << __func__ << " measurement_record_length - 0x"
-                      << std::hex << measurement_record_length << std::dec
-                      << std::endl;
-            std::cerr << __func__ << " Reset measurement vector." << std::endl;
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("spdmRequesterImpl::do_measurement number_of_block - " + std::to_string(number_of_block)).c_str());
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("spdmRequesterImpl::do_measurement measurement_record_length - " + std::to_string(measurement_record_length)).c_str());
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                "spdmRequesterImpl::do_measurement Reset measurement vector.");
             // Keep measurement to reserved vector.
             spdmResponder.dataMeas = {};
 
@@ -594,9 +609,8 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
             {
                 return status;
             }
-            std::cerr << __func__ << " number_of_blocks - 0x" << std::hex
-                      << static_cast<uint16_t>(number_of_blocks) << std::dec
-                      << std::endl;
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("spdmRequesterImpl::do_measurement number_of_block - " + std::to_string(number_of_block)).c_str());
             received_number_of_block = 0;
             for (index = 1; index <= 0xFE; index++)
             {
@@ -604,9 +618,8 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 {
                     break;
                 }
-                std::cerr << __func__ << " index - 0x" << std::hex
-                          << static_cast<uint16_t>(index) << std::dec
-                          << std::endl;
+                phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                    ("spdmRequesterImpl::do_measurement index - " + std::to_string(index)).c_str());
 
                 /* 2. query measurement one by one*/
                 /* get signature in last message only.*/
@@ -627,9 +640,8 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                     continue;
                 }
                 received_number_of_block += 1;
-                std::cerr << __func__ << " measurement_record_length - 0x"
-                          << std::hex << measurement_record_length << std::dec
-                          << std::endl;
+                phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                    ("spdmRequesterImpl::do_measurement measurement_record_length - " + std::to_string(measurement_record_length)).c_str());
                 // Keep measurement to reserved vector.
 
                 spdmResponder.dataMeas.insert(
@@ -642,11 +654,14 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 return RETURN_DEVICE_ERROR;
             }
         }
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "spdmRequesterImpl::do_measurement PASS!!");
         return 0;
     }
     else
     {
-        std::cerr << __func__ << " error!" << std::endl;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "spdmRequesterImpl::do_measurement Error!");
         return -1;
     }
 }
