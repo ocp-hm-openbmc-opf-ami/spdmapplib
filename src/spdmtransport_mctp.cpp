@@ -157,9 +157,9 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
              std::to_string(eid) + " Service: " + it->second.second)
                 .c_str());
     }
-    catch (std::exception& e)
+    catch (std::exception& catchException)
     {
-        std::string exceptionStr = e.what();
+        std::string exceptionStr = catchException.what();
         phosphor::logging::log<phosphor::logging::level::ERR>(
             ("spdmTransportMCTP::transAddNewDevice Exception : " + exceptionStr)
                 .c_str());

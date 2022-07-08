@@ -119,7 +119,7 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
  * @brief Initial function of SPDM responder.
  *
  * The function will enter daemon mode. Accept request from assigned
- *trasport layer.
+ *transport layer.
  *
  * @param  io                boost io_service object..
  * @param  trans             The pointer of transport instance.
@@ -129,7 +129,7 @@ int spdmResponderImpl::initResponder(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
-    spdmConfiguration* pSpdmConfig)
+    SpdmConfiguration* pSpdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;
@@ -145,7 +145,7 @@ int spdmResponderImpl::initResponder(
         spdmTrans->initTransport(
             io, conn, std::bind(&spdmResponderImpl::addNewDevice, this, _1),
             std::bind(&spdmResponderImpl::removeDevice, this, _1),
-            std::bind(&spdmResponderImpl::MsgRecvCallback, this, _1, _2));
+            std::bind(&spdmResponderImpl::msgRecvCallback, this, _1, _2));
     }
     else
     {
@@ -211,7 +211,7 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
     copyDevice(&newItem.transEP,
                static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint));
     newItem.useSlotId = 0;
-    newItem.sessonId = 0;
+    newItem.sessionId = 0;
     newItem.useVersion = 0;
     newItem.useReqAsymAlgo = 0;
     newItem.useMeasurementHashAlgo = 0;
@@ -272,9 +272,9 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
 int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
 {
     libspdm_data_parameter_t parameter;
-    uint8_t u8Value;   // Value that size is uint8_t
-    uint16_t u16Value; // Value that size is uint16_t
-    uint32_t u32Value; // Value that size is uint32_t
+    uint8_t u8Value;
+    uint16_t u16Value;
+    uint32_t u32Value;
     void* tmpThis = static_cast<void*>(this);
     return_status status;
 
@@ -430,7 +430,7 @@ int spdmResponderImpl::addData(void* ptransEndpoint,
 /**
  * @brief Called when message received.
  *
- * The function is called in MsgRecvCallback to process incoming received
+ * The function is called in msgRecvCallback to process incoming received
  *data.
  * @return 0: success, other: failed.
  *
@@ -465,7 +465,7 @@ int spdmResponderImpl::processSPDMMessage()
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::MsgRecvCallback(void* ptransEP,
+int spdmResponderImpl::msgRecvCallback(void* ptransEP,
                                        const std::vector<uint8_t>& data)
 {
     addData(ptransEP, data);
@@ -547,9 +547,9 @@ void spdmResponderImpl::processConnectionState(
     void* data;
     uint32_t dataSize;
     libspdm_data_parameter_t parameter;
-    uint8_t u8Value;   // Value that size is uint8_t
-    uint16_t u16Value; // Value that size is uint16_t
-    uint32_t u32Value; // Value that size is uint32_t
+    uint8_t u8Value;
+    uint16_t u16Value;
+    uint32_t u32Value;
     bool res;
     uint8_t index;
     spdm_version_number_t spdmVersion;
@@ -745,7 +745,7 @@ void spdmResponderImpl::processSessionState(
             break;
         case LIBSPDM_SESSION_STATE_HANDSHAKING:
             /* collect session policy*/
-            spdmPool[i].sessonId = sessionID;
+            spdmPool[i].sessionId = sessionID;
             if (spdmPool[i].useVersion >= SPDM_MESSAGE_VERSION_12)
             {
                 memset(&parameter, 0, sizeof(parameter));
@@ -779,7 +779,8 @@ void spdmResponderImpl::processSessionState(
             // Pre created for some actions needed in this state in the future.
             break;
         default:
-            ASSERT(false);
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "spdmResponderImpl::processConnectionState should not goto here!!");
             break;
     }
 }

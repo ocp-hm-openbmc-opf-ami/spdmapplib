@@ -23,7 +23,7 @@
 
 #include <iostream>
 
-extern spdmapplib::spdmConfiguration getConfigurationFromEntityManager(
+extern spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName);
 
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
         spdmtransport::TransportIdentifier::mctpOverSMBus);
     boost::asio::steady_timer timer(*ioc);
-    spdmapplib::spdmConfiguration spdmRequesterCfg;
+    spdmapplib::SpdmConfiguration spdmRequesterCfg;
     uint8_t eid;
     CLI::App app("SPDM requester verify tool");
     app.add_option("--eid", eid, "Responder MCTP EID    : uint8_t")->required();

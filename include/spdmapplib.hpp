@@ -47,7 +47,7 @@ typedef struct
     uint32_t aead;
     uint32_t slotcount;
     char* certPath;
-} spdmConfiguration;
+} SpdmConfiguration;
 
 /**
  * @brief The responder base class
@@ -70,7 +70,7 @@ class spdmResponder
         initResponder(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmConfiguration* pSpdmConfig) = 0;
+                      SpdmConfiguration* pSpdmConfig) = 0;
 };
 
 /**
@@ -96,7 +96,7 @@ class spdmRequester
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       spdmtransport::transportEndPoint* ptransResponder,
-                      spdmConfiguration* pSpdmConfig) = 0;
+                      SpdmConfiguration* pSpdmConfig) = 0;
     /**
      * @brief The authentication function
      *

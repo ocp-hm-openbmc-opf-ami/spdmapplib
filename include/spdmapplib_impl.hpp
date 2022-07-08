@@ -41,7 +41,7 @@ namespace spdmapplib
  *
  */
 
-enum class spdmVersions : uint32_t
+enum class SPDMVersions : uint32_t
 {
     spdmv1p1 = 0x01
 };
@@ -61,7 +61,7 @@ typedef struct
     void* pspdmContext;
     spdmtransport::transportEndPoint transEP;
     uint8_t useSlotId;
-    uint32_t sessonId;
+    uint32_t sessionId;
     uint32_t useVersion;
     uint16_t useReqAsymAlgo;
     uint32_t useMeasurementHashAlgo;
@@ -95,7 +95,7 @@ class spdmResponderImpl : public spdmResponder
     int initResponder(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmConfiguration* spdmConfig) override;
+                      SpdmConfiguration* spdmConfig) override;
 
     /*APIs called by transport layer*/
     /**
@@ -129,7 +129,7 @@ class spdmResponderImpl : public spdmResponder
     /**
      * @brief Called when message received.
      *
-     * The function is called in MsgRecvCallback to process incoming received
+     * The function is called in msgRecvCallback to process incoming received
      *data.
      * @return 0: success, other: failed.
      *
@@ -144,7 +144,7 @@ class spdmResponderImpl : public spdmResponder
      * @return 0: success, other: failed.
      *
      **/
-    int MsgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
+    int msgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
     /*Cabllback functions implementation for libspdm */
     /**
      * @brief Register to libspdm for sending SPDM payload.
@@ -211,7 +211,7 @@ class spdmResponderImpl : public spdmResponder
     uint32_t useResponderCapabilityFlags;
     uint8_t useMutAuth;
     uint8_t useBasicMutAuth;
-    spdmConfiguration spdmResponderCfg;
+    SpdmConfiguration spdmResponderCfg;
     std::vector<spdmItem> spdmPool;
     std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;
 };
@@ -237,7 +237,7 @@ class spdmRequesterImpl : public spdmRequester
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       spdmtransport::transportEndPoint* ptransResponder,
-                      spdmConfiguration* spdmConfig) override;
+                      SpdmConfiguration* spdmConfig) override;
     /**
      * @brief The authentication function
      *
@@ -299,7 +299,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return 0: success, other: failed.
      *
      **/
-    int MsgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
+    int msgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
 
     /*Callback functions implementation for libspdm*/
     /**
@@ -356,14 +356,14 @@ class spdmRequesterImpl : public spdmRequester
     uint32_t useRequesterCapabilityFlags;
     uint8_t useMutAuth;
     uint8_t useBasicMutAuth;
-    uint16_t m_use_req_asym_algo;
-    uint32_t m_use_asym_algo;
-    uint32_t m_use_hash_algo;
-    uint32_t m_exe_connection;
-    uint8_t m_use_measurement_summary_hash_type;
-    uint8_t m_use_measurement_operation;
-    uint8_t m_use_measurement_attribute;
-    spdmConfiguration spdmRequesterCfg;
+    uint16_t mUseReqAsymAlgo;
+    uint32_t mUseAsymAlgo;
+    uint32_t mUseHashAlgo;
+    uint32_t mExeConnection;
+    uint8_t mUseMeasurementSummaryHashType;
+    uint8_t mUseMeasurementOperation;
+    uint8_t mUseMeasurementAttribute;
+    SpdmConfiguration spdmRequesterCfg;
     spdmItem spdmResponder; // only one instance for requester.
     spdmtransport::transportEndPoint transResponder;
     std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;

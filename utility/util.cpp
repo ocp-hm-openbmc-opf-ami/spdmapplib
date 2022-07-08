@@ -23,7 +23,7 @@ extern "C"
 
 using configurationField =
     std::variant<bool, uint64_t, std::string, std::vector<std::string>>;
-using configurationMap = std::unordered_map<std::string, configurationField>;
+using ConfigurationMap = std::unordered_map<std::string, configurationField>;
 
 char* setCertPath = NULL;
 
@@ -187,7 +187,7 @@ static bool getValueFromName(const valueStringEntry* table, uint32_t entryCount,
  * some other purposes.
  * @param configurationPath : path
  */
-static configurationMap
+static ConfigurationMap
     getConfigurationMap(std::shared_ptr<sdbusplus::asio::connection> conn,
                         const std::string& configurationPath)
 {
@@ -200,14 +200,14 @@ static configurationMap
     // Note: This is a blocking call.
     // However, there is nothing to do until the configuration is retrieved.
     auto reply = conn->call(methodCall);
-    configurationMap map;
+    ConfigurationMap map;
     reply.read(map);
 
     return map;
 }
 
 /**
- * @brief get field from configurationMap
+ * @brief get field from ConfigurationMap
  *
  * @param map : map of configuration
  * @param fieldName : string of field
@@ -215,7 +215,7 @@ static configurationMap
  */
 
 template <typename T>
-static bool getField(const configurationMap& map, const std::string& fieldName,
+static bool getField(const ConfigurationMap& map, const std::string& fieldName,
                      T& value)
 {
     auto it = map.find(fieldName);
@@ -300,18 +300,18 @@ responder.
  * @return SPDM configuration
  */
 
-spdmapplib::spdmConfiguration getConfigurationFromEntityManager(
+spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName)
 {
     uint32_t i;
     uint32_t u32Data;
-    spdmapplib::spdmConfiguration spdmConfig;
+    spdmapplib::SpdmConfiguration spdmConfig;
     memset(&spdmConfig, 0, sizeof(spdmConfig));
     const std::string objectPath =
         getSPDMConfigurationPaths(conn, configurationName);
 
-    configurationMap map;
+    ConfigurationMap map;
     if (objectPath.empty())
     {
         return spdmConfig;
