@@ -1,6 +1,6 @@
-{ 
+{
     global:
         *spdm*;
-    local: 
-        *; 
+    local:
+        *;
 };

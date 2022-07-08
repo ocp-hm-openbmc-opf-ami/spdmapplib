@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,8 +57,8 @@ class spdmTransportMCTP : public spdmTransport
      **/
     int initTransport(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      AddRemoreDeviceCallback addCB,
-                      AddRemoreDeviceCallback delCB,
+                      AddRemoveDeviceCallback addCB,
+                      AddRemoveDeviceCallback delCB,
                       MsgReceiveCallback msgRcvCB = nullptr) override;
 
     /**
@@ -73,7 +73,7 @@ class spdmTransportMCTP : public spdmTransport
 
     /**
      * @brief The async send data function for responder
-     *  nonblocing function to send message to remote endpoint.
+     *  nonblocking function to send message to remote endpoint.
      *
      * @param  ptransEP          pointer to destination endpoint.
      * @param  requestSize       The size of data to be sent.
@@ -89,34 +89,32 @@ class spdmTransportMCTP : public spdmTransport
      * @brief The sync send and receive data function for requester
      *  blocking function to send SPDM payload and get response data.
      *
+     * @param ptransEP    pointer to destination endpoint.
+     * @param requestSize The size of data to be sent.
+     * @param request     The buffer pointer of data.
+     * @param timeout     The timeout time.
+     * @param rspRcvCB    The resRcvCB to be called when response data received.
      * @return 0: success, other: failed.
      *
      **/
-    int syncSendRecvData(
-        transportEndPoint* ptransEP, ///< pointer to destination endpoint.
-        uint32_t requestSize,        ///< The size of data to be sent.
-        const void* request,         ///< The buffer pointer of data.
-        uint64_t timeout,            ///< The timeout time.
-        MsgReceiveCallback
-            rspRcvCB ///< The resRcvCB to be called when response data received.
-        ) override;
+    int syncSendRecvData(transportEndPoint* ptransEP, uint32_t requestSize,
+                         const void* request, uint64_t timeout,
+                         MsgReceiveCallback rspRcvCB) override;
 
     /*APIs called by mctpwrapper callback function*/
   private:
     /**
      * @brief Called by mctpwrapper when device updated.
      *
+     * @param eid  The EID of detected new endpoint.
      **/
-    int transAddNewDevice(
-        const mctpw::eid_t eid ///< The EID of detected new endpoint.
-    );
+    int transAddNewDevice(const mctpw::eid_t eid);
     /**
      * @brief Called by mctpwrapper when device updated.
      *
+     * @param eid The EID of detected removed endpoint.
      **/
-    int transRemoveDevice(
-        const mctpw::eid_t eid ///< The EID of detected removed endpoint.
-    );
+    int transRemoveDevice(const mctpw::eid_t eid);
 
     /**
      * @brief Function registered to mctpwrapper as receiving message Callback.
@@ -134,8 +132,8 @@ class spdmTransportMCTP : public spdmTransport
                              boost::asio::yield_context yield);
 
     /* Callback function pointers */
-    AddRemoreDeviceCallback addNewDeviceCB = nullptr;
-    AddRemoreDeviceCallback removeDeviceCB = nullptr;
+    AddRemoveDeviceCallback addNewDeviceCB = nullptr;
+    AddRemoveDeviceCallback removeDeviceCB = nullptr;
     MsgReceiveCallback msgReceiveCB = nullptr;
 
   protected:

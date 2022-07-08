@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,11 @@
 #include <boost/asio/steady_timer.hpp>
 
 #include <iostream>
+
+extern spdmapplib::spdmConfiguration getConfigurationFromEntityManager(
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    const std::string& configurationName);
+
 /**
  * @brief Function to display Unit test menu.
  *
@@ -58,12 +63,13 @@ int main(int argc, char* argv[])
 {
     auto pspdmRequester = spdmapplib::createRequester();
     spdmtransport::transportEndPoint responderCfg = {
-        spdmtransport::TransportIdentifier::mctpOverSmBus, 0};
+        spdmtransport::TransportIdentifier::mctpOverSMBus, 0};
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
     auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
-        spdmtransport::TransportIdentifier::mctpOverSmBus);
+        spdmtransport::TransportIdentifier::mctpOverSMBus);
     boost::asio::steady_timer timer(*ioc);
+    spdmapplib::spdmConfiguration spdmRequesterCfg;
     uint8_t eid;
     CLI::App app("SPDM requester verify tool");
     app.add_option("--eid", eid, "Responder MCTP EID    : uint8_t")->required();
@@ -71,66 +77,76 @@ int main(int argc, char* argv[])
 
     std::cerr << "Assigned responder EID: " << static_cast<uint16_t>(eid)
               << std::endl;
-    responderCfg.devIdentifer = eid;
+    responderCfg.devIdentifier = eid;
+    do
+    {
+        spdmRequesterCfg =
+            getConfigurationFromEntityManager(conn, "SPDM_requester");
+        if (spdmRequesterCfg.version)
+        {
+            break;
+        }
+        else
+        {
+            std::cerr
+                << "Can't get SPDM requester configuration from EntityManager. Wait for 1 second."
+                << std::endl;
+            sleep(1);
+        }
+    } while (true);
 
     if (pspdmRequester->initRequester(
             ioc, conn, trans,
-            static_cast<spdmtransport::transportEndPoint*>(&responderCfg)) == 0)
+            static_cast<spdmtransport::transportEndPoint*>(&responderCfg),
+            &spdmRequesterCfg) == 0)
     {
         std::cerr << "spdm_requester started." << std::endl;
-        boost::asio::spawn(*(ioc), [&](boost::asio::yield_context yield) {
-            UNUSED(yield);
-            int selTest = 0;
-            timer.expires_after(std::chrono::seconds(1));
-            timer.async_wait([&](boost::system::error_code ec) {
-                if (ec == boost::asio::error::operation_aborted)
+        int selTest = 0;
+        timer.expires_after(std::chrono::seconds(1));
+        timer.async_wait([&](boost::system::error_code ec) {
+            if (ec == boost::asio::error::operation_aborted)
+            {
+                return;
+            }
+            else if (ec)
+            {
+                std::cerr << "Timer error " << ec.message() << std::endl;
+                return;
+            }
+            bool testRun = true;
+            while (testRun)
+            {
+                displayMenu();
+                std::cerr << "Enter test selection Number: ";
+                std::cin >> selTest;
+                std::cerr << "\nThe selection is " << selTest << std::endl;
+                switch (selTest)
                 {
-                    return;
+                    case 1:
+                        std::cerr << "Execute do_authentication()."
+                                  << std::endl;
+                        pspdmRequester->do_authentication();
+                        break;
+                    case 2:
+                        std::cerr << "Execute do_measurement()." << std::endl;
+                        pspdmRequester->do_measurement(NULL);
+                        break;
+                    case 3:
+                        std::cerr << "Execute get_certificate()." << std::endl;
+                        dumpVector(pspdmRequester->get_certificate().value());
+                        break;
+                    case 4:
+                        std::cerr << "Execute get_measurements()." << std::endl;
+                        dumpVector(pspdmRequester->get_measurements().value());
+                        break;
+                    default:
+                        testRun = false;
+                        std::cerr << "Quit!" << std::endl;
                 }
-                else if (ec)
-                {
-                    std::cerr << "Timer error " << ec.message() << std::endl;
-                    return;
-                }
-                bool testRun = true;
-                while (testRun)
-                {
-                    displayMenu();
-                    std::cerr << "Enter test selection Number: ";
-                    std::cin >> selTest;
-                    std::cerr << "\nThe selection is " << selTest << std::endl;
-                    switch (selTest)
-                    {
-                        case 1:
-                            std::cerr << "Execute do_authentication()."
-                                      << std::endl;
-                            pspdmRequester->do_authentication();
-                            break;
-                        case 2:
-                            std::cerr << "Execute do_measurement()."
-                                      << std::endl;
-                            pspdmRequester->do_measurement(NULL);
-                            break;
-                        case 3:
-                            std::cerr << "Execute get_certificate()."
-                                      << std::endl;
-                            dumpVector(
-                                pspdmRequester->get_certificate().value());
-                            break;
-                        case 4:
-                            std::cerr << "Execute get_measurements()."
-                                      << std::endl;
-                            dumpVector(
-                                pspdmRequester->get_measurements().value());
-                            break;
-                        default:
-                            testRun = false;
-                            std::cerr << "Quit!" << std::endl;
-                    }
-                }
-                ioc->stop();
-            });
+            }
+            ioc->stop();
         });
+        // });
 
         ioc->run();
     }

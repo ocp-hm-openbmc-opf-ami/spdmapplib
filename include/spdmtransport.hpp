@@ -1,3 +1,18 @@
+/**
+ * Copyright © 2022 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 #include <boost/asio.hpp>
@@ -6,13 +21,13 @@ using namespace sdbusplus;
 namespace spdmtransport
 {
 /**
- * @brief Defind callback function prototype
+ * @brief Define callback function prototype
  *
  * @param ptransEP Pointer to transportEndPoint object.
  * @param data Pointer to a buffer.
  */
 
-using AddRemoreDeviceCallback = std::function<int(void* ptransEP)>;
+using AddRemoveDeviceCallback = std::function<int(void* ptransEP)>;
 using MsgReceiveCallback =
     std::function<void(void* ptransEP, const std::vector<uint8_t>& data)>;
 
@@ -22,9 +37,9 @@ using MsgReceiveCallback =
  */
 enum class TransportIdentifier : uint8_t
 {
-    mctpOverSmBus = 0x01,
-    pmtWatcher = 0x02, /*Intel specific transport*/
-    SDSi = 0x03        // SDSi
+    mctpOverSMBus = 0x01,
+    mctpOverPCIe = 0x02,
+    pmtWatcher = 0x03, /*Intel specific transport*/
 };
 
 /**
@@ -34,7 +49,7 @@ enum class TransportIdentifier : uint8_t
 typedef struct
 {
     TransportIdentifier transType; /*interface type.*/
-    uint8_t devIdentifer;
+    uint8_t devIdentifier;
 } transportEndPoint;
 
 /**
@@ -64,14 +79,15 @@ class spdmTransport
     virtual int initTransport(
         std::shared_ptr<boost::asio::io_service> io,
         std::shared_ptr<sdbusplus::asio::connection> conn,
-        AddRemoreDeviceCallback addCB, AddRemoreDeviceCallback delCB,
+        AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
         MsgReceiveCallback msgRcvCB =
             nullptr) = 0; // override this function in implementation
-                          /**
-                           * @brief Get the interface type of transport layer
-                           * @return TransportIdentifier
-                           *
-                           **/
+
+    /**
+     * @brief Get the interface type of transport layer
+     * @return TransportIdentifier
+     *
+     **/
     virtual TransportIdentifier getTransType(void) = 0;
 
     /****************************************************

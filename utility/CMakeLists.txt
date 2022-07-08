@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 set(src_spdm_requester 
-        ${PROJECT_SOURCE_DIR}/utility/spdm_requester.cpp)
+        ${PROJECT_SOURCE_DIR}/utility/spdm_requester.cpp ${PROJECT_SOURCE_DIR}/utility/util.cpp)
 
 ADD_EXECUTABLE(spdm_requester ${src_spdm_requester})
 

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,23 +60,28 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
  * @param  io                boost io_service object..
  * @param  trans             The pointer of transport instance.
  * @param  ptransResponder   The pointer to assigned responder EndPoint.
+ * @param  pSpdmConfig       The pointer to a spdmConfiguration structure.
  * @return 0: success, other: listed in spdmapplib::errorCodes
  **/
 int spdmRequesterImpl::initRequester(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
-    spdmtransport::transportEndPoint* ptransResponder)
+    spdmtransport::transportEndPoint* ptransResponder,
+    spdmConfiguration* pSpdmConfig)
 {
     using namespace std::placeholders;
     spdmtransport::transportEndPoint* pTmp;
     int intResult = -1;
     bResponderFound = false; // init member variable.
     pio = io;
-    spdmRequesterCfg =
-        spdmapplib::getConfigurationFromEntityManager(conn, "SPDM_requester");
+    spdmRequesterCfg = *pSpdmConfig;
     if (spdmRequesterCfg.version)
     {
+        if (setCertificatePath(spdmRequesterCfg.certPath) == false)
+        {
+            return -1;
+        }
         m_exe_connection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                             EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS | 0);
         pTmp = static_cast<spdmtransport::transportEndPoint*>(&transResponder);

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,16 +127,20 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
  **/
 int spdmResponderImpl::initResponder(
     std::shared_ptr<boost::asio::io_service> io,
-    std::shared_ptr<spdmtransport::spdmTransport> trans)
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    std::shared_ptr<spdmtransport::spdmTransport> trans,
+    spdmConfiguration* pSpdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;
-    auto conn = std::make_shared<sdbusplus::asio::connection>(*io);
     pio = io;
-    spdmResponderCfg =
-        spdmapplib::getConfigurationFromEntityManager(conn, "SPDM_responder");
+    spdmResponderCfg = *pSpdmConfig;
     if (spdmResponderCfg.version)
     {
+        if (setCertificatePath(spdmResponderCfg.certPath) == false)
+        {
+            return -1;
+        }
         spdmTrans = trans;
         spdmTrans->initTransport(
             io, conn, std::bind(&spdmResponderImpl::addNewDevice, this, _1),

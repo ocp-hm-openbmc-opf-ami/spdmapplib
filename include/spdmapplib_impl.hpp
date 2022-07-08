@@ -1,3 +1,18 @@
+/**
+ * Copyright © 2022 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #pragma once
 #include "spdmapplib.hpp"
 extern "C"
@@ -6,6 +21,7 @@ extern "C"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_responder_lib.h"
 #include "spdm_device_secret_lib_internal.h"
+    extern bool setCertificatePath(char* certPath);
 }
 // for testing
 #define EXE_CONNECTION_VERSION_ONLY 0x1
@@ -58,29 +74,6 @@ typedef struct
 } spdmItem;
 
 /**
- * @brief SPDM configurations from EntityManager
- *
- */
-typedef struct
-{
-    /* SPDM Version */
-    uint32_t version;
-    /* library can support requester and responder roles */
-    /* Responder configurations */
-    uint32_t capability;
-    uint32_t hash;
-    uint32_t measHash;
-    uint32_t asym;
-    uint32_t reqasym;
-    uint32_t dhe;
-    uint32_t aead;
-    uint32_t slotcount;
-
-    /* Requester configurations */
-    uint32_t transportTimeouts;
-} spdmConfiguration;
-
-/**
  * @brief SPDM responder implementation class
  *
  */
@@ -99,9 +92,10 @@ class spdmResponderImpl : public spdmResponder
      * @param  trans             The pointer of transport instance.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initResponder(
-        std::shared_ptr<boost::asio::io_service> io,
-        std::shared_ptr<spdmtransport::spdmTransport> trans) override;
+    int initResponder(std::shared_ptr<boost::asio::io_service> io,
+                      std::shared_ptr<sdbusplus::asio::connection> conn,
+                      std::shared_ptr<spdmtransport::spdmTransport> trans,
+                      spdmConfiguration* spdmConfig) override;
 
     /*APIs called by transport layer*/
     /**
@@ -239,11 +233,11 @@ class spdmRequesterImpl : public spdmRequester
      * @param  ptransResponder   The pointer to assigned responder EndPoint.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initRequester(
-        std::shared_ptr<boost::asio::io_service> io,
-        std::shared_ptr<sdbusplus::asio::connection> conn,
-        std::shared_ptr<spdmtransport::spdmTransport> trans,
-        spdmtransport::transportEndPoint* ptransResponder) override;
+    int initRequester(std::shared_ptr<boost::asio::io_service> io,
+                      std::shared_ptr<sdbusplus::asio::connection> conn,
+                      std::shared_ptr<spdmtransport::spdmTransport> trans,
+                      spdmtransport::transportEndPoint* ptransResponder,
+                      spdmConfiguration* spdmConfig) override;
     /**
      * @brief The authentication function
      *
@@ -376,26 +370,7 @@ class spdmRequesterImpl : public spdmRequester
 };
 
 /*Utility functions.*/
-using configurationField =
-    std::variant<bool, uint64_t, std::string, std::vector<std::string>>;
-using configurationMap = std::unordered_map<std::string, configurationField>;
 
-/*
-API to get SPDM configuration from Entity Manager. Called by requester and
-responder. Consider to move to base class of requester and responder
-*/
-/**
- * @brief The utility function to get configuration from EntityManager.
- *
- * @param  conn          shared_ptr of sdbusplus::asio::connection.
- * @param  configurationName          Name of
- *configuration("SPDM_responder"/"SPDM_requester").
- * @return spdmConfiguration.
- *
- **/
-spdmConfiguration getConfigurationFromEntityManager(
-    std::shared_ptr<sdbusplus::asio::connection> conn,
-    const std::string& configurationName);
 /**
  * @brief Compare given endpoints.
  *

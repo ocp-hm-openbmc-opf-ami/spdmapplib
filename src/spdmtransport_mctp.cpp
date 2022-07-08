@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,16 +29,17 @@ namespace spdmtransport
  * @brief Function registered to mctpwrapper as receiving message Callback.
  *
  **/
-void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid, bool,
-                                             uint8_t,
+void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
+                                             bool /*tagOwner*/,
+                                             uint8_t /* msgTag*/,
                                              const std::vector<uint8_t>& data,
-                                             int)
+                                             int /*status*/)
 {
     if (!data.empty() &&
         data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
     { // only SPDM message arrive here.
         transportEndPoint tmpEP;
-        tmpEP.devIdentifer = srcEid;
+        tmpEP.devIdentifier = srcEid;
         tmpEP.transType = getTransType();
         msgReceiveCB(&tmpEP, data);
     }
@@ -48,10 +49,9 @@ void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid, bool,
  * @brief Function registered to mctpwrapper as device update handler.
  *
  **/
-void spdmTransportMCTP::transOnDeviceUpdate(void*, const mctpw::Event& evt,
-                                            boost::asio::yield_context yield)
+void spdmTransportMCTP::transOnDeviceUpdate(
+    void*, const mctpw::Event& evt, boost::asio::yield_context /*yield*/)
 {
-    UNUSED(yield);
     switch (evt.type)
     {
         case mctpw::Event::EventType::deviceAdded:
@@ -83,7 +83,7 @@ void spdmTransportMCTP::transOnDeviceUpdate(void*, const mctpw::Event& evt,
 int spdmTransportMCTP::initTransport(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> conn,
-    AddRemoreDeviceCallback addCB, AddRemoreDeviceCallback delCB,
+    AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
     MsgReceiveCallback msgRcvCB)
 {
     using namespace std::placeholders;
@@ -93,7 +93,7 @@ int spdmTransportMCTP::initTransport(
     removeDeviceCB = delCB;
     msgReceiveCB = msgRcvCB;
     mctpw::BindingType bindingType;
-    if (transType == spdmtransport::TransportIdentifier::mctpOverSmBus)
+    if (transType == spdmtransport::TransportIdentifier::mctpOverSMBus)
     {
         bindingType = mctpw::BindingType::mctpOverSmBus;
     }
@@ -128,7 +128,7 @@ int spdmTransportMCTP::initTransport(
 int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
     transportEndPoint newEP;
-    newEP.devIdentifer = eid;
+    newEP.devIdentifier = eid;
     return removeDeviceCB == nullptr ? false : removeDeviceCB(&newEP);
 }
 
@@ -140,12 +140,7 @@ int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
  **/
 int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 {
-    transportEndPoint* pnewEP;
-    pnewEP = (transportEndPoint*)malloc(sizeof(transportEndPoint));
-    if (pnewEP == NULL)
-    {
-        return false;
-    }
+    transportEndPoint tmpEP;
     try
     {
         auto it = mctpWrapper->getEndpointMap().find(eid);
@@ -155,8 +150,6 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
                 ("spdmTransportMCTP::transAddNewDevice Error add device: " +
                  std::to_string(eid))
                     .c_str());
-            free(pnewEP);
-            pnewEP = NULL;
             return false;
         }
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
@@ -172,9 +165,9 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
                 .c_str());
         return false;
     }
-    pnewEP->devIdentifer = eid;
-    pnewEP->transType = transType;
-    return addNewDeviceCB == nullptr ? false : addNewDeviceCB(pnewEP);
+    tmpEP.devIdentifier = eid;
+    tmpEP.transType = transType;
+    return addNewDeviceCB == nullptr ? false : addNewDeviceCB((void*)&tmpEP);
 }
 
 /**
@@ -200,11 +193,11 @@ int spdmTransportMCTP::asyncSendData(transportEndPoint* ptransEP,
     if (ptransEP == NULL)
         return -1;
 
-    data.push_back(5);
+    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
 
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->devIdentifer;
+    mctpw::eid_t eid = ptransEP->devIdentifier;
 
     boost::asio::spawn(*(pio), [this, eid,
                                 data](boost::asio::yield_context yield) {
@@ -240,11 +233,12 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
     uint8_t* requestPayload = (uint8_t*)request;
     if (ptransEP == NULL)
         return -1;
-    data.push_back(5); // SPDM mctp ID
+    data.push_back(
+        static_cast<uint8_t>(mctpw::MessageType::spdm)); // SPDM mctp ID
 
     for (j = 0; j < requestSize; j++)
         data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->devIdentifer;
+    mctpw::eid_t eid = ptransEP->devIdentifier;
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         ("spdmTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) +
          ", data size: " + std::to_string(data.size()) +
