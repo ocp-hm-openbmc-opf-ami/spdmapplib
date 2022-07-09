@@ -62,7 +62,6 @@ extern "C"
             sprintf(newFileName, "%s", fileName);
         if ((fp = fopen(newFileName, "rb")) == NULL)
         {
-
             printf("Unable to open file %s\n", newFileName);
             *fileData = NULL;
             return false;
@@ -113,48 +112,3 @@ extern "C"
         }
     }
 }
-
-namespace spdmapplib
-{
-/*utility functions*/
-/**
- * @brief Compare given endpoints.
- *
- * @param  pOne          The 1st endpoint te be matched.
- * @param  pTwo          The 2nd endpoint te be matched.
- * @return true: matched, false: different.
- *
- **/
-bool matchDevice(spdmtransport::transportEndPoint* pOne,
-                 spdmtransport::transportEndPoint* pTwo)
-{
-    if (pOne == NULL || pTwo == NULL)
-        return false;
-    if (pOne->transType == pTwo->transType)
-    {
-        return (pOne->devIdentifier == pTwo->devIdentifier);
-    }
-    else
-    {
-        return false;
-    }
-}
-
-/**
- * @brief Duplicate Endpoint content.
- *
- * @param  pOne          The target endpoint te be copied.
- * @param  pTwo          The source endpoint te be copied.
- * @return true: success, false: failed.
- *
- **/
-bool copyDevice(spdmtransport::transportEndPoint* pOne,
-                spdmtransport::transportEndPoint* pTwo)
-{
-    if (pOne == NULL || pTwo == NULL)
-        return false;
-    memcpy(pOne, pTwo, sizeof(spdmtransport::transportEndPoint));
-    return true;
-}
-
-} // namespace spdmapplib

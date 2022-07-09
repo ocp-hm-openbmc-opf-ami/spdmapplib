@@ -16,6 +16,7 @@
 
 #include "library/spdm_transport_none_lib.h"
 
+#include "mctp_wrapper.hpp"
 #include "spdmapplib_impl.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -46,8 +47,18 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     if (pTmp == NULL)
         return false;
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
-    return pspdmTmp->deviceSendMessage(spdmContext, requestSize, request,
-                                       timeout);
+
+    uint32_t j;
+    std::vector<uint8_t> data;
+
+    uint8_t* requestPayload = (uint8_t*)request;
+
+    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
+
+    for (j = 0; j < requestSize; j++)
+        data.push_back(*(requestPayload + j));
+
+    return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }
 
 /**
@@ -65,13 +76,18 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
                                             uint64_t timeout)
 {
     void* pTmp = NULL;
+    return_status status;
     spdmResponderImpl* pspdmTmp = NULL;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == NULL)
         return false;
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
-    return pspdmTmp->deviceReceiveMessage(spdmContext, responseSize, response,
-                                          timeout);
+
+    std::vector<uint8_t> rspData{};
+    status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
+    *responseSize = rspData.size() - 1; // skip MessageType byte
+    std::copy(rspData.begin() + 1, rspData.end(), (uint8_t*)response);
+    return status;
 }
 
 /**
@@ -129,12 +145,12 @@ int spdmResponderImpl::initResponder(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
-    SpdmConfiguration* pSpdmConfig)
+    SpdmConfiguration& spdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;
     pio = io;
-    spdmResponderCfg = *pSpdmConfig;
+    spdmResponderCfg = spdmConfig;
     if (spdmResponderCfg.version)
     {
         if (setCertificatePath(spdmResponderCfg.certPath) == false)
@@ -160,18 +176,17 @@ int spdmResponderImpl::initResponder(
 /**
  * @brief Called when endpoint remove is detected.
  *
- * @param  ptransEP          The pointer to the removed endpoint object.
+ * @param  transEndpoint          The endpoint to be removed.
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::removeDevice(void* ptransEndpoint)
+int spdmResponderImpl::removeDevice(
+    spdmtransport::transportEndPoint& transEndpoint)
 {
     uint8_t i;
     for (i = 0; i < curIndex; i++)
     {
-        if (matchDevice(
-                &spdmPool[i].transEP,
-                static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint)))
+        if (spdmPool[i].transEP == transEndpoint)
             break;
     }
     if (i >= curIndex)
@@ -189,11 +204,12 @@ int spdmResponderImpl::removeDevice(void* ptransEndpoint)
 /**
  * @brief Called when new endpoint detected.
  *
- * @param  ptransEP          The pointer to the new endpoint object.
+ * @param  transEndpoint          The new endpoint object.
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
+int spdmResponderImpl::addNewDevice(
+    spdmtransport::transportEndPoint& transEndpoint)
 {
     using namespace std::placeholders;
 
@@ -208,8 +224,7 @@ int spdmResponderImpl::addNewDevice(void* ptransEndpoint)
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         "spdmResponderImpl::addNewDevice");
-    copyDevice(&newItem.transEP,
-               static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint));
+    newItem.transEP = transEndpoint;
     newItem.useSlotId = 0;
     newItem.sessionId = 0;
     newItem.useVersion = 0;
@@ -401,27 +416,25 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
 /**
  * @brief Called when message received.
  *
- * @param  ptransEP      The pointer of the endpoint object to receive data.
+ * @param  transEndpoint      The endpoint object to receive data.
  * @param  data          The vector of received data.
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::addData(void* ptransEndpoint,
+int spdmResponderImpl::addData(spdmtransport::transportEndPoint& transEndpoint,
                                const std::vector<uint8_t>& data)
 {
     uint8_t i;
 
     for (i = 0; i < curIndex; i++)
     {
-        if (matchDevice(
-                &spdmPool[i].transEP,
-                static_cast<spdmtransport::transportEndPoint*>(ptransEndpoint)))
+        if (spdmPool[i].transEP == transEndpoint)
         {
             break;
         }
     }
     if (i >= curIndex)
-        return false;
+        return -1;
 
     spdmPool[i].data = data;
     return RETURN_SUCCESS;
@@ -460,15 +473,15 @@ int spdmResponderImpl::processSPDMMessage()
 /**
  * @brief Register to transport layer for handling received data.
  *
- * @param  ptransEP      The pointer of the endpoint object to receive data.
+ * @param  transEP      The endpoint object to receive data.
  * @param  data          The vector of received data.
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::msgRecvCallback(void* ptransEP,
-                                       const std::vector<uint8_t>& data)
+int spdmResponderImpl::msgRecvCallback(
+    spdmtransport::transportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
-    addData(ptransEP, data);
+    addData(transEP, data);
     return processSPDMMessage();
 };
 
@@ -476,16 +489,13 @@ int spdmResponderImpl::msgRecvCallback(void* ptransEP,
  * @brief Register to libspdm for receiving SPDM response payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
- * @param  responseSize     The variable pointer for received data size.
- * @param  response         The response data buffer pointer.
+ * @param  response         The response data buffer vector.
  * @param  timeout          The timeout time.
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmResponderImpl::deviceReceiveMessage(void* spdmContext,
-                                                      uintn* responseSize,
-                                                      void* response,
-                                                      uint64_t /*timeout*/)
+return_status spdmResponderImpl::deviceReceiveMessage(
+    void* spdmContext, std::vector<uint8_t>& response, uint64_t /*timeout*/)
 {
     uint8_t i;
 
@@ -497,12 +507,11 @@ return_status spdmResponderImpl::deviceReceiveMessage(void* spdmContext,
     if (i >= curIndex)
         return RETURN_DEVICE_ERROR;
 
-    if (spdmPool[i].data.size() <= 1)
-        return RETURN_DEVICE_ERROR;
-    *responseSize = spdmPool[i].data.size() - 1;
-    std::copy(spdmPool[i].data.begin() + 1, spdmPool[i].data.end(),
-              (uint8_t*)response);
-    spdmPool[i].data.clear();
+    response = std::move(spdmPool[i].data);
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("spdmResponderImpl::deviceReceiveMessage responseSize: " +
+         std::to_string(response.size()))
+            .c_str());
     return RETURN_SUCCESS;
 }
 
@@ -510,18 +519,14 @@ return_status spdmResponderImpl::deviceReceiveMessage(void* spdmContext,
  * @brief Register to libspdm for sending SPDM payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
- * @param  requestSize      The request payload size.
- * @param  request          The request payload data buffer.
+ * @param  request          The request payload data vector.
  * @param  timeout          The timeout time.
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmResponderImpl::deviceSendMessage(void* spdmContext,
-                                                   uintn requestSize,
-                                                   const void* request,
-                                                   uint64_t timeout)
+return_status spdmResponderImpl::deviceSendMessage(
+    void* spdmContext, const std::vector<uint8_t>& request, uint64_t timeout)
 {
-    UNUSED(timeout);
     uint8_t i;
     for (i = 0; i < curIndex; i++)
     {
@@ -530,8 +535,7 @@ return_status spdmResponderImpl::deviceSendMessage(void* spdmContext,
     }
     if (i >= curIndex)
         return RETURN_DEVICE_ERROR;
-    return spdmTrans->asyncSendData(&spdmPool[i].transEP, requestSize, request,
-                                    timeout);
+    return spdmTrans->asyncSendData(spdmPool[i].transEP, request, timeout);
 }
 
 /**

@@ -15,6 +15,7 @@
  */
 #include "library/spdm_transport_none_lib.h"
 
+#include "mctp_wrapper.hpp"
 #include "spdmapplib_impl.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -36,8 +37,18 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     if (pTmp == NULL)
         return false;
     pspdmTmp = static_cast<spdmRequesterImpl*>(pTmp);
-    return pspdmTmp->deviceSendMessage(spdmContext, requestSize, request,
-                                       timeout);
+
+    uint32_t j;
+    std::vector<uint8_t> data;
+
+    uint8_t* requestPayload = (uint8_t*)request;
+
+    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
+
+    for (j = 0; j < requestSize; j++)
+        data.push_back(*(requestPayload + j));
+
+    return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }
 
 return_status requesterDeviceReceiveMessage(void* spdmContext,
@@ -45,13 +56,17 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
                                             uint64_t timeout)
 {
     void* pTmp = NULL;
+    return_status status;
     spdmRequesterImpl* pspdmTmp = NULL;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == NULL)
         return false;
     pspdmTmp = static_cast<spdmRequesterImpl*>(pTmp);
-    return pspdmTmp->deviceReceiveMessage(spdmContext, responseSize, response,
-                                          timeout);
+    std::vector<uint8_t> rspData{};
+    status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
+    *responseSize = rspData.size() - 1; // skip MessageType byte
+    std::copy(rspData.begin() + 1, rspData.end(), (uint8_t*)response);
+    return status;
 }
 
 /**
@@ -59,23 +74,22 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
  *
  * @param  io                boost io_service object..
  * @param  trans             The pointer of transport instance.
- * @param  ptransResponder   The pointer to assigned responder EndPoint.
- * @param  pSpdmConfig       The pointer to a SpdmConfiguration structure.
+ * @param  cfgTransResponder Assigned responder EndPoint.
+ * @param  spdmConfig        User input SpdmConfiguration.
  * @return 0: success, other: listed in spdmapplib::errorCodes
  **/
 int spdmRequesterImpl::initRequester(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
-    spdmtransport::transportEndPoint* ptransResponder,
-    SpdmConfiguration* pSpdmConfig)
+    spdmtransport::transportEndPoint& cfgTransResponder,
+    SpdmConfiguration& spdmConfig)
 {
     using namespace std::placeholders;
-    spdmtransport::transportEndPoint* pTmp;
     int intResult = -1;
     bResponderFound = false; // init member variable.
     pio = io;
-    spdmRequesterCfg = *pSpdmConfig;
+    spdmRequesterCfg = spdmConfig;
     if (spdmRequesterCfg.version)
     {
         if (setCertificatePath(spdmRequesterCfg.certPath) == false)
@@ -84,27 +98,22 @@ int spdmRequesterImpl::initRequester(
         }
         mExeConnection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                           EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS | 0);
-        pTmp = static_cast<spdmtransport::transportEndPoint*>(&transResponder);
+        transResponder = cfgTransResponder;
         spdmTrans = trans;
-        if (copyDevice(pTmp, ptransResponder))
+        intResult = setupResponder(transResponder);
+        if (intResult == 0)
         {
-            intResult = setupResponder(pTmp);
-            if (intResult == 0)
-            {
-                spdmTrans->initTransport(
-                    io, conn,
-                    std::bind(&spdmRequesterImpl::checkResponderDevice, this,
-                              _1),
-                    NULL,
-                    std::bind(&spdmRequesterImpl::msgRecvCallback, this, _1,
-                              _2));
-            }
-            phosphor::logging::log<phosphor::logging::level::INFO>(
-                ("spdmRequesterImpl::initRequester intResult: " +
-                 std::to_string(intResult) +
-                 ", bResponderFound: " + std::to_string(bResponderFound))
-                    .c_str());
+            spdmTrans->initTransport(
+                io, conn,
+                std::bind(&spdmRequesterImpl::checkResponderDevice, this, _1),
+                NULL,
+                std::bind(&spdmRequesterImpl::msgRecvCallback, this, _1, _2));
         }
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            ("spdmRequesterImpl::initRequester intResult: " +
+             std::to_string(intResult) +
+             ", bResponderFound: " + std::to_string(bResponderFound))
+                .c_str());
     }
     else
     {
@@ -124,14 +133,11 @@ int spdmRequesterImpl::initRequester(
  * @return 0: success, other: failed.
  *
  **/
-int spdmRequesterImpl::checkResponderDevice(void* ptransEP)
+// int spdmRequesterImpl::checkResponderDevice(void* ptransEP)
+int spdmRequesterImpl::checkResponderDevice(
+    spdmtransport::transportEndPoint& transEP)
 {
-    if (ptransEP == NULL)
-    {
-        return false;
-    }
-    if (matchDevice(&spdmResponder.transEP,
-                    static_cast<spdmtransport::transportEndPoint*>(ptransEP)))
+    if (spdmResponder.transEP == transEP)
     {
         phosphor::logging::log<phosphor::logging::level::INFO>(
             "Found Responder!!");
@@ -397,8 +403,7 @@ int spdmRequesterImpl::settingFromConfig(void)
  * @return return_status defined in libspdm.
  *
  **/
-int spdmRequesterImpl::setupResponder(
-    spdmtransport::transportEndPoint* ptransEP)
+int spdmRequesterImpl::setupResponder(spdmtransport::transportEndPoint& transEP)
 {
     return_status status;
     spdmResponder.pspdmContext = (void*)malloc(libspdm_get_context_size());
@@ -408,7 +413,8 @@ int spdmRequesterImpl::setupResponder(
     }
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "spdmRequesterImpl::setupResponder");
-    copyDevice(&spdmResponder.transEP, ptransEP);
+    // copyDevice(&spdmResponder.transEP, ptransEP);
+    spdmResponder.transEP = transEP;
     spdmResponder.useSlotId = 0;
     spdmResponder.sessionId = 0;
     spdmResponder.useVersion = 0;
@@ -442,20 +448,20 @@ int spdmRequesterImpl::setupResponder(
 /**
  * @brief Set received data to assigned endpoint.
  *
- * @param  ptransEP          Endpoint object pointer.
+ * @param  transEP          The Endpoint object to receive data.
  * @param  trans             The pointer of transport instance.
  * @return 0: success, other: failed.
  *
  **/
-int spdmRequesterImpl::addData(void* ptransEP, const std::vector<uint8_t>& data)
+int spdmRequesterImpl::addData(spdmtransport::transportEndPoint& transEP,
+                               const std::vector<uint8_t>& data)
 {
-    if (matchDevice(&spdmResponder.transEP,
-                    static_cast<spdmtransport::transportEndPoint*>(ptransEP)))
+    if (spdmResponder.transEP == transEP)
     {
         spdmResponder.data = data;
         return RETURN_SUCCESS;
     }
-    return false;
+    return -1;
 }
 
 /**
@@ -464,16 +470,16 @@ int spdmRequesterImpl::addData(void* ptransEP, const std::vector<uint8_t>& data)
  *
  *  The function will be called when send/receive is completed in transport
  *layer.
- * @param  ptransEP         Pointer to the endpoint the received data send
+ * @param  transEP         The endpoint the received data after send.
  *to.
  * @param  data             The received data buffer.
  * @return 0: success, other: failed.
  *
  **/
-int spdmRequesterImpl::msgRecvCallback(void* ptransEP,
-                                       const std::vector<uint8_t>& data)
+int spdmRequesterImpl::msgRecvCallback(
+    spdmtransport::transportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
-    addData(ptransEP, data);
+    addData(transEP, data);
     return RETURN_SUCCESS;
 };
 
@@ -481,23 +487,18 @@ int spdmRequesterImpl::msgRecvCallback(void* ptransEP,
  * @brief Register to libspdm for receiving SPDM response payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
- * @param  responseSize     The variable pointer for received data size.
- * @param  response         The response data buffer pointer.
+ * @param  response         The response data buffer vector.
  * @param  timeout          The timeout time.
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
-                                                      uintn* responseSize,
-                                                      void* response,
-                                                      uint64_t /*timeout*/)
+return_status spdmRequesterImpl::deviceReceiveMessage(
+    void* /*spdmContext*/, std::vector<uint8_t>& response, uint64_t /*timeout*/)
 {
-    *responseSize = spdmResponder.data.size() - 1;
-    std::copy(spdmResponder.data.begin() + 1, spdmResponder.data.end(),
-              (uint8_t*)response);
-    spdmResponder.data.clear();
+    response = std::move(spdmResponder.data);
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("deviceReceiveMessage responseSize: " + std::to_string(*responseSize))
+        ("deviceReceiveMessage responseSize: " +
+         std::to_string(response.size()))
             .c_str());
     return RETURN_SUCCESS;
 }
@@ -506,23 +507,22 @@ return_status spdmRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
  * @brief Register to libspdm for sending SPDM payload.
  *
  * @param  spdmContext      The pointer of the spdmcontext.
- * @param  requestSize      The request payload size.
- * @param  request          The request payload data buffer.
+ * @param  request          The request payload data vector.
  * @param  timeout          The timeout time.
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
-                                                   uintn requestSize,
-                                                   const void* request,
-                                                   uint64_t timeout)
+return_status
+    spdmRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
+                                         const std::vector<uint8_t>& request,
+                                         uint64_t timeout)
 {
     using namespace std::placeholders;
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("deviceSendMessage requestSize: " + std::to_string(requestSize))
+        ("deviceSendMessage requestSize: " + std::to_string(request.size()))
             .c_str());
     return spdmTrans->syncSendRecvData(
-        &spdmResponder.transEP, requestSize, request, timeout,
+        spdmResponder.transEP, request, timeout,
         std::bind(&spdmRequesterImpl::msgRecvCallback, this, _1, _2));
 }
 
@@ -531,7 +531,7 @@ return_status spdmRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
  * @return 0: success, other: failed.
  *
  **/
-int spdmRequesterImpl::do_authentication(void)
+int spdmRequesterImpl::doAuthentication(void)
 {
     if (bResponderFound)
     {
@@ -550,7 +550,7 @@ int spdmRequesterImpl::do_authentication(void)
         if (settingFromConfig() == RETURN_SUCCESS)
         {
             phosphor::logging::log<phosphor::logging::level::INFO>(
-                "spdmRequesterImpl::do_authentication starting...");
+                "spdmRequesterImpl::doAuthentication starting...");
             /** Executing following functions.
                 get_digest
                 get_certificate
@@ -563,7 +563,7 @@ int spdmRequesterImpl::do_authentication(void)
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("spdmRequesterImpl::do_authentication libspdm_get_digest Error!- " +
+                        ("spdmRequesterImpl::doAuthentication libspdm_get_digest Error!- " +
                          std::to_string(status))
                             .c_str());
                     free(spdmResponder.pspdmContext);
@@ -573,7 +573,7 @@ int spdmRequesterImpl::do_authentication(void)
                 else
                 {
                     phosphor::logging::log<phosphor::logging::level::INFO>(
-                        "spdmRequesterImpl::do_authentication libspdm_get_digest completed!");
+                        "spdmRequesterImpl::doAuthentication libspdm_get_digest completed!");
                 }
             }
 
@@ -587,7 +587,7 @@ int spdmRequesterImpl::do_authentication(void)
                     if (RETURN_ERROR(status))
                     {
                         phosphor::logging::log<phosphor::logging::level::ERR>(
-                            ("spdmRequesterImpl::do_authentication libspdm_get_certificate Error! - " +
+                            ("spdmRequesterImpl::doAuthentication libspdm_get_certificate Error! - " +
                              std::to_string(status))
                                 .c_str());
                         free(spdmResponder.pspdmContext);
@@ -598,7 +598,7 @@ int spdmRequesterImpl::do_authentication(void)
                     else
                     {
                         phosphor::logging::log<phosphor::logging::level::INFO>(
-                            "spdmRequesterImpl::do_authentication libspdm_get_certificate completed!");
+                            "spdmRequesterImpl::doAuthentication libspdm_get_certificate completed!");
                         // Keep certificate to reserved vector.
                         if (spdmResponder.dataCert.size() == 0)
                         {
@@ -618,7 +618,7 @@ int spdmRequesterImpl::do_authentication(void)
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("spdmRequesterImpl::do_authentication libspdm_challenge Error! - " +
+                        ("spdmRequesterImpl::doAuthentication libspdm_challenge Error! - " +
                          std::to_string(status))
                             .c_str());
                     free(spdmResponder.pspdmContext);
@@ -628,23 +628,23 @@ int spdmRequesterImpl::do_authentication(void)
                 else
                 {
                     phosphor::logging::log<phosphor::logging::level::INFO>(
-                        "spdmRequesterImpl::do_authentication libspdm_challenge completed!");
+                        "spdmRequesterImpl::doAuthentication libspdm_challenge completed!");
                 }
             }
             phosphor::logging::log<phosphor::logging::level::INFO>(
-                "spdmRequesterImpl::do_authentication Pass!!");
+                "spdmRequesterImpl::doAuthentication Pass!!");
         }
         else
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
-                "spdmRequesterImpl::do_authentication responder setting error!");
+                "spdmRequesterImpl::doAuthentication responder setting error!");
             return -1;
         }
     }
     else
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "spdmRequesterImpl::do_authentication responder not found yet!");
+            "spdmRequesterImpl::doAuthentication responder not found yet!");
         return -1;
     }
     return RETURN_SUCCESS;
@@ -658,7 +658,7 @@ int spdmRequesterImpl::do_authentication(void)
  * @return 0: success, other: failed.
  *
  **/
-int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
+int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
 {
     return_status status;
     uint8_t number_of_blocks;
@@ -670,13 +670,12 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
     uint8_t request_attribute;
 
     phosphor::logging::log<phosphor::logging::level::INFO>(
-        "Requesting all the Measurements in do_measurement!!");
+        "Requesting all the Measurements.");
     if (bResponderFound && (spdmResponder.pspdmContext != NULL))
     {
         if (mUseMeasurementOperation ==
             SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS)
         {
-
             /* request all at one time.*/
 
             request_attribute =
@@ -693,15 +692,15 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 return status;
             }
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("spdmRequesterImpl::do_measurement number_of_block - " +
+                ("spdmRequesterImpl::doMeasurement number_of_block - " +
                  std::to_string(number_of_block))
                     .c_str());
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("spdmRequesterImpl::do_measurement measurement_record_length - " +
+                ("spdmRequesterImpl::doMeasurement measurement_record_length - " +
                  std::to_string(measurement_record_length))
                     .c_str());
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                "spdmRequesterImpl::do_measurement Reset measurement vector.");
+                "spdmRequesterImpl::doMeasurement Reset measurement vector.");
             // Keep measurement to reserved vector.
             spdmResponder.dataMeas = {};
 
@@ -725,7 +724,7 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 return status;
             }
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("spdmRequesterImpl::do_measurement number_of_block - " +
+                ("spdmRequesterImpl::doMeasurement number_of_block - " +
                  std::to_string(number_of_block))
                     .c_str());
             received_number_of_block = 0;
@@ -736,7 +735,7 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                     break;
                 }
                 phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                    ("spdmRequesterImpl::do_measurement index - " +
+                    ("spdmRequesterImpl::doMeasurement index - " +
                      std::to_string(index))
                         .c_str());
 
@@ -760,7 +759,7 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
                 }
                 received_number_of_block += 1;
                 phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                    ("spdmRequesterImpl::do_measurement measurement_record_length - " +
+                    ("spdmRequesterImpl::doMeasurement measurement_record_length - " +
                      std::to_string(measurement_record_length))
                         .c_str());
                 // Keep measurement to reserved vector.
@@ -776,13 +775,13 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
             }
         }
         phosphor::logging::log<phosphor::logging::level::INFO>(
-            "spdmRequesterImpl::do_measurement PASS!!");
+            "spdmRequesterImpl::doMeasurement PASS!!");
         return RETURN_SUCCESS;
     }
     else
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "spdmRequesterImpl::do_measurement Error!");
+            "spdmRequesterImpl::doMeasurement Error!");
         return -1;
     }
 }
@@ -790,11 +789,11 @@ int spdmRequesterImpl::do_measurement(const uint32_t* session_id)
 /**
  * @brief Get all measurement function
  *
- * The do_measurement should be executed  successfully before calling this
+ * The doMeasurement should be executed  successfully before calling this
  *function.
  * @return vector of all measurements.
  **/
-std::optional<std::vector<uint8_t>> spdmRequesterImpl::get_measurements()
+std::optional<std::vector<uint8_t>> spdmRequesterImpl::getMeasurements()
 {
     return spdmResponder.dataMeas;
 }
@@ -802,11 +801,11 @@ std::optional<std::vector<uint8_t>> spdmRequesterImpl::get_measurements()
 /**
  * @brief Get certification function
  *
- * The do_authentication should be executed  successfully before calling this
+ * The doAuthentication should be executed  successfully before calling this
  *function.
  * @return vector of certification.
  **/
-std::optional<std::vector<uint8_t>> spdmRequesterImpl::get_certificate()
+std::optional<std::vector<uint8_t>> spdmRequesterImpl::getCertificate()
 {
     return spdmResponder.dataCert;
 }

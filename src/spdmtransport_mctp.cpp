@@ -23,7 +23,6 @@
 
 namespace spdmtransport
 {
-
 /*Callback function for MCTPwplus  */
 /**
  * @brief Function registered to mctpwrapper as receiving message Callback.
@@ -41,7 +40,7 @@ void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
         transportEndPoint tmpEP;
         tmpEP.devIdentifier = srcEid;
         tmpEP.transType = getTransType();
-        msgReceiveCB(&tmpEP, data);
+        msgReceiveCB(tmpEP, data);
     }
 };
 
@@ -127,9 +126,10 @@ int spdmTransportMCTP::initTransport(
  **/
 int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
-    transportEndPoint newEP;
-    newEP.devIdentifier = eid;
-    return removeDeviceCB == nullptr ? false : removeDeviceCB(&newEP);
+    transportEndPoint tmpEP;
+    tmpEP.devIdentifier = eid;
+    tmpEP.transType = transType;
+    return removeDeviceCB == nullptr ? false : removeDeviceCB(tmpEP);
 }
 
 /**
@@ -141,69 +141,32 @@ int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 {
     transportEndPoint tmpEP;
-    try
-    {
-        auto it = mctpWrapper->getEndpointMap().find(eid);
-        if (mctpWrapper->getEndpointMap().end() == it)
-        {
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("spdmTransportMCTP::transAddNewDevice Error add device: " +
-                 std::to_string(eid))
-                    .c_str());
-            return false;
-        }
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("spdmTransportMCTP::transAddNewDevice Adding device: " +
-             std::to_string(eid) + " Service: " + it->second.second)
-                .c_str());
-    }
-    catch (std::exception& catchException)
-    {
-        std::string exceptionStr = catchException.what();
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("spdmTransportMCTP::transAddNewDevice Exception : " + exceptionStr)
-                .c_str());
-        return false;
-    }
     tmpEP.devIdentifier = eid;
     tmpEP.transType = transType;
-    return addNewDeviceCB == nullptr ? false : addNewDeviceCB((void*)&tmpEP);
+    return addNewDeviceCB == nullptr ? false : addNewDeviceCB(tmpEP);
 }
 
 /**
  * @brief The async send data function for responder
  *  nonblocking function to send message to remote endpoint.
  *
- * @param  ptransEP          pointer to destination endpoint.
- * @param  requestSize       The size of data to be sent.
- * @param  request           The buffer pointer of data.
+ * @param  transEP           The destination endpoint.
+ * @param  request           The vector of payload.
  * @param  timeout           The timeout time.
  * @return 0: success, other: failed.
  *
  **/
-int spdmTransportMCTP::asyncSendData(transportEndPoint* ptransEP,
-                                     uint32_t requestSize, const void* request,
-                                     uint64_t timeout)
+int spdmTransportMCTP::asyncSendData(transportEndPoint& transEP,
+                                     const std::vector<uint8_t>& request,
+                                     uint64_t /*timeout*/)
 {
-    UNUSED(timeout);
-    uint32_t j;
-    std::vector<uint8_t> data;
-
-    uint8_t* requestPayload = (uint8_t*)request;
-    if (ptransEP == NULL)
-        return -1;
-
-    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
-
-    for (j = 0; j < requestSize; j++)
-        data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->devIdentifier;
+    mctpw::eid_t eid = transEP.devIdentifier;
 
     boost::asio::spawn(*(pio), [this, eid,
-                                data](boost::asio::yield_context yield) {
+                                request](boost::asio::yield_context yield) {
         mctpWrapper->sendYield(yield, eid,
                                static_cast<uint8_t>(mctpw::MessageType::spdm),
-                               false, data);
+                               false, request);
     });
 
     return 0;
@@ -213,39 +176,39 @@ int spdmTransportMCTP::asyncSendData(transportEndPoint* ptransEP,
  * @brief The sync send and receive data function for requester
  *  blocking function to send SPDM payload and get response data.
  *
- * @param  ptransEP          pointer to destination endpoint.
- * @param  requestSize       The size of data to be sent.
- * @param  request           The buffer pointer of data.
+ * @param  transEP           The destination endpoint.
+ * @param  request           The vector of data payload.
  * @param  timeout           The timeout time.
  * @param  rspRcvCB          The resRcvCB to be called when response data
  *received.
  * @return 0: success, other: failed.
  *
  **/
-int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
-                                        uint32_t requestSize,
-                                        const void* request, uint64_t timeout,
+int spdmTransportMCTP::syncSendRecvData(transportEndPoint& transEP,
+                                        const std::vector<uint8_t>& request,
+                                        uint64_t timeout,
                                         MsgReceiveCallback rspRcvCB)
 {
-    uint32_t j;
-    std::vector<uint8_t> data;
+    /*
+        uint32_t j;
+        std::vector<uint8_t> data;
 
-    uint8_t* requestPayload = (uint8_t*)request;
-    if (ptransEP == NULL)
-        return -1;
-    data.push_back(
-        static_cast<uint8_t>(mctpw::MessageType::spdm)); // SPDM mctp ID
+        uint8_t* requestPayload = (uint8_t*)request;
 
-    for (j = 0; j < requestSize; j++)
-        data.push_back(*(requestPayload + j));
-    mctpw::eid_t eid = ptransEP->devIdentifier;
+        data.push_back(
+            static_cast<uint8_t>(mctpw::MessageType::spdm)); // SPDM mctp ID
+
+        for (j = 0; j < requestSize; j++)
+            data.push_back(*(requestPayload + j));
+    */
+    mctpw::eid_t eid = transEP.devIdentifier;
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         ("spdmTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) +
-         ", data size: " + std::to_string(data.size()) +
+         ", request size: " + std::to_string(request.size()) +
          ", timeout: " + std::to_string(timeout))
             .c_str());
     auto reply = mctpWrapper->sendReceiveBlocked(
-        eid, data, std::chrono::milliseconds(500));
+        eid, request, std::chrono::milliseconds(500));
     if (reply.first)
     {
         return reply.first.value();
@@ -276,7 +239,7 @@ int spdmTransportMCTP::syncSendRecvData(transportEndPoint* ptransEP,
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
             ss.str().c_str());
 
-        rspRcvCB(ptransEP, responsePacket);
+        rspRcvCB(transEP, responsePacket);
 
         return 0;
     }

@@ -30,10 +30,6 @@ extern "C"
 #define EXE_CONNECTION_CHAL 0x8
 #define EXE_CONNECTION_MEAS 0x10
 
-#ifndef UNUSED
-#define UNUSED(x) (void)(x)
-#endif
-
 namespace spdmapplib
 {
 /**
@@ -90,42 +86,44 @@ class spdmResponderImpl : public spdmResponder
      *
      * @param  io                boost io_service object..
      * @param  trans             The pointer of transport instance.
+     * @param  spdmConfig        Application assigned SpdmConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
     int initResponder(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      SpdmConfiguration* spdmConfig) override;
+                      SpdmConfiguration& spdmConfig) override;
 
     /*APIs called by transport layer*/
     /**
      * @brief Called when new endpoint detected.
      *
-     * @param  ptransEP          The pointer to the new endpoint object.
+     * @param  transEP          The new endpoint object.
      * @return 0: success, other: failed.
      *
      **/
-    int addNewDevice(void* ptransEP);
+    int addNewDevice(spdmtransport::transportEndPoint& transEP);
 
     /**
      * @brief Called when endpoint remove is detected.
      *
-     * @param  ptransEP          The pointer to the removed endpoint object.
+     * @param  transEP          The endpoint to be removed.
      * @return 0: success, other: failed.
      *
      **/
-    int removeDevice(void* ptransEP);
+    int removeDevice(spdmtransport::transportEndPoint& transEP);
 
     /**
      * @brief Called when message received.
      *
-     * @param  ptransEP      The pointer of the endpoint object to receive data.
+     * @param  transEP      The endpoint object to receive data.
      * @param  data          The vector of received data.
      * @return 0: success, other: failed.
      *
      **/
 
-    int addData(void* ptransEP, const std::vector<uint8_t>& data);
+    int addData(spdmtransport::transportEndPoint& transEP,
+                const std::vector<uint8_t>& data);
     /**
      * @brief Called when message received.
      *
@@ -139,38 +137,40 @@ class spdmResponderImpl : public spdmResponder
     /**
      * @brief Register to transport layer for handling received data.
      *
-     * @param  ptransEP      The pointer of the endpoint object to receive data.
+     * @param  transEP      The endpoint object to receive data.
      * @param  data          The vector of received data.
      * @return 0: success, other: failed.
      *
      **/
-    int msgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
+    int msgRecvCallback(spdmtransport::transportEndPoint& transEP,
+                        const std::vector<uint8_t>& data);
+
     /*Cabllback functions implementation for libspdm */
     /**
      * @brief Register to libspdm for sending SPDM payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
-     * @param  requestSize      The request payload size.
-     * @param  request          The request payload data buffer.
+     * @param  request          The request payload data vector.
      * @param  timeout          The timeout time.
      * @return return_status defined in libspdm.
      *
      **/
-    return_status deviceSendMessage(void* spdmContext, uintn requestSize,
-                                    const void* request, uint64_t timeout);
+    return_status deviceSendMessage(void* spdmContext,
+                                    const std::vector<uint8_t>& request,
+                                    uint64_t timeout);
 
     /**
      * @brief Register to libspdm for receiving SPDM response payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
-     * @param  responseSize     The variable pointer for received data size.
-     * @param  response         The response data buffer pointer.
+     * @param  response         The response data buffer vector.
      * @param  timeout          The timeout time.
      * @return return_status defined in libspdm.
      *
      **/
-    return_status deviceReceiveMessage(void* spdmContext, uintn* responseSize,
-                                       void* response, uint64_t timeout);
+    return_status deviceReceiveMessage(void* spdmContext,
+                                       std::vector<uint8_t>& response,
+                                       uint64_t timeout);
 
     /**
      * @brief Register to libspdm for handling connection state change.
@@ -236,14 +236,14 @@ class spdmRequesterImpl : public spdmRequester
     int initRequester(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmtransport::transportEndPoint* ptransResponder,
-                      SpdmConfiguration* spdmConfig) override;
+                      spdmtransport::transportEndPoint& transResponder,
+                      SpdmConfiguration& spdmConfig) override;
     /**
      * @brief The authentication function
      *
      * @return 0: success, other: failed.
      **/
-    int do_authentication(void) override;
+    int doAuthentication(void) override;
     /**
      * @brief The measurement function
      *
@@ -252,40 +252,41 @@ class spdmRequesterImpl : public spdmRequester
      *
      * @return 0: success, other: failed.
      **/
-    int do_measurement(const uint32_t* sessionid) override;
+    int doMeasurement(const uint32_t* sessionid) override;
     /**
      * @brief Get all measurement function
      *
      * @return vector of all measurements.
      **/
-    std::optional<std::vector<uint8_t>> get_measurements() override;
+    std::optional<std::vector<uint8_t>> getMeasurements() override;
     /**
      * @brief Get certification function
      *
      * @return vector of certification.
      **/
-    std::optional<std::vector<uint8_t>> get_certificate() override;
+    std::optional<std::vector<uint8_t>> getCertificate() override;
 
     /*APIs called by transport layer*/
     /**
      * @brief Set received data to assigned endpoint.
      *
-     * @param  ptransEP          Endpoint object pointer.
+     * @param  transEP          The Endpoint object to receive data.
      * @param  trans             The pointer of transport instance.
      * @return 0: success, other: failed.
      *
      **/
-    int addData(void* ptransEP, const std::vector<uint8_t>& data);
+    int addData(spdmtransport::transportEndPoint& transEP,
+                const std::vector<uint8_t>& data);
 
     /**
      * @brief Function to check if found endpoint is the responder assigned by
      *user.
      *
-     * @param  ptransEP          Pointer of endpoint object to be checked.
+     * @param  transEP          The endpoint object to be checked.
      * @return 0: success, other: failed.
      *
      **/
-    int checkResponderDevice(void* ptransEP);
+    int checkResponderDevice(spdmtransport::transportEndPoint& transEP);
 
     /**
      * @brief Function to pass as parameter of syncSendRecvData of transport
@@ -293,40 +294,41 @@ class spdmRequesterImpl : public spdmRequester
      *
      *  The function will be called when send/receive is completed in transport
      *layer.
-     * @param  ptransEP         Pointer to the endpoint the received data send
+     * @param  transEP         The endpoint to receive data after send.
      *to.
      * @param  data             The received data buffer.
      * @return 0: success, other: failed.
      *
      **/
-    int msgRecvCallback(void* ptransEP, const std::vector<uint8_t>& data);
+    int msgRecvCallback(spdmtransport::transportEndPoint& transEP,
+                        const std::vector<uint8_t>& data);
 
     /*Callback functions implementation for libspdm*/
     /**
      * @brief Register to libspdm for sending SPDM payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
-     * @param  requestSize      The request payload size.
-     * @param  request          The request payload data buffer.
+     * @param  request          The request payload data vector.
      * @param  timeout          The timeout time.
      * @return return_status defined in libspdm.
      *
      **/
-    return_status deviceSendMessage(void* spdmContext, uintn requestSize,
-                                    const void* request, uint64_t timeout);
+    return_status deviceSendMessage(void* spdmContext,
+                                    const std::vector<uint8_t>& request,
+                                    uint64_t timeout);
 
     /**
      * @brief Register to libspdm for receiving SPDM response payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
-     * @param  responseSize     The variable pointer for received data size.
-     * @param  response         The response data buffer pointer.
+     * @param  response         The response data buffer vector.
      * @param  timeout          The timeout time.
      * @return return_status defined in libspdm.
      *
      **/
-    return_status deviceReceiveMessage(void* spdmContext, uintn* responseSize,
-                                       void* response, uint64_t timeout);
+    return_status deviceReceiveMessage(void* spdmContext,
+                                       std::vector<uint8_t>& response,
+                                       uint64_t timeout);
 
     /*Internal implementation*/
   protected:
@@ -338,7 +340,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return return_status defined in libspdm.
      *
      **/
-    int setupResponder(spdmtransport::transportEndPoint* ptransEP);
+    int setupResponder(spdmtransport::transportEndPoint& transEP);
     /**
      * @brief Function to setup user assigned endpoint initial configuration.
      *
@@ -368,28 +370,5 @@ class spdmRequesterImpl : public spdmRequester
     spdmtransport::transportEndPoint transResponder;
     std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;
 };
-
-/*Utility functions.*/
-
-/**
- * @brief Compare given endpoints.
- *
- * @param  pOne          The 1st endpoint te be matched.
- * @param  pTwo          The 2nd endpoint te be matched.
- * @return true: matched, false: different.
- *
- **/
-bool matchDevice(spdmtransport::transportEndPoint* pOne,
-                 spdmtransport::transportEndPoint* pTwo);
-/**
- * @brief Duplicate Endpoint content.
- *
- * @param  pOne          The target endpoint te be copied.
- * @param  pTwo          The source endpoint te be copied.
- * @return true: success, false: failed.
- *
- **/
-bool copyDevice(spdmtransport::transportEndPoint* pOne,
-                spdmtransport::transportEndPoint* pTwo);
 
 } // namespace spdmapplib

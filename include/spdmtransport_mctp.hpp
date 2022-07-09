@@ -18,7 +18,6 @@
 #include "mctp_wrapper.hpp"
 #include "spdmtransport.hpp"
 
-#define UNUSED(x) (void)(x)
 namespace spdmtransport
 {
 /**
@@ -75,30 +74,29 @@ class spdmTransportMCTP : public spdmTransport
      * @brief The async send data function for responder
      *  nonblocking function to send message to remote endpoint.
      *
-     * @param  ptransEP          pointer to destination endpoint.
-     * @param  requestSize       The size of data to be sent.
-     * @param  request           The buffer pointer of data.
+     * @param  transEP           The destination endpoint.
+     * @param  request           The buffer vector of data.
      * @param  timeout           The timeout time.
      * @return 0: success, other: failed.
      *
      **/
-    int asyncSendData(transportEndPoint* ptransEP, uint32_t requestSize,
-                      const void* request, uint64_t timeout) override;
+    int asyncSendData(transportEndPoint& transEP,
+                      const std::vector<uint8_t>& request,
+                      uint64_t timeout) override;
 
     /**
      * @brief The sync send and receive data function for requester
      *  blocking function to send SPDM payload and get response data.
      *
-     * @param ptransEP    pointer to destination endpoint.
-     * @param requestSize The size of data to be sent.
-     * @param request     The buffer pointer of data.
+     * @param transEP     The destination endpoint.
+     * @param request     The vector of data payload.
      * @param timeout     The timeout time.
      * @param rspRcvCB    The resRcvCB to be called when response data received.
      * @return 0: success, other: failed.
      *
      **/
-    int syncSendRecvData(transportEndPoint* ptransEP, uint32_t requestSize,
-                         const void* request, uint64_t timeout,
+    int syncSendRecvData(transportEndPoint& transEP,
+                         const std::vector<uint8_t>& request, uint64_t timeout,
                          MsgReceiveCallback rspRcvCB) override;
 
     /*APIs called by mctpwrapper callback function*/

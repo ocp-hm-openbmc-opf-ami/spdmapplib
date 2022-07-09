@@ -191,7 +191,6 @@ static ConfigurationMap
     getConfigurationMap(std::shared_ptr<sdbusplus::asio::connection> conn,
                         const std::string& configurationPath)
 {
-
     auto methodCall = conn->new_method_call(
         "xyz.openbmc_project.EntityManager", configurationPath.c_str(),
         "org.freedesktop.DBus.Properties", "GetAll");
@@ -332,7 +331,6 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         setCertPath = (char*)malloc(strlen("/usr/bin") + 1);
         if (setCertPath != NULL)
         {
-
             strcpy(setCertPath, certPath.c_str());
         }
     }

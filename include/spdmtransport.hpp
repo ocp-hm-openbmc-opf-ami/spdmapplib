@@ -17,19 +17,18 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <sdbusplus/asio/connection.hpp>
-using namespace sdbusplus;
 namespace spdmtransport
 {
 /**
  * @brief Define callback function prototype
  *
- * @param ptransEP Pointer to transportEndPoint object.
+ * @param transEP The transportEndPoint object.
  * @param data Pointer to a buffer.
  */
-
-using AddRemoveDeviceCallback = std::function<int(void* ptransEP)>;
-using MsgReceiveCallback =
-    std::function<void(void* ptransEP, const std::vector<uint8_t>& data)>;
+struct transportEndPoint;
+using MsgReceiveCallback = std::function<void(
+    transportEndPoint& transEP, const std::vector<uint8_t>& data)>;
+using AddRemoveDeviceCallback = std::function<int(transportEndPoint& transEP)>;
 
 /**
  * @brief SPDM Transport type, could be extended.
@@ -46,11 +45,17 @@ enum class TransportIdentifier : uint8_t
  * @brief Endpoint information, could be extended.
  *
  */
-typedef struct
+struct transportEndPoint
 {
     TransportIdentifier transType; /*interface type.*/
     uint8_t devIdentifier;
-} transportEndPoint;
+    bool operator==(const transportEndPoint& p2) const
+    {
+        const transportEndPoint& p1 = (*this);
+        return p1.transType == p2.transType &&
+               p1.devIdentifier == p2.devIdentifier;
+    }
+};
 
 /**
  * @brief SPDM transport layer class.
@@ -98,15 +103,15 @@ class spdmTransport
      * @brief The async send data function for responder
      *  nonblocking function to send message to remote endpoint.
      *
-     * @param  ptransEP          pointer to destination endpoint.
-     * @param  requestSize       The size of data to be sent.
-     * @param  request           The buffer pointer of data.
+     * @param  transEP           The destination endpoint.
+     * @param  request           The vector of payload.
      * @param  timeout           The timeout time.
      * @return 0: success, other: failed.
      *
      **/
-    virtual int asyncSendData(transportEndPoint* ptransEP, uint32_t requestSize,
-                              const void* request, uint64_t timeout) = 0;
+    virtual int asyncSendData(transportEndPoint& transEP,
+                              const std::vector<uint8_t>& request,
+                              uint64_t timeout) = 0;
 
     /****************************************************
         APIs for requester
@@ -115,17 +120,16 @@ class spdmTransport
      * @brief The sync send and receive data function for requester
      *  blocking function to send SPDM payload and get response data.
      *
-     * @param  ptransEP          pointer to destination endpoint.
-     * @param  requestSize       The size of data to be sent.
-     * @param  request           The buffer pointer of data.
+     * @param  transEP           The destination endpoint.
+     * @param  request           The vector of data payload.
      * @param  timeout           The timeout time.
      * @param  rspRcvCB          The resRcvCB to be called when response data
      *received.
      * @return 0: success, other: failed.
      *
      **/
-    virtual int syncSendRecvData(transportEndPoint* ptransEP,
-                                 uint32_t requestSize, const void* request,
+    virtual int syncSendRecvData(transportEndPoint& transEP,
+                                 const std::vector<uint8_t>& request,
                                  uint64_t timeout,
                                  MsgReceiveCallback rspRcvCB) = 0;
 };

@@ -34,10 +34,10 @@ extern spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
 
 void displayMenu(void)
 {
-    std::cerr << "1: do_authentication()" << std::endl;
-    std::cerr << "2: do_measurement()" << std::endl;
-    std::cerr << "3: get_certificate()" << std::endl;
-    std::cerr << "4: get_measurements()" << std::endl;
+    std::cerr << "1: doAuthentication()" << std::endl;
+    std::cerr << "2: doMeasurement()" << std::endl;
+    std::cerr << "3: getCertificate()" << std::endl;
+    std::cerr << "4: getMeasurements()" << std::endl;
     std::cerr << "0: Quit" << std::endl;
 }
 
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
         spdmtransport::TransportIdentifier::mctpOverSMBus);
     boost::asio::steady_timer timer(*ioc);
-    spdmapplib::SpdmConfiguration spdmRequesterCfg;
+    spdmapplib::SpdmConfiguration spdmRequesterCfg{};
     uint8_t eid;
     CLI::App app("SPDM requester verify tool");
     app.add_option("--eid", eid, "Responder MCTP EID    : uint8_t")->required();
@@ -95,10 +95,8 @@ int main(int argc, char* argv[])
         }
     } while (true);
 
-    if (pspdmRequester->initRequester(
-            ioc, conn, trans,
-            static_cast<spdmtransport::transportEndPoint*>(&responderCfg),
-            &spdmRequesterCfg) == 0)
+    if (pspdmRequester->initRequester(ioc, conn, trans, responderCfg,
+                                      spdmRequesterCfg) == 0)
     {
         std::cerr << "spdm_requester started." << std::endl;
         int selTest = 0;
@@ -123,21 +121,20 @@ int main(int argc, char* argv[])
                 switch (selTest)
                 {
                     case 1:
-                        std::cerr << "Execute do_authentication()."
-                                  << std::endl;
-                        pspdmRequester->do_authentication();
+                        std::cerr << "Execute doAuthentication()." << std::endl;
+                        pspdmRequester->doAuthentication();
                         break;
                     case 2:
-                        std::cerr << "Execute do_measurement()." << std::endl;
-                        pspdmRequester->do_measurement(NULL);
+                        std::cerr << "Execute doMeasurement()." << std::endl;
+                        pspdmRequester->doMeasurement(NULL);
                         break;
                     case 3:
-                        std::cerr << "Execute get_certificate()." << std::endl;
-                        dumpVector(pspdmRequester->get_certificate().value());
+                        std::cerr << "Execute getCertificate()." << std::endl;
+                        dumpVector(pspdmRequester->getCertificate().value());
                         break;
                     case 4:
-                        std::cerr << "Execute get_measurements()." << std::endl;
-                        dumpVector(pspdmRequester->get_measurements().value());
+                        std::cerr << "Execute getMeasurements()." << std::endl;
+                        dumpVector(pspdmRequester->getMeasurements().value());
                         break;
                     default:
                         testRun = false;
@@ -146,8 +143,6 @@ int main(int argc, char* argv[])
             }
             ioc->stop();
         });
-        // });
-
         ioc->run();
     }
     else

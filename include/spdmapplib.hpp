@@ -64,13 +64,14 @@ class spdmResponder
      *
      * @param  io                boost io_service object..
      * @param  trans             The pointer of transport instance.
+     * @param  spdmConfig        Application assigned SpdmConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
     virtual int
         initResponder(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      SpdmConfiguration* pSpdmConfig) = 0;
+                      SpdmConfiguration& spdmConfig) = 0;
 };
 
 /**
@@ -95,14 +96,14 @@ class spdmRequester
         initRequester(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmtransport::transportEndPoint* ptransResponder,
-                      SpdmConfiguration* pSpdmConfig) = 0;
+                      spdmtransport::transportEndPoint& transResponder,
+                      SpdmConfiguration& pSpdmConfig) = 0;
     /**
      * @brief The authentication function
      *
      * @return 0: success, other: failed.
      **/
-    virtual int do_authentication(void) = 0;
+    virtual int doAuthentication(void) = 0;
     /**
      * @brief The measurement function
      *
@@ -111,19 +112,19 @@ class spdmRequester
      * @return 0: success, other: failed.
      *
      **/
-    virtual int do_measurement(const uint32_t* sessionid) = 0;
+    virtual int doMeasurement(const uint32_t* sessionid) = 0;
     /**
      * @brief Get all measurement function
      * @return vector of all measurements.
      *
      **/
-    virtual std::optional<std::vector<uint8_t>> get_measurements() = 0;
+    virtual std::optional<std::vector<uint8_t>> getMeasurements() = 0;
     /**
      * @brief Get certification function
      * @return vector of certification.
      *
      **/
-    virtual std::optional<std::vector<uint8_t>> get_certificate() = 0;
+    virtual std::optional<std::vector<uint8_t>> getCertificate() = 0;
 };
 
 /**
