@@ -71,7 +71,7 @@ class spdmTransport
     /**
      * @brief Initial function of transport instance
      *
-     * @param  io                boost io_service object.
+     * @param  ioc               shared_ptr to boost io_context object.
      * @param  conn              shared_ptr to already existing boost
      *asio::connection.
      * @param  addCB             The callback function for new endpoint
@@ -82,7 +82,7 @@ class spdmTransport
      * @return 0: success, other: failed.
      **/
     virtual int initTransport(
-        std::shared_ptr<boost::asio::io_service> io,
+        std::shared_ptr<boost::asio::io_context> ioc,
         std::shared_ptr<sdbusplus::asio::connection> conn,
         AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
         MsgReceiveCallback msgRcvCB =

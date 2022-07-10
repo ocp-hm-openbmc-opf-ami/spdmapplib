@@ -31,11 +31,13 @@ namespace spdmapplib
 return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
                                          const void* request, uint64_t timeout)
 {
-    void* pTmp = NULL;
-    spdmRequesterImpl* pspdmTmp = NULL;
+    void* pTmp = nullptr;
+    spdmRequesterImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
-        return false;
+    if (pTmp == nullptr)
+    {
+        return errorcodes::generalReturnError;
+    }
     pspdmTmp = static_cast<spdmRequesterImpl*>(pTmp);
 
     uint32_t j;
@@ -55,12 +57,14 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
                                             uintn* responseSize, void* response,
                                             uint64_t timeout)
 {
-    void* pTmp = NULL;
+    void* pTmp = nullptr;
     return_status status;
-    spdmRequesterImpl* pspdmTmp = NULL;
+    spdmRequesterImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
-        return false;
+    if (pTmp == nullptr)
+    {
+        return errorcodes::generalReturnError;
+    }
     pspdmTmp = static_cast<spdmRequesterImpl*>(pTmp);
     std::vector<uint8_t> rspData{};
     status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
@@ -72,14 +76,14 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
 /**
  * @brief Initial function of SPDM requester
  *
- * @param  io                boost io_service object..
+ * @param  ioc               The shared_ptr to boost io_context object..
  * @param  trans             The pointer of transport instance.
  * @param  cfgTransResponder Assigned responder EndPoint.
  * @param  spdmConfig        User input SpdmConfiguration.
  * @return 0: success, other: listed in spdmapplib::errorCodes
  **/
 int spdmRequesterImpl::initRequester(
-    std::shared_ptr<boost::asio::io_service> io,
+    std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
     spdmtransport::transportEndPoint& cfgTransResponder,
@@ -88,13 +92,13 @@ int spdmRequesterImpl::initRequester(
     using namespace std::placeholders;
     int intResult = -1;
     bResponderFound = false; // init member variable.
-    pio = io;
+    pioc = ioc;
     spdmRequesterCfg = spdmConfig;
     if (spdmRequesterCfg.version)
     {
         if (setCertificatePath(spdmRequesterCfg.certPath) == false)
         {
-            return -1;
+            return errorcodes::generalReturnError;
         }
         mExeConnection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                           EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS | 0);
@@ -104,9 +108,9 @@ int spdmRequesterImpl::initRequester(
         if (intResult == 0)
         {
             spdmTrans->initTransport(
-                io, conn,
+                ioc, conn,
                 std::bind(&spdmRequesterImpl::checkResponderDevice, this, _1),
-                NULL,
+                nullptr,
                 std::bind(&spdmRequesterImpl::msgRecvCallback, this, _1, _2));
         }
         phosphor::logging::log<phosphor::logging::level::INFO>(
@@ -119,8 +123,7 @@ int spdmRequesterImpl::initRequester(
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmRequesterImpl::initRequester getConfigurationFromEntityManager failed!");
-        intResult = static_cast<int>(
-            errorCodes::spdmConfigurationNotFoundInEntityManager);
+        intResult = errorcodes::spdmConfigurationNotFoundInEntityManager;
     }
     return intResult;
 }
@@ -144,7 +147,7 @@ int spdmRequesterImpl::checkResponderDevice(
         this->bResponderFound = true;
         return true;
     }
-    return false;
+    return errorcodes::generalReturnError;
 }
 
 /**
@@ -197,7 +200,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &tmpThis, sizeof(void*));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     u8Value = 0;
     status = libspdm_set_data(spdmResponder.pspdmContext,
@@ -205,7 +208,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     useRequesterCapabilityFlags = spdmRequesterCfg.capability;
@@ -215,7 +218,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
@@ -224,7 +227,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmRequesterCfg.measHash;
@@ -233,7 +236,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmRequesterCfg.asym;
@@ -243,7 +246,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmRequesterCfg.reqasym;
@@ -253,7 +256,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmRequesterCfg.hash;
@@ -263,7 +266,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmRequesterCfg.dhe;
@@ -272,7 +275,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmRequesterCfg.aead;
@@ -281,7 +284,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
@@ -290,7 +293,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                          &parameter, &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u8Value = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
@@ -299,7 +302,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     /*
         This function sends GET_VERSION, GET_CAPABILITIES, NEGOTIATE_ALGORITHM
@@ -317,8 +320,8 @@ int spdmRequesterImpl::settingFromConfig(void)
              ss.str())
                 .c_str());
         free(spdmResponder.pspdmContext);
-        spdmResponder.pspdmContext = NULL;
-        return -1;
+        spdmResponder.pspdmContext = nullptr;
+        return errorcodes::generalReturnError;
     }
     else
     {
@@ -336,7 +339,7 @@ int spdmRequesterImpl::settingFromConfig(void)
     ASSERT(u32Value == LIBSPDM_CONNECTION_STATE_NEGOTIATED);
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     data_size = sizeof(u32Value);
@@ -345,7 +348,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, &data_size);
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     phosphor::logging::log<phosphor::logging::level::INFO>(
         ("spdmRequesterImpl::settingFromConfig use measurement hash algo: " +
@@ -357,7 +360,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, &data_size);
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     mUseAsymAlgo = u32Value;
     data_size = sizeof(u32Value);
@@ -366,7 +369,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u32Value, &data_size);
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     mUseHashAlgo = u32Value;
     data_size = sizeof(u16Value);
@@ -375,7 +378,7 @@ int spdmRequesterImpl::settingFromConfig(void)
                               &u16Value, &data_size);
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
     mUseReqAsymAlgo = u16Value;
 
@@ -407,9 +410,9 @@ int spdmRequesterImpl::setupResponder(spdmtransport::transportEndPoint& transEP)
 {
     return_status status;
     spdmResponder.pspdmContext = (void*)malloc(libspdm_get_context_size());
-    if (spdmResponder.pspdmContext == NULL)
+    if (spdmResponder.pspdmContext == nullptr)
     {
-        return -1;
+        return errorcodes::generalReturnError;
     }
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "spdmRequesterImpl::setupResponder");
@@ -432,7 +435,7 @@ int spdmRequesterImpl::setupResponder(spdmtransport::transportEndPoint& transEP)
             ("spdmRequesterImpl::setupResponder libspdm_init_context failed" +
              std::to_string(status))
                 .c_str());
-        return -1;
+        return errorcodes::generalReturnError;
     }
     libspdm_register_device_io_func(spdmResponder.pspdmContext,
                                     requesterDeviceSendMessage,
@@ -461,7 +464,7 @@ int spdmRequesterImpl::addData(spdmtransport::transportEndPoint& transEP,
         spdmResponder.data = data;
         return RETURN_SUCCESS;
     }
-    return -1;
+    return errorcodes::generalReturnError;
 }
 
 /**
@@ -533,6 +536,7 @@ return_status
  **/
 int spdmRequesterImpl::doAuthentication(void)
 {
+    constexpr uint8_t lastSlotIndex = 0xFF;
     if (bResponderFound)
     {
         uint8_t slot_mask;
@@ -567,7 +571,7 @@ int spdmRequesterImpl::doAuthentication(void)
                          std::to_string(status))
                             .c_str());
                     free(spdmResponder.pspdmContext);
-                    spdmResponder.pspdmContext = NULL;
+                    spdmResponder.pspdmContext = nullptr;
                     return status;
                 }
                 else
@@ -579,7 +583,7 @@ int spdmRequesterImpl::doAuthentication(void)
 
             if ((mExeConnection & EXE_CONNECTION_CERT) != 0)
             {
-                if (useSlotId != 0xFF)
+                if (useSlotId != lastSlotIndex)
                 {
                     status = libspdm_get_certificate(
                         spdmResponder.pspdmContext, useSlotId, &cert_chain_size,
@@ -591,7 +595,7 @@ int spdmRequesterImpl::doAuthentication(void)
                              std::to_string(status))
                                 .c_str());
                         free(spdmResponder.pspdmContext);
-                        spdmResponder.pspdmContext = NULL;
+                        spdmResponder.pspdmContext = nullptr;
                         spdmResponder.dataCert = {};
                         return status;
                     }
@@ -614,7 +618,7 @@ int spdmRequesterImpl::doAuthentication(void)
             {
                 status = libspdm_challenge(
                     spdmResponder.pspdmContext, useSlotId,
-                    mUseMeasurementSummaryHashType, measurement_hash, NULL);
+                    mUseMeasurementSummaryHashType, measurement_hash, nullptr);
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -622,7 +626,7 @@ int spdmRequesterImpl::doAuthentication(void)
                          std::to_string(status))
                             .c_str());
                     free(spdmResponder.pspdmContext);
-                    spdmResponder.pspdmContext = NULL;
+                    spdmResponder.pspdmContext = nullptr;
                     return status;
                 }
                 else
@@ -638,14 +642,14 @@ int spdmRequesterImpl::doAuthentication(void)
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
                 "spdmRequesterImpl::doAuthentication responder setting error!");
-            return -1;
+            return errorcodes::generalReturnError;
         }
     }
     else
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmRequesterImpl::doAuthentication responder not found yet!");
-        return -1;
+        return errorcodes::generalReturnError;
     }
     return RETURN_SUCCESS;
 }
@@ -671,7 +675,7 @@ int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
 
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Requesting all the Measurements.");
-    if (bResponderFound && (spdmResponder.pspdmContext != NULL))
+    if (bResponderFound && (spdmResponder.pspdmContext != nullptr))
     {
         if (mUseMeasurementOperation ==
             SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS)
@@ -684,7 +688,7 @@ int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
             status = libspdm_get_measurement(
                 spdmResponder.pspdmContext, session_id, request_attribute,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS,
-                useSlotId & 0xF, NULL, &number_of_block,
+                useSlotId & 0xF, nullptr, &number_of_block,
                 &measurement_record_length, measurement_record);
             if (RETURN_ERROR(status))
             {
@@ -717,7 +721,7 @@ int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
             status = libspdm_get_measurement(
                 spdmResponder.pspdmContext, session_id, request_attribute,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS,
-                useSlotId & 0xF, NULL, &number_of_blocks, NULL, NULL);
+                useSlotId & 0xF, nullptr, &number_of_blocks, nullptr, nullptr);
             spdmResponder.dataMeas = {};
             if (RETURN_ERROR(status))
             {
@@ -751,7 +755,7 @@ int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
                 measurement_record_length = sizeof(measurement_record);
                 status = libspdm_get_measurement(
                     spdmResponder.pspdmContext, session_id, request_attribute,
-                    index, useSlotId & 0xF, NULL, &number_of_block,
+                    index, useSlotId & 0xF, nullptr, &number_of_block,
                     &measurement_record_length, measurement_record);
                 if (RETURN_ERROR(status))
                 {
@@ -782,7 +786,7 @@ int spdmRequesterImpl::doMeasurement(const uint32_t* session_id)
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmRequesterImpl::doMeasurement Error!");
-        return -1;
+        return errorcodes::generalReturnError;
     }
 }
 

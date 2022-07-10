@@ -49,6 +49,7 @@ SET(spdmapplib_headers
     ${PROJECT_SOURCE_DIR}/include/spdmapplib.hpp
     ${PROJECT_SOURCE_DIR}/include/spdmtransport.hpp
     ${PROJECT_SOURCE_DIR}/include/spdmtransport_mctp.hpp
+    ${PROJECT_SOURCE_DIR}/include/spdmapplib_errorcodes.hpp
 )
 
 ADD_SUBDIRECTORY(utility/)

@@ -23,12 +23,12 @@ extern "C"
 #include "spdm_device_secret_lib_internal.h"
     extern bool setCertificatePath(char* certPath);
 }
-// for testing
-#define EXE_CONNECTION_VERSION_ONLY 0x1
-#define EXE_CONNECTION_DIGEST 0x2
-#define EXE_CONNECTION_CERT 0x4
-#define EXE_CONNECTION_CHAL 0x8
-#define EXE_CONNECTION_MEAS 0x10
+
+inline constexpr uint32_t EXE_CONNECTION_VERSION_ONLY = 0x1;
+inline constexpr uint32_t EXE_CONNECTION_DIGEST = 0x2;
+inline constexpr uint32_t EXE_CONNECTION_CERT = 0x4;
+inline constexpr uint32_t EXE_CONNECTION_CHAL = 0x8;
+inline constexpr uint32_t EXE_CONNECTION_MEAS = 0x10;
 
 namespace spdmapplib
 {
@@ -84,12 +84,12 @@ class spdmResponderImpl : public spdmResponder
      * The function will enter daemon mode. Accept request from assigned
      *transport layer.
      *
-     * @param  io                boost io_service object..
+     * @param  ioc                boost io_context object..
      * @param  trans             The pointer of transport instance.
      * @param  spdmConfig        Application assigned SpdmConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initResponder(std::shared_ptr<boost::asio::io_service> io,
+    int initResponder(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       SpdmConfiguration& spdmConfig) override;
@@ -204,7 +204,7 @@ class spdmResponderImpl : public spdmResponder
     int settingFromConfig(uint8_t ItemIndex);
 
   private:
-    std::shared_ptr<boost::asio::io_service> pio;
+    std::shared_ptr<boost::asio::io_context> pioc;
 
     uint8_t useSlotCount;
     uint8_t curIndex;
@@ -228,12 +228,12 @@ class spdmRequesterImpl : public spdmRequester
     /**
      * @brief Initial function of SPDM requester
      *
-     * @param  io                boost io_service object..
+     * @param  ioc                boost io_context object..
      * @param  trans             The pointer of transport instance.
      * @param  ptransResponder   The pointer to assigned responder EndPoint.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initRequester(std::shared_ptr<boost::asio::io_service> io,
+    int initRequester(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       spdmtransport::transportEndPoint& transResponder,
@@ -351,7 +351,7 @@ class spdmRequesterImpl : public spdmRequester
 
   private:
     bool bResponderFound;
-    std::shared_ptr<boost::asio::io_service> pio;
+    std::shared_ptr<boost::asio::io_context> pioc;
 
     uint8_t useSlotCount;
     uint8_t useSlotId;

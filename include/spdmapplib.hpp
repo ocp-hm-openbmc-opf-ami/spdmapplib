@@ -15,21 +15,11 @@
  */
 
 #pragma once
+#include "spdmapplib_errorcodes.hpp"
 #include "spdmtransport.hpp"
 
 namespace spdmapplib
 {
-/**
- * @brief spdmapplib error codes list.
- *
- */
-enum class errorCodes : int
-{
-    spdmConfigurationNotFoundInEntityManager =
-        1,                 // SPDM configuration not found in EntityManager.
-    libspdmReturnError = 2 // libspdm function calls return error.
-};
-
 /**
  * @brief SPDM configurations from EntityManager
  *
@@ -62,13 +52,13 @@ class spdmResponder
      * @brief Initial function of SPDM responder
      *  When the function is called, it will enter daemon mode and never return.
      *
-     * @param  io                boost io_service object..
+     * @param  ioc                boost io_context object..
      * @param  trans             The pointer of transport instance.
      * @param  spdmConfig        Application assigned SpdmConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
     virtual int
-        initResponder(std::shared_ptr<boost::asio::io_service> io,
+        initResponder(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       SpdmConfiguration& spdmConfig) = 0;
@@ -86,14 +76,14 @@ class spdmRequester
     /**
      * @brief Initial function of SPDM requester
      *
-     * @param  io                boost io_service object..
+     * @param  ioc               The shared_ptr to boost io_context object..
      * @param  trans             The pointer of transport instance.
      * @param  ptransResponder   The pointer to assigned responder EndPoint.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      *
      **/
     virtual int
-        initRequester(std::shared_ptr<boost::asio::io_service> io,
+        initRequester(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::spdmTransport> trans,
                       spdmtransport::transportEndPoint& transResponder,

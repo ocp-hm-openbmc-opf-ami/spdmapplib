@@ -41,11 +41,13 @@ namespace spdmapplib
 return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
                                          const void* request, uint64_t timeout)
 {
-    void* pTmp = NULL;
-    spdmResponderImpl* pspdmTmp = NULL;
+    void* pTmp = nullptr;
+    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
-        return false;
+    if (pTmp == nullptr)
+    {
+        return errorcodes::generalReturnError;
+    }
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
 
     uint32_t j;
@@ -75,12 +77,14 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
                                             uintn* responseSize, void* response,
                                             uint64_t timeout)
 {
-    void* pTmp = NULL;
+    void* pTmp = nullptr;
     return_status status;
-    spdmResponderImpl* pspdmTmp = NULL;
+    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
-        return false;
+    if (pTmp == nullptr)
+    {
+        return errorcodes::generalReturnError;
+    }
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
 
     std::vector<uint8_t> rspData{};
@@ -100,13 +104,15 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
 void spdmServerConnectionStateCallback(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
-    void* pTmp = NULL;
-    spdmResponderImpl* pspdmTmp = NULL;
+    void* pTmp = nullptr;
+    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
+    if (pTmp == nullptr)
+    {
         return;
+    }
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
-    return pspdmTmp->processConnectionState(spdmContext, connectionState);
+    pspdmTmp->processConnectionState(spdmContext, connectionState);
 }
 /**
  * @brief Register to libspdm for handling session state change.
@@ -120,10 +126,10 @@ void spdmServerConnectionStateCallback(
 void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
                                     libspdm_session_state_t sessionState)
 {
-    void* pTmp = NULL;
-    spdmResponderImpl* pspdmTmp = NULL;
+    void* pTmp = nullptr;
+    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == NULL)
+    if (pTmp == nullptr)
         return;
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
     return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
@@ -137,29 +143,29 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
  * The function will enter daemon mode. Accept request from assigned
  *transport layer.
  *
- * @param  io                boost io_service object..
+ * @param  ioc               The shared_ptr to boost io_context object..
  * @param  trans             The pointer of transport instance.
  * @return 0: success, other: listed in spdmapplib::errorCodes
  **/
 int spdmResponderImpl::initResponder(
-    std::shared_ptr<boost::asio::io_service> io,
+    std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     std::shared_ptr<spdmtransport::spdmTransport> trans,
     SpdmConfiguration& spdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;
-    pio = io;
+    pioc = ioc;
     spdmResponderCfg = spdmConfig;
     if (spdmResponderCfg.version)
     {
         if (setCertificatePath(spdmResponderCfg.certPath) == false)
         {
-            return -1;
+            return errorcodes::generalReturnError;
         }
         spdmTrans = trans;
         spdmTrans->initTransport(
-            io, conn, std::bind(&spdmResponderImpl::addNewDevice, this, _1),
+            ioc, conn, std::bind(&spdmResponderImpl::addNewDevice, this, _1),
             std::bind(&spdmResponderImpl::removeDevice, this, _1),
             std::bind(&spdmResponderImpl::msgRecvCallback, this, _1, _2));
     }
@@ -167,8 +173,7 @@ int spdmResponderImpl::initResponder(
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmResponderImpl::initResponder getConfigurationFromEntityManager failed!");
-        return static_cast<int>(
-            errorCodes::spdmConfigurationNotFoundInEntityManager);
+        return errorcodes::spdmConfigurationNotFoundInEntityManager;
     }
     return RETURN_SUCCESS;
 }
@@ -190,11 +195,13 @@ int spdmResponderImpl::removeDevice(
             break;
     }
     if (i >= curIndex)
-        return false;
-    if (spdmPool[i].pspdmContext != NULL)
+    {
+        return errorcodes::generalReturnError;
+    }
+    if (spdmPool[i].pspdmContext != nullptr)
     {
         free(spdmPool[i].pspdmContext);
-        spdmPool[i].pspdmContext = NULL;
+        spdmPool[i].pspdmContext = nullptr;
     }
     spdmPool.erase(spdmPool.begin() + i);
     curIndex = curIndex - 1;
@@ -218,9 +225,9 @@ int spdmResponderImpl::addNewDevice(
     return_status status;
 
     newItem.pspdmContext = (void*)malloc(libspdm_get_context_size());
-    if (newItem.pspdmContext == NULL)
+    if (newItem.pspdmContext == nullptr)
     {
-        return false;
+        return errorcodes::generalReturnError;
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         "spdmResponderImpl::addNewDevice");
@@ -244,7 +251,7 @@ int spdmResponderImpl::addNewDevice(
             ("spdmResponderImpl::addNewDevice libspdm_init_context failed" +
              std::to_string(status))
                 .c_str());
-        return -1;
+        return errorcodes::generalReturnError;
     }
     libspdm_register_device_io_func(spdmPool[newIndex].pspdmContext,
                                     responderDeviceSendMessage,
@@ -261,7 +268,7 @@ int spdmResponderImpl::addNewDevice(
             ("spdmResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return -1;
+        return errorcodes::generalReturnError;
     }
     status = libspdm_register_connection_state_callback_func(
         spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
@@ -271,7 +278,7 @@ int spdmResponderImpl::addNewDevice(
             ("spdmResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return -1;
+        return errorcodes::generalReturnError;
     }
 
     return settingFromConfig(newIndex);
@@ -307,7 +314,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &tmpThis, sizeof(void*));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u8Value = 0;
@@ -316,7 +323,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     useResponderCapabilityFlags = spdmResponderCfg.capability;
@@ -326,7 +333,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
@@ -335,7 +342,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmResponderCfg.measHash;
@@ -344,7 +351,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmResponderCfg.asym;
@@ -353,7 +360,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.reqasym;
@@ -362,7 +369,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u32Value = spdmResponderCfg.hash;
@@ -371,7 +378,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.dhe;
@@ -380,7 +387,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.aead;
@@ -389,7 +396,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u16Value = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
@@ -398,7 +405,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     u8Value = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
@@ -407,7 +414,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return static_cast<int>(errorCodes::libspdmReturnError);
+        return errorcodes::libspdmReturnError;
     }
 
     return RETURN_SUCCESS;
@@ -434,8 +441,9 @@ int spdmResponderImpl::addData(spdmtransport::transportEndPoint& transEndpoint,
         }
     }
     if (i >= curIndex)
-        return -1;
-
+    {
+        return errorcodes::generalReturnError;
+    }
     spdmPool[i].data = data;
     return RETURN_SUCCESS;
 }
@@ -660,7 +668,7 @@ void spdmResponderImpl::processConnectionState(
             spdmPool[i].useReqAsymAlgo = u16Value;
             res = read_responder_public_certificate_chain(
                 spdmPool[i].useHashAlgo, spdmPool[i].useAsymAlgo, &data,
-                &dataSize, NULL, NULL);
+                &dataSize, nullptr, nullptr);
             if (res)
             {
                 memset(&parameter, 0, sizeof(parameter));

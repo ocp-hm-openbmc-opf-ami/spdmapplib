@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 #include <iostream>
-char* setCertPath = NULL;
+char* setCertPath = nullptr;
 
 extern "C"
 {
@@ -56,14 +56,14 @@ extern "C"
         uint32_t tempResult;
         char newFileName[256];
 
-        if (setCertPath != NULL)
+        if (setCertPath != nullptr)
             sprintf(newFileName, "%s/%s", setCertPath, fileName);
         else
             sprintf(newFileName, "%s", fileName);
-        if ((fp = fopen(newFileName, "rb")) == NULL)
+        if ((fp = fopen(newFileName, "rb")) == nullptr)
         {
             printf("Unable to open file %s\n", newFileName);
-            *fileData = NULL;
+            *fileData = nullptr;
             return false;
         }
 
@@ -71,7 +71,7 @@ extern "C"
         *fileSize = ftell(fp);
 
         *fileData = (void*)malloc(*fileSize);
-        if (NULL == *fileData)
+        if (nullptr == *fileData)
         {
             printf("No sufficient memory to allocate %s\n", fileName);
             fclose(fp);

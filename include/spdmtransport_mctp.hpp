@@ -16,6 +16,7 @@
 
 #pragma once
 #include "mctp_wrapper.hpp"
+#include "spdmapplib_errorcodes.hpp"
 #include "spdmtransport.hpp"
 
 namespace spdmtransport
@@ -44,7 +45,7 @@ class spdmTransportMCTP : public spdmTransport
     /**
      * @brief Initial function of transport instance
      *
-     * @param  io                boost io_service object.
+     * @param  ioc               shared_ptr to boost io_context object.
      * @param  conn              shared_ptr to already existing boost
      *asio::connection.
      * @param  addCB             The callback function for new endpoint
@@ -54,7 +55,7 @@ class spdmTransportMCTP : public spdmTransport
      *responder used).
      * @return 0: success, other: failed.
      **/
-    int initTransport(std::shared_ptr<boost::asio::io_service> io,
+    int initTransport(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       AddRemoveDeviceCallback addCB,
                       AddRemoveDeviceCallback delCB,
@@ -136,7 +137,7 @@ class spdmTransportMCTP : public spdmTransport
 
   protected:
     TransportIdentifier transType; /*MCTP over PCIe, MCTP over SMBus, SDSi*/
-    std::shared_ptr<boost::asio::io_service> pio;
+    std::shared_ptr<boost::asio::io_context> pioc;
     std::shared_ptr<sdbusplus::asio::connection> pconn;
     std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper;
 };
