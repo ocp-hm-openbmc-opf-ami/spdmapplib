@@ -1,5 +1,5 @@
 /**
- * Copyright © 2020 Intel Corporation
+ * Copyright © 2022 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,141 +15,136 @@
  */
 
 #include "spdmapplib.hpp"
+
+#include <phosphor-logging/log.hpp>
 extern "C"
 {
 #include "library/spdm_common_lib.h"
 }
 #include <iostream>
+#include <map>
 
 using configurationField =
     std::variant<bool, uint64_t, std::string, std::vector<std::string>>;
 using ConfigurationMap = std::unordered_map<std::string, configurationField>;
 
-char* setCertPath = NULL;
-
-typedef struct
-{
-    uint32_t value;
-    char* name;
-} valueStringEntry;
-
-valueStringEntry versionValueStringTable[] = {
-    {SPDM_MESSAGE_VERSION_10, "1.0"},
-    {SPDM_MESSAGE_VERSION_11, "1.1"},
-    {SPDM_MESSAGE_VERSION_12, "1.2"},
+std::map<std::string, uint32_t> versionValueStringTable = {
+    {"1.0", SPDM_MESSAGE_VERSION_10},
+    {"1.1", SPDM_MESSAGE_VERSION_11},
+    {"1.2", SPDM_MESSAGE_VERSION_12},
 };
 
-valueStringEntry securedMessageVersionValueStringTable[] = {
-    {0, "0"},
-    {SPDM_MESSAGE_VERSION_10, "1.0"},
-    {SPDM_MESSAGE_VERSION_11, "1.1"},
+std::map<std::string, uint32_t> securedMessageVersionValueStringTable = {
+    {"0", 0},
+    {"1.0", SPDM_MESSAGE_VERSION_10},
+    {"1.1", SPDM_MESSAGE_VERSION_11},
 };
 
-valueStringEntry spdmRequesterCapabilitiesSringTable[] = {
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP, "CERT"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHAL_CAP, "CHAL"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCRYPT_CAP, "ENCRYPT"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP, "MAC"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MUT_AUTH_CAP, "MUT_AUTH"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_EX_CAP, "KEY_EX"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PSK_CAP_REQUESTER, "PSK"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP, "ENCAP"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP, "HBEAT"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP, "KEY_UPD"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP,
-     "HANDSHAKE_IN_CLEAR"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PUB_KEY_ID_CAP, "PUB_KEY_ID"},
-    {SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHUNK_CAP, "CHUNK"},
+std::map<std::string, uint32_t> spdmRequesterCapabilitiesStringTable = {
+    {"CERT", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP},
+    {"CHAL", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHAL_CAP},
+    {"ENCRYPT", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCRYPT_CAP},
+    {"MAC", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP},
+    {"MUT_AUTH", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MUT_AUTH_CAP},
+    {"KEY_EX", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_EX_CAP},
+    {"PSK", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PSK_CAP_REQUESTER},
+    {"ENCAP", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP},
+    {"HBEAT", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP},
+    {"KEY_UPD", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP},
+    {"HANDSHAKE_IN_CLEAR",
+     SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP},
+    {"PUB_KEY_ID", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PUB_KEY_ID_CAP},
+    {"CHUNK", SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHUNK_CAP},
 };
 
-valueStringEntry spdmResponderCapabilitiesStringTable[] = {
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CACHE_CAP, "CACHE"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CERT_CAP, "CERT"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CHAL_CAP, "CHAL"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_CAP_NO_SIG, "MEAS_NO_SIG"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_CAP_SIG, "MEAS_SIG"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_FRESH_CAP, "MEAS_FRESH"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ENCRYPT_CAP, "ENCRYPT"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MAC_CAP, "MAC"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MUT_AUTH_CAP, "MUT_AUTH"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_KEY_EX_CAP, "KEY_EX"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PSK_CAP_RESPONDER, "PSK"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PSK_CAP_RESPONDER_WITH_CONTEXT,
-     "PSK_WITH_CONTEXT"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ENCAP_CAP, "ENCAP"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_HBEAT_CAP, "HBEAT"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_KEY_UPD_CAP, "KEY_UPD"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP,
-     "HANDSHAKE_IN_CLEAR"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PUB_KEY_ID_CAP, "PUB_KEY_ID"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CHUNK_CAP, "CHUNK"},
-    {SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ALIAS_CERT_CAP, "ALIAS_CERT"},
+std::map<std::string, uint32_t> spdmResponderCapabilitiesStringTable = {
+    {"CACHE", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CACHE_CAP},
+    {"CERT", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CERT_CAP},
+    {"CHAL", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CHAL_CAP},
+    {"MEAS_NO_SIG", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_CAP_NO_SIG},
+    {"MEAS_SIG", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_CAP_SIG},
+    {"MEAS_FRESH", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MEAS_FRESH_CAP},
+    {"ENCRYPT", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ENCRYPT_CAP},
+    {"MAC", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MAC_CAP},
+    {"MUT_AUTH", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_MUT_AUTH_CAP},
+    {"KEY_EX", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_KEY_EX_CAP},
+    {"PSK", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PSK_CAP_RESPONDER},
+    {"PSK_WITH_CONTEXT",
+     SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PSK_CAP_RESPONDER_WITH_CONTEXT},
+    {"ENCAP", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ENCAP_CAP},
+    {"HBEAT", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_HBEAT_CAP},
+    {"KEY_UPD", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_KEY_UPD_CAP},
+    {"HANDSHAKE_IN_CLEAR",
+     SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP},
+    {"PUB_KEY_ID", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_PUB_KEY_ID_CAP},
+    {"CHUNK", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_CHUNK_CAP},
+    {"ALIAS_CERT", SPDM_GET_CAPABILITIES_RESPONSE_FLAGS_ALIAS_CERT_CAP},
 };
 
-valueStringEntry hashValueStringTable[] = {
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_256, "SHA_256"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384, "SHA_384"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_512, "SHA_512"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_256, "SHA3_256"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_384, "SHA3_384"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_512, "SHA3_512"},
-    {SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SM3_256, "SM3_256"},
+std::map<std::string, uint32_t> hashValueStringTable{
+    {"SHA_256", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_256},
+    {"SHA_384", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384},
+    {"SHA_512", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_512},
+    {"SHA3_256", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_256},
+    {"SHA3_384", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_384},
+    {"SHA3_512", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA3_512},
+    {"SM3_256", SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SM3_256},
 };
 
-valueStringEntry measurementHashValueStringTable[] = {
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_RAW_BIT_STREAM_ONLY, "RAW_BIT"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_256, "SHA_256"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_384, "SHA_384"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_512, "SHA_512"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_256, "SHA3_256"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_384, "SHA3_384"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_512, "SHA3_512"},
-    {SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SM3_256, "SM3_256"},
+std::map<std::string, uint32_t> measurementHashValueStringTable = {
+    {"RAW_BIT", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_RAW_BIT_STREAM_ONLY},
+    {"SHA_256", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_256},
+    {"SHA_384", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_384},
+    {"SHA_512", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA_512},
+    {"SHA3_256", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_256},
+    {"SHA3_384", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_384},
+    {"SHA3_512", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SHA3_512},
+    {"SM3_256", SPDM_ALGORITHMS_MEASUREMENT_HASH_ALGO_TPM_ALG_SM3_256},
 };
 
-valueStringEntry asymValueStringTable[] = {
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048, "RSASSA_2048"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_3072, "RSASSA_3072"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_4096, "RSASSA_4096"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_2048, "RSAPSS_2048"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_3072, "RSAPSS_3072"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_4096, "RSAPSS_4096"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256, "ECDSA_P256"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384, "ECDSA_P384"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P521, "ECDSA_P521"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_SM2_ECC_SM2_P256, "SM2_P256"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED25519, "EDDSA_25519"},
-    {SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED448, "EDDSA_448"},
+std::map<std::string, uint32_t> asymValueStringTable = {
+    {"RSASSA_2048", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048},
+    {"RSASSA_3072", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_3072},
+    {"RSASSA_4096", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_4096},
+    {"RSAPSS_2048", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_2048},
+    {"RSAPSS_3072", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_3072},
+    {"RSAPSS_4096", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSAPSS_4096},
+    {"ECDSA_P256", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256},
+    {"ECDSA_P384", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384},
+    {"ECDSA_P521", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P521},
+    {"SM2_P256", SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_SM2_ECC_SM2_P256},
+    {"EDDSA_25519", SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED25519},
+    {"EDDSA_448", SPDM_ALGORITHMS_BASE_ASYM_ALGO_EDDSA_ED448},
 };
 
-valueStringEntry dheValueStringTable[] = {
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_2048, "FFDHE_2048"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_3072, "FFDHE_3072"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_4096, "FFDHE_4096"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_256_R1, "SECP_256_R1"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1, "SECP_384_R1"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_521_R1, "SECP_521_R1"},
-    {SPDM_ALGORITHMS_DHE_NAMED_GROUP_SM2_P256, "SM2_P256"},
+std::map<std::string, uint32_t> dheValueStringTable = {
+    {"FFDHE_2048", SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_2048},
+    {"FFDHE_3072", SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_3072},
+    {"FFDHE_4096", SPDM_ALGORITHMS_DHE_NAMED_GROUP_FFDHE_4096},
+    {"SECP_256_R1", SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_256_R1},
+    {"SECP_384_R1", SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1},
+    {"SECP_521_R1", SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_521_R1},
+    {"SM2_P256", SPDM_ALGORITHMS_DHE_NAMED_GROUP_SM2_P256},
 };
 
-valueStringEntry aeadValueStringTable[] = {
-    {SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_128_GCM, "AES_128_GCM"},
-    {SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM, "AES_256_GCM"},
-    {SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_CHACHA20_POLY1305, "CHACHA20_POLY1305"},
-    {SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AEAD_SM4_GCM, "SM4_128_GCM"},
+std::map<std::string, uint32_t> aeadValueStringTable = {
+    {"AES_128_GCM", SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_128_GCM},
+    {"AES_256_GCM", SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM},
+    {"CHACHA20_POLY1305", SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_CHACHA20_POLY1305},
+    {"SM4_128_GCM", SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AEAD_SM4_GCM},
 };
 
-valueStringEntry basicMutAuthPolicyStringTable[] = {
-    {0, "NO"},
-    {1, "BASIC"},
+std::map<std::string, uint32_t> basicMutAuthPolicyStringTable = {
+    {"NO", 0},
+    {"BASIC", 1},
 };
 
-valueStringEntry mutAuthPolicyStringTable[] = {
-    {0, "NO"},
-    {SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED, "WO_ENCAP"},
-    {SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED_WITH_ENCAP_REQUEST,
-     "W_ENCAP"},
-    {SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED_WITH_GET_DIGESTS, "DIGESTS"},
+std::map<std::string, uint32_t> mutAuthPolicyStringTable = {
+    {"NO", 0},
+    {"WO_ENCAP", SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED},
+    {"W_ENCAP",
+     SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED_WITH_ENCAP_REQUEST},
+    {"DIGESTS", SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED_WITH_GET_DIGESTS},
 };
 
 static const std::string spdmTypeName =
@@ -159,24 +154,21 @@ static const std::string spdmTypeName =
  * @brief convert string to integer
  *
  * @param table : source table
- * @param entryCount : source table
  * @param name: string to convert
  * @param value (output): result
  */
-static bool getValueFromName(const valueStringEntry* table, uint32_t entryCount,
-                             std::string name, uint32_t* value)
+static bool getValueFromName(const std::map<std::string, uint32_t>& table,
+                             std::string name, uint32_t& value)
 {
-    uint32_t index;
+    auto item = table.find(name);
 
-    for (index = 0; index < entryCount; index++)
+    if (item == table.end())
     {
-        if (strcmp(name.c_str(), table[index].name) == 0)
-        {
-            *value = table[index].value;
-            return true;
-        }
+        return false;
     }
-    return false;
+    // actions when found
+    value = item->second;
+    return true;
 }
 
 /**
@@ -218,17 +210,20 @@ static bool getField(const ConfigurationMap& map, const std::string& fieldName,
                      T& value)
 {
     auto it = map.find(fieldName);
-    if (it != map.end())
+    if (it == map.end())
     {
-        const T* ptrValue = std::get_if<T>(&it->second);
-        if (ptrValue != nullptr)
-        {
-            value = *ptrValue;
-            return true;
-        }
+        return false;
     }
-
-    return false;
+    const T* ptrValue = std::get_if<T>(&it->second);
+    if (ptrValue != nullptr)
+    {
+        value = *ptrValue;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 /**
@@ -247,33 +242,40 @@ static std::string
 {
     std::string configPath;
     std::vector<std::string> paths;
-    std::cerr << "Get config path of " << spdmConfig << std::endl;
+    phosphor::logging::log<phosphor::logging::level::ERR>(
+        ("getSPDMConfigurationPaths Get config path of  " + spdmConfig)
+            .c_str());
     try
     {
-        auto method_call = conn->new_method_call(
+        auto methodCall = conn->new_method_call(
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths");
 
-        method_call.append("/xyz/openbmc_project/inventory/system/board", 2,
-                           std::array<std::string, 1>({spdmTypeName}));
+        methodCall.append("/xyz/openbmc_project/inventory/system/board", 2,
+                          std::array<std::string, 1>({spdmTypeName}));
 
-        auto reply = conn->call(method_call);
+        auto reply = conn->call(methodCall);
         reply.read(paths);
     }
-    catch (const std::exception& e)
+    catch (const std::exception& exceptionIn)
     {
-        std::cerr << __func__ << ":" << e.what() << std::endl;
+        std::string exceptionStr = exceptionIn.what();
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("getSPDMConfigurationPaths Exception: " + exceptionStr).c_str());
         return configPath;
     }
 
-    std::cerr << "Checking config path of " << spdmConfig << std::endl;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("getSPDMConfigurationPaths Checking config path of " + spdmConfig)
+            .c_str());
 
     if (paths.size() > 0)
     {
         for (std::string& cfgPath : paths)
         {
-            std::cerr << "Checking : " << cfgPath << std::endl;
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("getSPDMConfigurationPaths Checking : " + cfgPath).c_str());
             if (cfgPath.find(spdmConfig) != cfgPath.npos)
             {
                 configPath = cfgPath;
@@ -303,10 +305,8 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName)
 {
-    uint32_t i;
     uint32_t u32Data;
-    spdmapplib::SpdmConfiguration spdmConfig;
-    memset(&spdmConfig, 0, sizeof(spdmConfig));
+    spdmapplib::SpdmConfiguration spdmConfig{};
     const std::string objectPath =
         getSPDMConfigurationPaths(conn, configurationName);
 
@@ -319,30 +319,21 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
     {
         map = getConfigurationMap(conn, objectPath);
     }
-    catch (const std::exception& e)
+    catch (const std::exception& exceptionIn)
     {
         return spdmConfig;
     }
 
     // Get cert file path
     std::string certPath;
-    if (!getField(map, "CertPath", certPath))
+    if (getField(map, "CertPath", certPath))
     {
-        setCertPath = (char*)malloc(strlen("/usr/bin") + 1);
-        if (setCertPath != NULL)
-        {
-            strcpy(setCertPath, certPath.c_str());
-        }
+        spdmConfig.certPath = std::move(certPath);
     }
     else
     {
-        setCertPath = (char*)malloc(certPath.size() + 1);
-        if (setCertPath != NULL)
-        {
-            strcpy(setCertPath, certPath.c_str());
-        }
+        spdmConfig.certPath = "/usr/bin";
     }
-    spdmConfig.certPath = setCertPath;
 
     // get capability
     std::vector<std::string> capability;
@@ -351,14 +342,15 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < capability.size(); i++)
+    for (std::string& entry : capability)
     {
         u32Data = 0;
 
-        if (!getValueFromName(spdmResponderCapabilitiesStringTable,
-                              sizeof(spdmResponderCapabilitiesStringTable),
-                              capability[i], &(u32Data)))
+        if (!getValueFromName(spdmResponderCapabilitiesStringTable, entry,
+                              u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.capability = spdmConfig.capability | u32Data;
     }
 
@@ -369,13 +361,13 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < hash.size(); i++)
+    for (std::string& entry : hash)
     {
         u32Data = 0;
-        if (!getValueFromName(hashValueStringTable,
-                              sizeof(hashValueStringTable), hash[i],
-                              &(u32Data)))
+        if (!getValueFromName(hashValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.hash = spdmConfig.hash | u32Data;
     }
 
@@ -386,13 +378,13 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < measHash.size(); i++)
+    for (std::string& entry : measHash)
     {
         u32Data = 0;
-        if (!getValueFromName(measurementHashValueStringTable,
-                              sizeof(measurementHashValueStringTable),
-                              measHash[i], &(u32Data)))
+        if (!getValueFromName(measurementHashValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.measHash = spdmConfig.measHash | u32Data;
     }
 
@@ -403,13 +395,13 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < asym.size(); i++)
+    for (std::string& entry : asym)
     {
         u32Data = 0;
-        if (!getValueFromName(asymValueStringTable,
-                              sizeof(asymValueStringTable), asym[i],
-                              &(u32Data)))
+        if (!getValueFromName(asymValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.asym = spdmConfig.asym | u32Data;
     }
     // get reqasym
@@ -419,13 +411,13 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < reqasym.size(); i++)
+    for (std::string& entry : reqasym)
     {
         u32Data = 0;
-        if (!getValueFromName(asymValueStringTable,
-                              sizeof(asymValueStringTable), reqasym[i],
-                              &(u32Data)))
+        if (!getValueFromName(asymValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.reqasym = spdmConfig.reqasym | u32Data;
     }
 
@@ -436,12 +428,13 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < dhe.size(); i++)
+    for (std::string& entry : dhe)
     {
         u32Data = 0;
-        if (!getValueFromName(dheValueStringTable, sizeof(dheValueStringTable),
-                              dhe[i], &(u32Data)))
+        if (!getValueFromName(dheValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.dhe = spdmConfig.dhe | u32Data;
     }
 
@@ -452,57 +445,32 @@ spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
         return spdmConfig;
     }
 
-    for (i = 0; i < aead.size(); i++)
+    for (std::string& entry : aead)
     {
         u32Data = 0;
-        if (!getValueFromName(aeadValueStringTable,
-                              sizeof(aeadValueStringTable), aead[i],
-                              &(u32Data)))
+        if (!getValueFromName(aeadValueStringTable, entry, u32Data))
+        {
             return spdmConfig;
+        }
         spdmConfig.aead = spdmConfig.aead | u32Data;
     }
     // get SlotCount
-    uint64_t slotcount;
-    if (!getField(map, "SlotCount", slotcount))
+    uint64_t slotCount;
+    if (!getField(map, "SlotCount", slotCount))
     {
         return spdmConfig;
     }
-    spdmConfig.slotcount = (uint32_t)slotcount;
+    spdmConfig.slotcount = (uint32_t)slotCount;
     // Get version
     std::string version;
     if (!getField(map, "Version", version))
     {
         return spdmConfig;
     }
-    if (!getValueFromName(versionValueStringTable,
-                          sizeof(versionValueStringTable), version,
-                          &(spdmConfig.version)))
+    if (!getValueFromName(versionValueStringTable, version, spdmConfig.version))
     {
         return spdmConfig;
     }
 
-#if 0
-    // get BasicMutAuth
-    std::string basicMutAuth;
-    if (!getField(map, "BasicMutAuth", basicMutAuth))
-    {
-        return spdmConfig;
-    }
-    if (!getValueFromName(basicMutAuthPolicyStringTable,
-                          sizeof(basicMutAuthPolicyStringTable), basicMutAuth,
-                          &(spdmConfig.basicMutAuth)))
-        return spdmConfig;
-
-    // get MutAuth
-    std::string mutAuth;
-    if (!getField(map, "MutAuth", mutAuth))
-    {
-        return spdmConfig;
-    }
-    if (!getValueFromName(mutAuthPolicyStringTable,
-                          sizeof(mutAuthPolicyStringTable), mutAuth,
-                          &(spdmConfig.mutAuth)))
-        return spdmConfig;
-#endif
     return spdmConfig;
 }

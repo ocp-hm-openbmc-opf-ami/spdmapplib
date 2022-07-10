@@ -96,9 +96,9 @@ class spdmTransportMCTP : public spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    int syncSendRecvData(transportEndPoint& transEP,
-                         const std::vector<uint8_t>& request, uint64_t timeout,
-                         MsgReceiveCallback rspRcvCB) override;
+    int sendRecvData(transportEndPoint& transEP,
+                     const std::vector<uint8_t>& request, uint64_t timeout,
+                     MsgReceiveCallback rspRcvCB) override;
 
     /*APIs called by mctpwrapper callback function*/
   private:

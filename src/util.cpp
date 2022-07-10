@@ -92,23 +92,18 @@ extern "C"
 
         return true;
     }
-
-    /**
-     * @brief set cert file Path
-     *
-     * @param certPath : cert file location
-     * @return true: success, false: not a valide path.
-     */
-    bool setCertificatePath(char* certPath)
-    {
-        if (certPath)
-        {
-            setCertPath = certPath;
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
 }
+namespace spdmapplib
+{
+/**
+ * @brief set cert file Path
+ *
+ * @param certPath : cert file location
+ * @return true: success, false: not a valide path.
+ */
+bool setCertificatePath(std::string& certPath)
+{
+    setCertPath = certPath.data();
+    return true;
+}
+} // namespace spdmapplib

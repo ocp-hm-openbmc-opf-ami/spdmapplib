@@ -20,7 +20,7 @@
 namespace spdmtransport
 {
 /**
- * @brief Define callback function prototype
+ * @brief Defined callback function prototype
  *
  * @param transEP The transportEndPoint object.
  * @param data Pointer to a buffer.
@@ -128,10 +128,9 @@ class spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    virtual int syncSendRecvData(transportEndPoint& transEP,
-                                 const std::vector<uint8_t>& request,
-                                 uint64_t timeout,
-                                 MsgReceiveCallback rspRcvCB) = 0;
+    virtual int sendRecvData(transportEndPoint& transEP,
+                             const std::vector<uint8_t>& request,
+                             uint64_t timeout, MsgReceiveCallback rspRcvCB) = 0;
 };
 
 } // namespace spdmtransport

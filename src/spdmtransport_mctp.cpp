@@ -188,10 +188,10 @@ int spdmTransportMCTP::asyncSendData(transportEndPoint& transEP,
  * @return 0: success, other: failed.
  *
  **/
-int spdmTransportMCTP::syncSendRecvData(transportEndPoint& transEP,
-                                        const std::vector<uint8_t>& request,
-                                        uint64_t timeout,
-                                        MsgReceiveCallback rspRcvCB)
+int spdmTransportMCTP::sendRecvData(transportEndPoint& transEP,
+                                    const std::vector<uint8_t>& request,
+                                    uint64_t timeout,
+                                    MsgReceiveCallback rspRcvCB)
 {
     constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{500};
     mctpw::eid_t eid = transEP.devIdentifier;

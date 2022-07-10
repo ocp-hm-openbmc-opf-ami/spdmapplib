@@ -21,7 +21,6 @@ extern "C"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_responder_lib.h"
 #include "spdm_device_secret_lib_internal.h"
-    extern bool setCertificatePath(char* certPath);
 }
 
 inline constexpr uint32_t EXE_CONNECTION_VERSION_ONLY = 0x1;
@@ -32,6 +31,7 @@ inline constexpr uint32_t EXE_CONNECTION_MEAS = 0x10;
 
 namespace spdmapplib
 {
+extern bool setCertificatePath(std::string& certPath);
 /**
  * @brief SPDM version enum
  *
@@ -77,7 +77,7 @@ class spdmResponderImpl : public spdmResponder
 {
   public:
     /*APIs called by SPDM daemon*/
-    spdmResponderImpl(){};
+    spdmResponderImpl() = default;
     /**
      * @brief Initial function of SPDM responder.
      *
@@ -223,7 +223,7 @@ class spdmResponderImpl : public spdmResponder
 class spdmRequesterImpl : public spdmRequester
 {
   public:
-    spdmRequesterImpl(){};
+    spdmRequesterImpl() = default;
     /* APIs for requester*/
     /**
      * @brief Initial function of SPDM requester
@@ -336,11 +336,11 @@ class spdmRequesterImpl : public spdmRequester
      * @brief Setup the configuration of user assigned endpoint as target
      *responder.
      *
-     * @param  ptransEP          Pointer of endpoint object to be configured.
+     * @param  transEP        The endpoint object to be configured.
      * @return return_status defined in libspdm.
      *
      **/
-    int setupResponder(spdmtransport::transportEndPoint& transEP);
+    int setupResponder(const spdmtransport::transportEndPoint& transEP);
     /**
      * @brief Function to setup user assigned endpoint initial configuration.
      *

@@ -24,7 +24,7 @@ namespace spdmapplib
  * @brief SPDM configurations from EntityManager
  *
  */
-typedef struct
+struct SpdmConfiguration
 {
     uint32_t version;
     /* library can support requester and responder roles */
@@ -36,8 +36,8 @@ typedef struct
     uint32_t dhe;
     uint32_t aead;
     uint32_t slotcount;
-    char* certPath;
-} SpdmConfiguration;
+    std::string certPath;
+};
 
 /**
  * @brief The responder base class

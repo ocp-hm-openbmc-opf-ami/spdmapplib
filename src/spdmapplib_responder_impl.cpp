@@ -42,17 +42,16 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
                                          const void* request, uint64_t timeout)
 {
     void* pTmp = nullptr;
-    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
     {
         return errorcodes::generalReturnError;
     }
+    spdmResponderImpl* pspdmTmp = nullptr;
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
 
     uint32_t j;
     std::vector<uint8_t> data;
-
     uint8_t* requestPayload = (uint8_t*)request;
 
     data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
@@ -79,18 +78,19 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
 {
     void* pTmp = nullptr;
     return_status status;
-    spdmResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
     {
         return errorcodes::generalReturnError;
     }
+    spdmResponderImpl* pspdmTmp = nullptr;
     pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
 
     std::vector<uint8_t> rspData{};
     status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
     *responseSize = rspData.size() - 1; // skip MessageType byte
-    std::copy(rspData.begin() + 1, rspData.end(), (uint8_t*)response);
+    std::copy(rspData.begin() + 1, rspData.end(),
+              reinterpret_cast<uint8_t*>(response));
     return status;
 }
 
@@ -444,7 +444,7 @@ int spdmResponderImpl::addData(spdmtransport::transportEndPoint& transEndpoint,
     {
         return errorcodes::generalReturnError;
     }
-    spdmPool[i].data = data;
+    spdmPool[i].data = std::move(data);
     return RETURN_SUCCESS;
 }
 
