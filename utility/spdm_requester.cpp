@@ -27,7 +27,7 @@
 #include <iostream>
 #include <unordered_set>
 
-extern spdmapplib::SpdmConfiguration getConfigurationFromEntityManager(
+extern spdmapplib::SPDMConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName);
 
@@ -36,9 +36,9 @@ static std::shared_ptr<boost::asio::io_context> ioc =
 static std::shared_ptr<sdbusplus::asio::connection> conn =
     std::make_shared<sdbusplus::asio::connection>(*ioc);
 static auto pSpdmRequester = spdmapplib::createRequester();
-static auto trans = std::make_shared<spdmtransport::spdmTransportMCTP>(
+static auto trans = std::make_shared<spdmtransport::SPDMTransportMCTP>(
     spdmtransport::TransportIdentifier::mctpOverSMBus);
-static spdmapplib::SpdmConfiguration spdmRequesterCfg{};
+static spdmapplib::SPDMConfiguration spdmRequesterCfg{};
 static boost::asio::steady_timer requesterTimer(*ioc);
 static uint8_t responderEid;
 
@@ -111,7 +111,7 @@ static void dumpVector(std::vector<unsigned char> vec)
  */
 static void startSPDMRequester()
 {
-    spdmtransport::transportEndPoint responderCfg = {
+    spdmtransport::TransportEndPoint responderCfg = {
         spdmtransport::TransportIdentifier::mctpOverSMBus, 0};
 
     phosphor::logging::log<phosphor::logging::level::INFO>(

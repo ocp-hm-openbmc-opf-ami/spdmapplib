@@ -47,8 +47,8 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         return errorcodes::generalReturnError;
     }
-    spdmResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
+    SPDMResponderImpl* pspdmTmp = nullptr;
+    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
 
     uint32_t j;
     std::vector<uint8_t> data;
@@ -83,8 +83,8 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     {
         return errorcodes::generalReturnError;
     }
-    spdmResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
+    SPDMResponderImpl* pspdmTmp = nullptr;
+    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
 
     std::vector<uint8_t> rspData{};
     status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
@@ -105,13 +105,13 @@ void spdmServerConnectionStateCallback(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
     void* pTmp = nullptr;
-    spdmResponderImpl* pspdmTmp = nullptr;
+    SPDMResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
     {
         return;
     }
-    pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
+    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
     pspdmTmp->processConnectionState(spdmContext, connectionState);
 }
 /**
@@ -127,11 +127,11 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
                                     libspdm_session_state_t sessionState)
 {
     void* pTmp = nullptr;
-    spdmResponderImpl* pspdmTmp = nullptr;
+    SPDMResponderImpl* pspdmTmp = nullptr;
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
         return;
-    pspdmTmp = static_cast<spdmResponderImpl*>(pTmp);
+    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
     return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
 }
 
@@ -147,11 +147,11 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
  * @param  trans             The pointer of transport instance.
  * @return 0: success, other: listed in spdmapplib::errorCodes
  **/
-int spdmResponderImpl::initResponder(
+int SPDMResponderImpl::initResponder(
     std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::spdmTransport> trans,
-    SpdmConfiguration& spdmConfig)
+    std::shared_ptr<spdmtransport::SPDMTransport> trans,
+    SPDMConfiguration& spdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;
@@ -165,14 +165,14 @@ int spdmResponderImpl::initResponder(
         }
         spdmTrans = trans;
         spdmTrans->initTransport(
-            ioc, conn, std::bind(&spdmResponderImpl::addNewDevice, this, _1),
-            std::bind(&spdmResponderImpl::removeDevice, this, _1),
-            std::bind(&spdmResponderImpl::msgRecvCallback, this, _1, _2));
+            ioc, conn, std::bind(&SPDMResponderImpl::addNewDevice, this, _1),
+            std::bind(&SPDMResponderImpl::removeDevice, this, _1),
+            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
     }
     else
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "spdmResponderImpl::initResponder getConfigurationFromEntityManager failed!");
+            "SPDMResponderImpl::initResponder getConfigurationFromEntityManager failed!");
         return errorcodes::spdmConfigurationNotFoundInEntityManager;
     }
     return RETURN_SUCCESS;
@@ -185,8 +185,8 @@ int spdmResponderImpl::initResponder(
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::removeDevice(
-    spdmtransport::transportEndPoint& transEndpoint)
+int SPDMResponderImpl::removeDevice(
+    spdmtransport::TransportEndPoint& transEndpoint)
 {
     uint8_t i;
     for (i = 0; i < curIndex; i++)
@@ -215,8 +215,8 @@ int spdmResponderImpl::removeDevice(
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::addNewDevice(
-    spdmtransport::transportEndPoint& transEndpoint)
+int SPDMResponderImpl::addNewDevice(
+    spdmtransport::TransportEndPoint& transEndpoint)
 {
     using namespace std::placeholders;
 
@@ -230,7 +230,7 @@ int spdmResponderImpl::addNewDevice(
         return errorcodes::generalReturnError;
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        "spdmResponderImpl::addNewDevice");
+        "SPDMResponderImpl::addNewDevice");
     newItem.transEP = transEndpoint;
     newItem.useSlotId = 0;
     newItem.sessionId = 0;
@@ -248,7 +248,7 @@ int spdmResponderImpl::addNewDevice(
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("spdmResponderImpl::addNewDevice libspdm_init_context failed" +
+            ("SPDMResponderImpl::addNewDevice libspdm_init_context failed" +
              std::to_string(status))
                 .c_str());
         return errorcodes::generalReturnError;
@@ -265,7 +265,7 @@ int spdmResponderImpl::addNewDevice(
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("spdmResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
+            ("SPDMResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
         return errorcodes::generalReturnError;
@@ -275,7 +275,7 @@ int spdmResponderImpl::addNewDevice(
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("spdmResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
+            ("SPDMResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
         return errorcodes::generalReturnError;
@@ -291,7 +291,7 @@ int spdmResponderImpl::addNewDevice(
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
+int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
 {
     libspdm_data_parameter_t parameter;
     uint8_t u8Value;
@@ -302,7 +302,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
 
     useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("spdmResponderImpl::settingFromConfig Responder useSlotCount: " +
+        ("SPDMResponderImpl::settingFromConfig Responder useSlotCount: " +
          std::to_string(spdmResponderCfg.slotcount))
             .c_str());
 
@@ -428,7 +428,7 @@ int spdmResponderImpl::settingFromConfig(uint8_t itemIndex)
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::addData(spdmtransport::transportEndPoint& transEndpoint,
+int SPDMResponderImpl::addData(spdmtransport::TransportEndPoint& transEndpoint,
                                const std::vector<uint8_t>& data)
 {
     uint8_t i;
@@ -456,7 +456,7 @@ int spdmResponderImpl::addData(spdmtransport::transportEndPoint& transEndpoint,
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::processSPDMMessage()
+int SPDMResponderImpl::processSPDMMessage()
 {
     uint8_t i;
     return_status status;
@@ -486,8 +486,8 @@ int spdmResponderImpl::processSPDMMessage()
  * @return 0: success, other: failed.
  *
  **/
-int spdmResponderImpl::msgRecvCallback(
-    spdmtransport::transportEndPoint& transEP, const std::vector<uint8_t>& data)
+int SPDMResponderImpl::msgRecvCallback(
+    spdmtransport::TransportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
     addData(transEP, data);
     return processSPDMMessage();
@@ -502,7 +502,7 @@ int spdmResponderImpl::msgRecvCallback(
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmResponderImpl::deviceReceiveMessage(
+return_status SPDMResponderImpl::deviceReceiveMessage(
     void* spdmContext, std::vector<uint8_t>& response, uint64_t /*timeout*/)
 {
     uint8_t i;
@@ -517,7 +517,7 @@ return_status spdmResponderImpl::deviceReceiveMessage(
 
     response = std::move(spdmPool[i].data);
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("spdmResponderImpl::deviceReceiveMessage responseSize: " +
+        ("SPDMResponderImpl::deviceReceiveMessage responseSize: " +
          std::to_string(response.size()))
             .c_str());
     return RETURN_SUCCESS;
@@ -532,7 +532,7 @@ return_status spdmResponderImpl::deviceReceiveMessage(
  * @return return_status defined in libspdm.
  *
  **/
-return_status spdmResponderImpl::deviceSendMessage(
+return_status SPDMResponderImpl::deviceSendMessage(
     void* spdmContext, const std::vector<uint8_t>& request, uint64_t timeout)
 {
     uint8_t i;
@@ -553,7 +553,7 @@ return_status spdmResponderImpl::deviceSendMessage(
  * @param  connectionState  The connection state.
  *
  **/
-void spdmResponderImpl::processConnectionState(
+void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
     void* data;
@@ -601,7 +601,7 @@ void spdmResponderImpl::processConnectionState(
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get Version failed:" +
+                        ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get Version failed:" +
                          std::to_string(status))
                             .c_str());
                     break;
@@ -620,7 +620,7 @@ void spdmResponderImpl::processConnectionState(
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get MeasurementHashAlgo failed:" +
+                    ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get MeasurementHashAlgo failed:" +
                      std::to_string(status))
                         .c_str());
                 break;
@@ -633,7 +633,7 @@ void spdmResponderImpl::processConnectionState(
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get AsymAlgo failed:" +
+                    ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get AsymAlgo failed:" +
                      std::to_string(status))
                         .c_str());
                 break;
@@ -646,7 +646,7 @@ void spdmResponderImpl::processConnectionState(
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get HashAlgo failed:" +
+                    ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get HashAlgo failed:" +
                      std::to_string(status))
                         .c_str());
                 break;
@@ -660,7 +660,7 @@ void spdmResponderImpl::processConnectionState(
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get ReqAsymAlgo failed:" +
+                    ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get ReqAsymAlgo failed:" +
                      std::to_string(status))
                         .c_str());
                 break;
@@ -680,7 +680,7 @@ void spdmResponderImpl::processConnectionState(
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set slotcount failed:" +
+                        ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set slotcount failed:" +
                          std::to_string(status))
                             .c_str());
                     break;
@@ -696,7 +696,7 @@ void spdmResponderImpl::processConnectionState(
                     if (RETURN_ERROR(status))
                     {
                         phosphor::logging::log<phosphor::logging::level::ERR>(
-                            ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set CertChain failed:" +
+                            ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Set CertChain failed:" +
                              std::to_string(status) +
                              " slot index: " + std::to_string(index))
                                 .c_str());
@@ -732,7 +732,7 @@ void spdmResponderImpl::processConnectionState(
  * @param  sessionState     The session state.
  *
  **/
-void spdmResponderImpl::processSessionState(
+void SPDMResponderImpl::processSessionState(
     void* spdmContext, uint32_t sessionID, libspdm_session_state_t sessionState)
 {
     uint32_t dataSize;
@@ -772,7 +772,7 @@ void spdmResponderImpl::processSessionState(
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("spdmResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get session policy failed:" +
+                        ("SPDMResponderImpl::processConnectionState LIBSPDM_CONNECTION_STATE_NEGOTIATED Get session policy failed:" +
                          std::to_string(status))
                             .c_str());
                     break;
@@ -780,7 +780,7 @@ void spdmResponderImpl::processSessionState(
                 else
                 {
                     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                        ("spdmResponderImpl::processSessionState session policy - " +
+                        ("SPDMResponderImpl::processSessionState session policy - " +
                          std::to_string(u8Value))
                             .c_str());
                 }
@@ -792,7 +792,7 @@ void spdmResponderImpl::processSessionState(
             break;
         default:
             phosphor::logging::log<phosphor::logging::level::ERR>(
-                "spdmResponderImpl::processConnectionState should not goto here!!");
+                "SPDMResponderImpl::processConnectionState should not goto here!!");
             break;
     }
 }
@@ -803,9 +803,9 @@ void spdmResponderImpl::processSessionState(
  * @return Pointer to Responder implementation object.
  *
  **/
-std::shared_ptr<spdmResponder> createResponder()
+std::shared_ptr<SPDMResponder> createResponder()
 {
-    return std::make_shared<spdmResponderImpl>();
+    return std::make_shared<SPDMResponderImpl>();
 }
 
 } // namespace spdmapplib

@@ -22,13 +22,13 @@ namespace spdmtransport
 /**
  * @brief Defined callback function prototype
  *
- * @param transEP The transportEndPoint object.
+ * @param transEP The TransportEndPoint object.
  * @param data Pointer to a buffer.
  */
-struct transportEndPoint;
+struct TransportEndPoint;
 using MsgReceiveCallback = std::function<void(
-    transportEndPoint& transEP, const std::vector<uint8_t>& data)>;
-using AddRemoveDeviceCallback = std::function<int(transportEndPoint& transEP)>;
+    TransportEndPoint& transEP, const std::vector<uint8_t>& data)>;
+using AddRemoveDeviceCallback = std::function<int(TransportEndPoint& transEP)>;
 
 /**
  * @brief SPDM Transport type, could be extended.
@@ -45,13 +45,13 @@ enum class TransportIdentifier : uint8_t
  * @brief Endpoint information, could be extended.
  *
  */
-struct transportEndPoint
+struct TransportEndPoint
 {
     TransportIdentifier transType; /*interface type.*/
     uint8_t devIdentifier;
-    bool operator==(const transportEndPoint& p2) const
+    bool operator==(const TransportEndPoint& p2) const
     {
-        const transportEndPoint& p1 = (*this);
+        const TransportEndPoint& p1 = (*this);
         return p1.transType == p2.transType &&
                p1.devIdentifier == p2.devIdentifier;
     }
@@ -62,10 +62,10 @@ struct transportEndPoint
  *
  **/
 
-class spdmTransport
+class SPDMTransport
 {
   public:
-    virtual ~spdmTransport() = default;
+    virtual ~SPDMTransport() = default;
 
     /* APIs for requester and responder */
     /**
@@ -109,7 +109,7 @@ class spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    virtual int asyncSendData(transportEndPoint& transEP,
+    virtual int asyncSendData(TransportEndPoint& transEP,
                               const std::vector<uint8_t>& request,
                               uint64_t timeout) = 0;
 
@@ -128,7 +128,7 @@ class spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    virtual int sendRecvData(transportEndPoint& transEP,
+    virtual int sendRecvData(TransportEndPoint& transEP,
                              const std::vector<uint8_t>& request,
                              uint64_t timeout, MsgReceiveCallback rspRcvCB) = 0;
 };

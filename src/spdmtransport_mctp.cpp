@@ -28,7 +28,7 @@ namespace spdmtransport
  * @brief Function registered to mctpwrapper as receiving message Callback.
  *
  **/
-void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
+void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
                                              bool /*tagOwner*/,
                                              uint8_t /* msgTag*/,
                                              const std::vector<uint8_t>& data,
@@ -37,7 +37,7 @@ void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     if (!data.empty() &&
         data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
     { // only SPDM message arrive here.
-        transportEndPoint tmpEP;
+        TransportEndPoint tmpEP;
         tmpEP.devIdentifier = srcEid;
         tmpEP.transType = getTransType();
         msgReceiveCB(tmpEP, data);
@@ -48,7 +48,7 @@ void spdmTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
  * @brief Function registered to mctpwrapper as device update handler.
  *
  **/
-void spdmTransportMCTP::transOnDeviceUpdate(
+void SPDMTransportMCTP::transOnDeviceUpdate(
     void*, const mctpw::Event& evt, boost::asio::yield_context /*yield*/)
 {
     switch (evt.type)
@@ -79,7 +79,7 @@ void spdmTransportMCTP::transOnDeviceUpdate(
  *responder used).
  * @return 0: success, other: failed.
  **/
-int spdmTransportMCTP::initTransport(
+int SPDMTransportMCTP::initTransport(
     std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
     AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
@@ -103,8 +103,8 @@ int spdmTransportMCTP::initTransport(
     mctpw::MCTPConfiguration config(mctpw::MessageType::spdm, bindingType);
     mctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
         conn, config,
-        std::bind(&spdmTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
-        std::bind(&spdmTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
+        std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
+        std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
                   _4, _5, _6));
 
     boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
@@ -124,9 +124,9 @@ int spdmTransportMCTP::initTransport(
  * @param  eid          The EID of detected new endpoint.
  * @return true: success, false: failed.
  **/
-int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
+int SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
-    transportEndPoint tmpEP;
+    TransportEndPoint tmpEP;
     tmpEP.devIdentifier = eid;
     tmpEP.transType = transType;
     return removeDeviceCB == nullptr
@@ -140,9 +140,9 @@ int spdmTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
  * @param  eid          The EID of detected new endpoint.
  * @return true: success, false: failed.
  **/
-int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
+int SPDMTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 {
-    transportEndPoint tmpEP;
+    TransportEndPoint tmpEP;
     tmpEP.devIdentifier = eid;
     tmpEP.transType = transType;
     return addNewDeviceCB == nullptr
@@ -160,7 +160,7 @@ int spdmTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
  * @return 0: success, other: failed.
  *
  **/
-int spdmTransportMCTP::asyncSendData(transportEndPoint& transEP,
+int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
                                      const std::vector<uint8_t>& request,
                                      uint64_t /*timeout*/)
 {
@@ -188,7 +188,7 @@ int spdmTransportMCTP::asyncSendData(transportEndPoint& transEP,
  * @return 0: success, other: failed.
  *
  **/
-int spdmTransportMCTP::sendRecvData(transportEndPoint& transEP,
+int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
                                     const std::vector<uint8_t>& request,
                                     uint64_t timeout,
                                     MsgReceiveCallback rspRcvCB)
@@ -196,7 +196,7 @@ int spdmTransportMCTP::sendRecvData(transportEndPoint& transEP,
     constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{500};
     mctpw::eid_t eid = transEP.devIdentifier;
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("spdmTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) +
+        ("SPDMTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) +
          ", request size: " + std::to_string(request.size()) +
          ", timeout: " + std::to_string(timeout))
             .c_str());
@@ -210,7 +210,7 @@ int spdmTransportMCTP::sendRecvData(transportEndPoint& transEP,
     {
         std::vector<uint8_t> responsePacket = reply.second;
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("spdmTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
+            ("SPDMTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
              std::to_string(responsePacket.size()))
                 .c_str());
         std::stringstream ss;

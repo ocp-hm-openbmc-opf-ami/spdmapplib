@@ -24,7 +24,7 @@ namespace spdmapplib
  * @brief SPDM configurations from EntityManager
  *
  */
-struct SpdmConfiguration
+struct SPDMConfiguration
 {
     uint32_t version;
     /* library can support requester and responder roles */
@@ -43,10 +43,10 @@ struct SpdmConfiguration
  * @brief The responder base class
  *
  **/
-class spdmResponder
+class SPDMResponder
 {
   public:
-    virtual ~spdmResponder() = default;
+    virtual ~SPDMResponder() = default;
     /*APIs called by SPDM responder daemon*/
     /**
      * @brief Initial function of SPDM responder
@@ -54,24 +54,24 @@ class spdmResponder
      *
      * @param  ioc                boost io_context object..
      * @param  trans             The pointer of transport instance.
-     * @param  spdmConfig        Application assigned SpdmConfiguration.
+     * @param  spdmConfig        Application assigned SPDMConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
     virtual int
         initResponder(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      SpdmConfiguration& spdmConfig) = 0;
+                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                      SPDMConfiguration& spdmConfig) = 0;
 };
 
 /**
  * @brief The requester base class
  *
  **/
-class spdmRequester
+class SPDMRequester
 {
   public:
-    virtual ~spdmRequester() = default;
+    virtual ~SPDMRequester() = default;
     /*Requester APIs*/
     /**
      * @brief Initial function of SPDM requester
@@ -85,9 +85,9 @@ class spdmRequester
     virtual int
         initRequester(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmtransport::transportEndPoint& transResponder,
-                      SpdmConfiguration& pSpdmConfig) = 0;
+                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                      spdmtransport::TransportEndPoint& transResponder,
+                      SPDMConfiguration& pSpdmConfig) = 0;
     /**
      * @brief The authentication function
      *
@@ -123,7 +123,7 @@ class spdmRequester
  * @return Pointer to Requester implementation object.
  *
  **/
-std::shared_ptr<spdmRequester> createRequester();
+std::shared_ptr<SPDMRequester> createRequester();
 
 /**
  * @brief Responder object create Factory function.
@@ -131,6 +131,6 @@ std::shared_ptr<spdmRequester> createRequester();
  * @return Pointer to Responder implementation object.
  *
  **/
-std::shared_ptr<spdmResponder> createResponder();
+std::shared_ptr<SPDMResponder> createResponder();
 
 } // namespace spdmapplib

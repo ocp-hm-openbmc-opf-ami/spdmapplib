@@ -26,18 +26,18 @@ namespace spdmtransport
  *
  **/
 
-class spdmTransportMCTP : public spdmTransport
+class SPDMTransportMCTP : public SPDMTransport
 {
   public:
     /*APIs called by spdmAppLib layer*/
     /**
-     * @brief spdmTransportMCTP constructor
+     * @brief SPDMTransportMCTP constructor
      *
      * @param  id        Transport layer interface id(here only for MCTPoverPCIe
      *or MCTPoverSMBus).
      *
      **/
-    spdmTransportMCTP(TransportIdentifier id)
+    SPDMTransportMCTP(TransportIdentifier id)
     {
         transType = id;
     };
@@ -81,7 +81,7 @@ class spdmTransportMCTP : public spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    int asyncSendData(transportEndPoint& transEP,
+    int asyncSendData(TransportEndPoint& transEP,
                       const std::vector<uint8_t>& request,
                       uint64_t timeout) override;
 
@@ -96,7 +96,7 @@ class spdmTransportMCTP : public spdmTransport
      * @return 0: success, other: failed.
      *
      **/
-    int sendRecvData(transportEndPoint& transEP,
+    int sendRecvData(TransportEndPoint& transEP,
                      const std::vector<uint8_t>& request, uint64_t timeout,
                      MsgReceiveCallback rspRcvCB) override;
 

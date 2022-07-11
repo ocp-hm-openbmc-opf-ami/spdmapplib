@@ -55,7 +55,7 @@ enum class SPDMDeviceEvent : uint8_t
 typedef struct
 {
     void* pspdmContext;
-    spdmtransport::transportEndPoint transEP;
+    spdmtransport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
     uint32_t useVersion;
@@ -73,11 +73,11 @@ typedef struct
  * @brief SPDM responder implementation class
  *
  */
-class spdmResponderImpl : public spdmResponder
+class SPDMResponderImpl : public SPDMResponder
 {
   public:
     /*APIs called by SPDM daemon*/
-    spdmResponderImpl() = default;
+    SPDMResponderImpl() = default;
     /**
      * @brief Initial function of SPDM responder.
      *
@@ -86,13 +86,13 @@ class spdmResponderImpl : public spdmResponder
      *
      * @param  ioc                boost io_context object..
      * @param  trans             The pointer of transport instance.
-     * @param  spdmConfig        Application assigned SpdmConfiguration.
+     * @param  spdmConfig        Application assigned SPDMConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
     int initResponder(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      SpdmConfiguration& spdmConfig) override;
+                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                      SPDMConfiguration& spdmConfig) override;
 
     /*APIs called by transport layer*/
     /**
@@ -102,7 +102,7 @@ class spdmResponderImpl : public spdmResponder
      * @return 0: success, other: failed.
      *
      **/
-    int addNewDevice(spdmtransport::transportEndPoint& transEP);
+    int addNewDevice(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Called when endpoint remove is detected.
@@ -111,7 +111,7 @@ class spdmResponderImpl : public spdmResponder
      * @return 0: success, other: failed.
      *
      **/
-    int removeDevice(spdmtransport::transportEndPoint& transEP);
+    int removeDevice(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Called when message received.
@@ -122,7 +122,7 @@ class spdmResponderImpl : public spdmResponder
      *
      **/
 
-    int addData(spdmtransport::transportEndPoint& transEP,
+    int addData(spdmtransport::TransportEndPoint& transEP,
                 const std::vector<uint8_t>& data);
     /**
      * @brief Called when message received.
@@ -142,7 +142,7 @@ class spdmResponderImpl : public spdmResponder
      * @return 0: success, other: failed.
      *
      **/
-    int msgRecvCallback(spdmtransport::transportEndPoint& transEP,
+    int msgRecvCallback(spdmtransport::TransportEndPoint& transEP,
                         const std::vector<uint8_t>& data);
 
     /*Cabllback functions implementation for libspdm */
@@ -211,19 +211,19 @@ class spdmResponderImpl : public spdmResponder
     uint32_t useResponderCapabilityFlags;
     uint8_t useMutAuth;
     uint8_t useBasicMutAuth;
-    SpdmConfiguration spdmResponderCfg;
+    SPDMConfiguration spdmResponderCfg;
     std::vector<spdmItem> spdmPool;
-    std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;
+    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
 };
 
 /**
  * @brief SPDM requester implementation class
  *
  */
-class spdmRequesterImpl : public spdmRequester
+class SPDMRequesterImpl : public SPDMRequester
 {
   public:
-    spdmRequesterImpl() = default;
+    SPDMRequesterImpl() = default;
     /* APIs for requester*/
     /**
      * @brief Initial function of SPDM requester
@@ -235,9 +235,9 @@ class spdmRequesterImpl : public spdmRequester
      **/
     int initRequester(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::spdmTransport> trans,
-                      spdmtransport::transportEndPoint& transResponder,
-                      SpdmConfiguration& spdmConfig) override;
+                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                      spdmtransport::TransportEndPoint& transResponder,
+                      SPDMConfiguration& spdmConfig) override;
     /**
      * @brief The authentication function
      *
@@ -275,7 +275,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return 0: success, other: failed.
      *
      **/
-    int addData(spdmtransport::transportEndPoint& transEP,
+    int addData(spdmtransport::TransportEndPoint& transEP,
                 const std::vector<uint8_t>& data);
 
     /**
@@ -286,7 +286,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return 0: success, other: failed.
      *
      **/
-    int checkResponderDevice(spdmtransport::transportEndPoint& transEP);
+    int checkResponderDevice(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Function to pass as parameter of syncSendRecvData of transport
@@ -300,7 +300,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return 0: success, other: failed.
      *
      **/
-    int msgRecvCallback(spdmtransport::transportEndPoint& transEP,
+    int msgRecvCallback(spdmtransport::TransportEndPoint& transEP,
                         const std::vector<uint8_t>& data);
 
     /*Callback functions implementation for libspdm*/
@@ -340,7 +340,7 @@ class spdmRequesterImpl : public spdmRequester
      * @return return_status defined in libspdm.
      *
      **/
-    int setupResponder(const spdmtransport::transportEndPoint& transEP);
+    int setupResponder(const spdmtransport::TransportEndPoint& transEP);
     /**
      * @brief Function to setup user assigned endpoint initial configuration.
      *
@@ -365,10 +365,10 @@ class spdmRequesterImpl : public spdmRequester
     uint8_t mUseMeasurementSummaryHashType;
     uint8_t mUseMeasurementOperation;
     uint8_t mUseMeasurementAttribute;
-    SpdmConfiguration spdmRequesterCfg;
+    SPDMConfiguration spdmRequesterCfg;
     spdmItem spdmResponder; // only one instance for requester.
-    spdmtransport::transportEndPoint transResponder;
-    std::shared_ptr<spdmtransport::spdmTransport> spdmTrans;
+    spdmtransport::TransportEndPoint transResponder;
+    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
 };
 
 } // namespace spdmapplib
