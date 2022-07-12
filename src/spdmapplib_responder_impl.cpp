@@ -230,6 +230,15 @@ int SPDMResponderImpl::addNewDevice(
 {
     using namespace std::placeholders;
 
+    for (auto& item : spdmPool)
+    {
+        if (item.transEP == transEndpoint)
+        {
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                "SPDMResponderImpl::addNewDevice, Found old EP item, delete it.");
+            removeDevice(transEndpoint);
+        }
+    }
     spdmItem newItem;
     uint8_t newIndex;
     return_status status;
