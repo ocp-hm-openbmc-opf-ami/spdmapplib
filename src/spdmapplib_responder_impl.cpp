@@ -137,6 +137,18 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
 
 /*Implement SPDMAppLib responder*/
 
+SPDMResponderImpl::~SPDMResponderImpl()
+{
+    for (auto& item : spdmPool)
+    {
+        if (item.pspdmContext)
+        {
+            free_pool(item.pspdmContext);
+            item.pspdmContext = nullptr;
+        }
+    }
+}
+
 /**
  * @brief Initial function of SPDM responder.
  *
@@ -159,10 +171,8 @@ int SPDMResponderImpl::initResponder(
     spdmResponderCfg = spdmConfig;
     if (spdmResponderCfg.version)
     {
-        if (setCertificatePath(spdmResponderCfg.certPath) == false)
-        {
-            return errorcodes::generalReturnError;
-        }
+        setCertificatePath(spdmResponderCfg.certPath);
+
         spdmTrans = trans;
         spdmTrans->initTransport(
             ioc, conn, std::bind(&SPDMResponderImpl::addNewDevice, this, _1),
@@ -200,7 +210,7 @@ int SPDMResponderImpl::removeDevice(
     }
     if (spdmPool[i].pspdmContext != nullptr)
     {
-        free(spdmPool[i].pspdmContext);
+        free_pool(spdmPool[i].pspdmContext);
         spdmPool[i].pspdmContext = nullptr;
     }
     spdmPool.erase(spdmPool.begin() + i);
@@ -224,7 +234,7 @@ int SPDMResponderImpl::addNewDevice(
     uint8_t newIndex;
     return_status status;
 
-    newItem.pspdmContext = (void*)malloc(libspdm_get_context_size());
+    newItem.pspdmContext = allocate_pool(libspdm_get_context_size());
     if (newItem.pspdmContext == nullptr)
     {
         return errorcodes::generalReturnError;

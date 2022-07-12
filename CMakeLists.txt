@@ -33,6 +33,7 @@ INCLUDE_DIRECTORIES(
                     $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include
                     $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include/hal/arm 
                     $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub
+                    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub/include
 )
 
 SET(src_spdmapplib

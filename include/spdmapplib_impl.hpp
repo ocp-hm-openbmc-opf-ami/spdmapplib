@@ -15,13 +15,16 @@
  */
 #pragma once
 #include "spdmapplib.hpp"
+// clang-format off
 extern "C"
 {
 #include "library/spdm_common_lib.h"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_responder_lib.h"
 #include "spdm_device_secret_lib_internal.h"
+#include "library/malloclib.h"
 }
+// clang-format on
 
 inline constexpr uint32_t EXE_CONNECTION_VERSION_ONLY = 0x1;
 inline constexpr uint32_t EXE_CONNECTION_DIGEST = 0x2;
@@ -31,7 +34,6 @@ inline constexpr uint32_t EXE_CONNECTION_MEAS = 0x10;
 
 namespace spdmapplib
 {
-extern bool setCertificatePath(std::string& certPath);
 /**
  * @brief SPDM version enum
  *
@@ -78,6 +80,7 @@ class SPDMResponderImpl : public SPDMResponder
   public:
     /*APIs called by SPDM daemon*/
     SPDMResponderImpl() = default;
+    virtual ~SPDMResponderImpl();
     /**
      * @brief Initial function of SPDM responder.
      *
@@ -224,6 +227,7 @@ class SPDMRequesterImpl : public SPDMRequester
 {
   public:
     SPDMRequesterImpl() = default;
+    virtual ~SPDMRequesterImpl();
     /* APIs for requester*/
     /**
      * @brief Initial function of SPDM requester
@@ -370,5 +374,13 @@ class SPDMRequesterImpl : public SPDMRequester
     spdmtransport::TransportEndPoint transResponder;
     std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
 };
+
+/*Utility function*/
+/**
+ * @brief set cert file Path
+ *
+ * @param certPath : cert file location
+ */
+void setCertificatePath(std::string& certPath);
 
 } // namespace spdmapplib

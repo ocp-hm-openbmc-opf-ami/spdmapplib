@@ -73,6 +73,14 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
     return status;
 }
 
+SPDMRequesterImpl::~SPDMRequesterImpl()
+{
+    if (spdmResponder.pspdmContext)
+    {
+        free_pool(spdmResponder.pspdmContext);
+        spdmResponder.pspdmContext = nullptr;
+    }
+}
 /**
  * @brief Initial function of SPDM requester
  *
@@ -96,10 +104,8 @@ int SPDMRequesterImpl::initRequester(
     spdmRequesterCfg = spdmConfig;
     if (spdmRequesterCfg.version)
     {
-        if (setCertificatePath(spdmRequesterCfg.certPath) == false)
-        {
-            return errorcodes::generalReturnError;
-        }
+        setCertificatePath(spdmRequesterCfg.certPath);
+
         mExeConnection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
                           EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS);
         transResponder = cfgTransResponder;
@@ -317,7 +323,7 @@ int SPDMRequesterImpl::settingFromConfig(void)
             ("SPDMRequesterImpl::settingFromConfig libspdm_init_connection Error!- " +
              ss.str())
                 .c_str());
-        free(spdmResponder.pspdmContext);
+        free_pool(spdmResponder.pspdmContext);
         spdmResponder.pspdmContext = nullptr;
         return errorcodes::generalReturnError;
     }
@@ -408,7 +414,7 @@ int SPDMRequesterImpl::setupResponder(
     const spdmtransport::TransportEndPoint& transEP)
 {
     return_status status;
-    spdmResponder.pspdmContext = (void*)malloc(libspdm_get_context_size());
+    spdmResponder.pspdmContext = allocate_pool(libspdm_get_context_size());
     if (spdmResponder.pspdmContext == nullptr)
     {
         return errorcodes::generalReturnError;
@@ -567,7 +573,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                         ("SPDMRequesterImpl::doAuthentication libspdm_get_digest Error!- " +
                          std::to_string(status))
                             .c_str());
-                    free(spdmResponder.pspdmContext);
+                    free_pool(spdmResponder.pspdmContext);
                     spdmResponder.pspdmContext = nullptr;
                     return status;
                 }
@@ -591,7 +597,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                             ("SPDMRequesterImpl::doAuthentication libspdm_get_certificate Error! - " +
                              std::to_string(status))
                                 .c_str());
-                        free(spdmResponder.pspdmContext);
+                        free_pool(spdmResponder.pspdmContext);
                         spdmResponder.pspdmContext = nullptr;
                         spdmResponder.dataCert = {};
                         return status;
@@ -622,7 +628,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                         ("SPDMRequesterImpl::doAuthentication libspdm_challenge Error! - " +
                          std::to_string(status))
                             .c_str());
-                    free(spdmResponder.pspdmContext);
+                    free_pool(spdmResponder.pspdmContext);
                     spdmResponder.pspdmContext = nullptr;
                     return status;
                 }

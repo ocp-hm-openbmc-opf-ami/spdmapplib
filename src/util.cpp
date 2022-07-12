@@ -99,11 +99,9 @@ namespace spdmapplib
  * @brief set cert file Path
  *
  * @param certPath : cert file location
- * @return true: success, false: not a valide path.
  */
-bool setCertificatePath(std::string& certPath)
+void setCertificatePath(std::string& certPath)
 {
     setCertPath = certPath.data();
-    return true;
 }
 } // namespace spdmapplib
