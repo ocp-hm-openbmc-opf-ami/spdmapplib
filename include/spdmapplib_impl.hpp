@@ -119,7 +119,7 @@ class SPDMResponderImpl : public SPDMResponder
     /**
      * @brief Called when message received.
      *
-     * @param  transEP      The endpoint object to receive data.
+     * @param  transEP      The endpoint object sending data.
      * @param  data          The vector of received data.
      * @return 0: success, other: failed.
      *
@@ -132,10 +132,11 @@ class SPDMResponderImpl : public SPDMResponder
      *
      * The function is called in msgRecvCallback to process incoming received
      *data.
+     * @param  transEP      The endpoint object sending data.
      * @return 0: success, other: failed.
      *
      **/
-    int processSPDMMessage();
+    int processSPDMMessage(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Register to transport layer for handling received data.

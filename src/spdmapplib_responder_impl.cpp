@@ -444,7 +444,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
 /**
  * @brief Called when message received.
  *
- * @param  transEndpoint      The endpoint object to receive data.
+ * @param  transEndpoint      The endpoint object sending data.
  * @param  data          The vector of received data.
  * @return 0: success, other: failed.
  *
@@ -452,20 +452,14 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
 int SPDMResponderImpl::addData(spdmtransport::TransportEndPoint& transEndpoint,
                                const std::vector<uint8_t>& data)
 {
-    uint8_t i;
-
-    for (i = 0; i < curIndex; i++)
-    {
-        if (spdmPool[i].transEP == transEndpoint)
-        {
-            break;
-        }
-    }
-    if (i >= curIndex)
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+        return (item.transEP == transEndpoint);
+    });
+    if (it == spdmPool.end())
     {
         return errorcodes::generalReturnError;
     }
-    spdmPool[i].data = std::move(data);
+    it->data = std::move(data);
     return RETURN_SUCCESS;
 }
 
@@ -474,26 +468,30 @@ int SPDMResponderImpl::addData(spdmtransport::TransportEndPoint& transEndpoint,
  *
  * The function is called in msgRecvCallback to process incoming received
  *data.
+ * @param  transEndpoint      The endpoint object sending data.
  * @return 0: success, other: failed.
  *
  **/
-int SPDMResponderImpl::processSPDMMessage()
+int SPDMResponderImpl::processSPDMMessage(
+    spdmtransport::TransportEndPoint& transEndpoint)
 {
-    uint8_t i;
     return_status status;
-    for (i = 0; i < curIndex; i++)
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+        return (item.transEP == transEndpoint);
+    });
+    if (it == spdmPool.end())
     {
-        if (spdmPool[i].data.size() > 0)
+        return errorcodes::generalReturnError;
+    }
+    if (it->data.size() > 0)
+    {
+        status = libspdm_responder_dispatch_message(it->pspdmContext);
+        if (RETURN_ERROR(status))
         {
-            status =
-                libspdm_responder_dispatch_message(spdmPool[i].pspdmContext);
-            if (RETURN_ERROR(status))
-            {
-                phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("spdmRequesterImpl::setupResponder libspdm_responder_dispatch_message failed at: " +
-                     std::to_string(i) + " status: " + std::to_string(status))
-                        .c_str());
-            }
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                ("spdmRequesterImpl::setupResponder libspdm_responder_dispatch_message failed! status: " +
+                 std::to_string(status))
+                    .c_str());
         }
     }
     return RETURN_SUCCESS;
@@ -511,7 +509,7 @@ int SPDMResponderImpl::msgRecvCallback(
     spdmtransport::TransportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
     addData(transEP, data);
-    return processSPDMMessage();
+    return processSPDMMessage(transEP);
 };
 
 /**
