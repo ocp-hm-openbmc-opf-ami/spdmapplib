@@ -306,7 +306,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
          std::to_string(spdmResponderCfg.slotcount))
             .c_str());
 
-    memset(&parameter, 0, sizeof(parameter));
+    zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
 
     status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
@@ -592,7 +592,7 @@ void SPDMResponderImpl::processConnectionState(
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
             if (spdmPool[i].useVersion == 0)
             {
-                memset(&parameter, 0, sizeof(parameter));
+                zero_mem(&parameter, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
                 dataSize = sizeof(spdmVersion);
                 status = libspdm_get_data(spdmPool[i].pspdmContext,
@@ -610,7 +610,7 @@ void SPDMResponderImpl::processConnectionState(
                     (uint8_t)(spdmVersion >> SPDM_VERSION_NUMBER_SHIFT_BIT);
             }
             /* Provision new content*/
-            memset(&parameter, 0, sizeof(parameter));
+            zero_mem(&parameter, sizeof(parameter));
             parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
 
             dataSize = sizeof(u32Value);
@@ -671,7 +671,7 @@ void SPDMResponderImpl::processConnectionState(
                 &dataSize, nullptr, nullptr);
             if (res)
             {
-                memset(&parameter, 0, sizeof(parameter));
+                zero_mem(&parameter, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
                 u8Value = useSlotCount;
                 status = libspdm_set_data(
@@ -760,7 +760,7 @@ void SPDMResponderImpl::processSessionState(
             spdmPool[i].sessionId = sessionID;
             if (spdmPool[i].useVersion >= SPDM_MESSAGE_VERSION_12)
             {
-                memset(&parameter, 0, sizeof(parameter));
+                zero_mem(&parameter, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_SESSION;
                 *(uint32_t*)parameter.additional_data = sessionID;
 

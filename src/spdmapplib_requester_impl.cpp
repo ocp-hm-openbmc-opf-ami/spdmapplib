@@ -190,7 +190,7 @@ int SPDMRequesterImpl::settingFromConfig(void)
         SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
     mUseMeasurementAttribute = 0;
 
-    memset(&parameter, 0, sizeof(parameter));
+    zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
 
     status = libspdm_set_data(spdmResponder.pspdmContext,
