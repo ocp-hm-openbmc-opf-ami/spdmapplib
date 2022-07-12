@@ -28,12 +28,12 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Add header and sources here
 INCLUDE_DIRECTORIES(
-                    include 
-                    src/include 
-                    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include
-                    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include/hal/arm 
-                    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub
-                    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub/include
+    include 
+    src/include 
+    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include
+    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/include/hal/arm 
+    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub
+    $ENV{PKG_CONFIG_SYSROOT_DIR}/usr/include/libspdm/os_stub/include
 )
 
 SET(src_spdmapplib
@@ -75,7 +75,7 @@ INSTALL (TARGETS ${PROJECT_NAME}
 )
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/pkgconfig/spdmapplib.pc DESTINATION /usr/lib/pkgconfig)
 SET(PKGCONF_REQ_PUB
-        "libsystemd, mctpwplus"
+    "libsystemd, mctpwplus"
 )
 CONFIGURE_FILE(spdmapplib.pc.in
   lib/pkgconfig/spdmapplib.pc @ONLY)

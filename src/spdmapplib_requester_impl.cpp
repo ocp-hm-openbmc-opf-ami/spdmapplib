@@ -47,7 +47,9 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
 
     for (j = 0; j < requestSize; j++)
+    {
         data.push_back(*(requestPayload + j));
+    }
 
     return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }
@@ -106,8 +108,8 @@ int SPDMRequesterImpl::initRequester(
     {
         setCertificatePath(spdmRequesterCfg.certPath);
 
-        mExeConnection = (0 | EXE_CONNECTION_DIGEST | EXE_CONNECTION_CERT |
-                          EXE_CONNECTION_CHAL | EXE_CONNECTION_MEAS);
+        mExeConnection = (0 | exeConnectionDigest | exeConnectionCert |
+                          exeConnectionChal | exeConnectionMeas);
         transResponder = cfgTransResponder;
         spdmTrans = trans;
         intResult = setupResponder(transResponder);
@@ -563,7 +565,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                 get_certificate
                 challenge
             **/
-            if ((mExeConnection & EXE_CONNECTION_DIGEST) != 0)
+            if ((mExeConnection & exeConnectionDigest) != 0)
             {
                 status = libspdm_get_digest(spdmResponder.pspdmContext,
                                             &slotMask, totalDigestBuffer);
@@ -584,7 +586,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                 }
             }
 
-            if ((mExeConnection & EXE_CONNECTION_CERT) != 0)
+            if ((mExeConnection & exeConnectionCert) != 0)
             {
                 if (useSlotId != lastSlotIndex)
                 {
@@ -617,7 +619,7 @@ int SPDMRequesterImpl::doAuthentication(void)
                 }
             }
 
-            if ((mExeConnection & EXE_CONNECTION_CHAL) != 0)
+            if ((mExeConnection & exeConnectionChal) != 0)
             {
                 status = libspdm_challenge(
                     spdmResponder.pspdmContext, useSlotId,

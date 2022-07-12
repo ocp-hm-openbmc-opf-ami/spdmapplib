@@ -57,7 +57,9 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
 
     for (j = 0; j < requestSize; j++)
+    {
         data.push_back(*(requestPayload + j));
+    }
 
     return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }

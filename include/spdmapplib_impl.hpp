@@ -26,11 +26,11 @@ extern "C"
 }
 // clang-format on
 
-inline constexpr uint32_t EXE_CONNECTION_VERSION_ONLY = 0x1;
-inline constexpr uint32_t EXE_CONNECTION_DIGEST = 0x2;
-inline constexpr uint32_t EXE_CONNECTION_CERT = 0x4;
-inline constexpr uint32_t EXE_CONNECTION_CHAL = 0x8;
-inline constexpr uint32_t EXE_CONNECTION_MEAS = 0x10;
+inline constexpr uint32_t exeConnectionVersionOnly = 0x1;
+inline constexpr uint32_t exeConnectionDigest = 0x2;
+inline constexpr uint32_t exeConnectionCert = 0x4;
+inline constexpr uint32_t exeConnectionChal = 0x8;
+inline constexpr uint32_t exeConnectionMeas = 0x10;
 
 namespace spdmapplib
 {
