@@ -414,7 +414,7 @@ int SPDMRequesterImpl::setupResponder(
     const spdmtransport::TransportEndPoint& transEP)
 {
     return_status status;
-    spdmResponder.pspdmContext = allocate_pool(libspdm_get_context_size());
+    spdmResponder.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (spdmResponder.pspdmContext == nullptr)
     {
         return errorcodes::generalReturnError;

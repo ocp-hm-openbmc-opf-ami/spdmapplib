@@ -234,7 +234,7 @@ int SPDMResponderImpl::addNewDevice(
     uint8_t newIndex;
     return_status status;
 
-    newItem.pspdmContext = allocate_pool(libspdm_get_context_size());
+    newItem.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (newItem.pspdmContext == nullptr)
     {
         return errorcodes::generalReturnError;
