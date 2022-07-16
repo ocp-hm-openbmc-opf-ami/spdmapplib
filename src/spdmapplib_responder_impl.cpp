@@ -176,10 +176,15 @@ int SPDMResponderImpl::initResponder(
         setCertificatePath(spdmResponderCfg.certPath);
 
         spdmTrans = trans;
-        spdmTrans->initTransport(
-            ioc, conn, std::bind(&SPDMResponderImpl::addNewDevice, this, _1),
-            std::bind(&SPDMResponderImpl::removeDevice, this, _1),
-            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
+        if (spdmTrans->initTransport(
+                ioc, conn, nullptr,
+                std::bind(&SPDMResponderImpl::removeDevice, this, _1),
+                std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2)))
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "SPDMResponderImpl::initResponder initTransport failed!");
+            return errorcodes::generalReturnError;
+        }
     }
     else
     {
@@ -227,20 +232,10 @@ int SPDMResponderImpl::removeDevice(
  * @return 0: success, other: failed.
  *
  **/
-int SPDMResponderImpl::addNewDevice(
+spdmItem& SPDMResponderImpl::createSPDMItem(
     spdmtransport::TransportEndPoint& transEndpoint)
 {
     using namespace std::placeholders;
-
-    for (auto& item : spdmPool)
-    {
-        if (item.transEP == transEndpoint)
-        {
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                "SPDMResponderImpl::addNewDevice, Found old EP item, delete it.");
-            removeDevice(transEndpoint);
-        }
-    }
     spdmItem newItem;
     uint8_t newIndex;
     return_status status;
@@ -248,10 +243,13 @@ int SPDMResponderImpl::addNewDevice(
     newItem.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (newItem.pspdmContext == nullptr)
     {
-        return errorcodes::generalReturnError;
+        throw std::runtime_error(
+            "allocate_zero_pool(libspdm_get_context_size()) error!");
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        "SPDMResponderImpl::addNewDevice");
+        ("SPDMResponderImpl::addNewDevice eid: " +
+         std::to_string(transEndpoint.devIdentifier))
+            .c_str());
     newItem.transEP = transEndpoint;
     newItem.useSlotId = 0;
     newItem.sessionId = 0;
@@ -272,7 +270,7 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_init_context failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        throw std::runtime_error("libspdm_init_context error!");
     }
     libspdm_register_device_io_func(spdmPool[newIndex].pspdmContext,
                                     responderDeviceSendMessage,
@@ -289,7 +287,8 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        throw std::runtime_error(
+            "libspdm_register_session_state_callback_func error!");
     }
     status = libspdm_register_connection_state_callback_func(
         spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
@@ -299,10 +298,15 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        throw std::runtime_error(
+            "libspdm_register_connection_state_callback_func error!");
     }
 
-    return settingFromConfig(newIndex);
+    if (settingFromConfig(newIndex))
+    {
+        throw std::runtime_error("settingFromConfig error!");
+    }
+    return spdmPool[newIndex];
 }
 
 /**
@@ -444,48 +448,18 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
 /**
  * @brief Called when message received.
  *
- * @param  transEndpoint      The endpoint object sending data.
- * @param  data          The vector of received data.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::addData(spdmtransport::TransportEndPoint& transEndpoint,
-                               const std::vector<uint8_t>& data)
-{
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.transEP == transEndpoint);
-    });
-    if (it == spdmPool.end())
-    {
-        return errorcodes::generalReturnError;
-    }
-    it->data = std::move(data);
-    return RETURN_SUCCESS;
-}
-
-/**
- * @brief Called when message received.
- *
  * The function is called in msgRecvCallback to process incoming received
  *data.
  * @param  transEndpoint      The endpoint object sending data.
  * @return 0: success, other: failed.
  *
  **/
-int SPDMResponderImpl::processSPDMMessage(
-    spdmtransport::TransportEndPoint& transEndpoint)
+int SPDMResponderImpl::processSPDMMessage(spdmItem& item)
 {
     return_status status;
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.transEP == transEndpoint);
-    });
-    if (it == spdmPool.end())
+    if (item.data.size() > 0)
     {
-        return errorcodes::generalReturnError;
-    }
-    if (it->data.size() > 0)
-    {
-        status = libspdm_responder_dispatch_message(it->pspdmContext);
+        status = libspdm_responder_dispatch_message(item.pspdmContext);
         if (RETURN_ERROR(status))
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -493,8 +467,40 @@ int SPDMResponderImpl::processSPDMMessage(
                  std::to_string(status))
                     .c_str());
         }
+        return RETURN_SUCCESS;
     }
-    return RETURN_SUCCESS;
+    return errorcodes::generalReturnError;
+}
+
+/**
+ * @brief find assigned EndPoint's spdmItem reference in spdmPool
+ * If item not exist, create a new one add to spdmPool and return the item.
+ *
+ * @param  transEP          The new endpoint object.
+ * @return reference of spdmItem: success, other: throw exception.
+ *
+ **/
+spdmItem&
+    SPDMResponderImpl::findSPDMItem(spdmtransport::TransportEndPoint& transEP)
+{
+    for (auto& item : spdmPool)
+    {
+        if (item.transEP == transEP)
+        {
+            phosphor::logging::log<phosphor::logging::level::INFO>(
+                "SPDMResponderImpl::findSPDMItem, Found exist EP item");
+            return item;
+        }
+    }
+    try
+    {
+        return createSPDMItem(transEP);
+    }
+    catch (const std::exception& e)
+    {
+        std::string exceptionStr = e.what();
+        throw std::runtime_error("Can not createSPDMItem!" + exceptionStr);
+    }
 }
 
 /**
@@ -508,8 +514,30 @@ int SPDMResponderImpl::processSPDMMessage(
 int SPDMResponderImpl::msgRecvCallback(
     spdmtransport::TransportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
-    addData(transEP, data);
-    return processSPDMMessage(transEP);
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("SPDMResponderImpl::msgRecvCallback eid: " +
+         std::to_string(transEP.devIdentifier) +
+         " size:" + std::to_string(data.size()))
+            .c_str());
+    try
+    {
+        auto& item = findSPDMItem(transEP);
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            ("SPDMResponderImpl::msgRecvCallback, item got! eid:" +
+             std::to_string(item.transEP.devIdentifier))
+                .c_str());
+        item.data = std::move(data);
+        return processSPDMMessage(item);
+    }
+    catch (const std::exception& e)
+    {
+        std::string exceptionStr = e.what();
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            ("SPDMResponderImpl::msgRecvCallback, catch exception!" +
+             exceptionStr + " eid:" + std::to_string(transEP.devIdentifier))
+                .c_str());
+        return errorcodes::generalReturnError;
+    }
 };
 
 /**

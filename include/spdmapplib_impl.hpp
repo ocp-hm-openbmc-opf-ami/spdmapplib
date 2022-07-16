@@ -99,13 +99,23 @@ class SPDMResponderImpl : public SPDMResponder
 
     /*APIs called by transport layer*/
     /**
-     * @brief Called when new endpoint detected.
+     * @brief Called when need to create a new spdmItem.
      *
      * @param  transEP          The new endpoint object.
-     * @return 0: success, other: failed.
+     * @return reference of spdmItem: success, other: throw exception.
      *
      **/
-    int addNewDevice(spdmtransport::TransportEndPoint& transEP);
+    spdmItem& createSPDMItem(spdmtransport::TransportEndPoint& transEP);
+
+    /**
+     * @brief find assigned EndPoint's spdmItem reference in spdmPool
+     * If item not exist, create a new one add to spdmPool and return the item.
+     *
+     * @param  transEP          The new endpoint object.
+     * @return reference of spdmItem: success, other: throw exception.
+     *
+     **/
+    spdmItem& findSPDMItem(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Called when endpoint remove is detected.
@@ -119,24 +129,13 @@ class SPDMResponderImpl : public SPDMResponder
     /**
      * @brief Called when message received.
      *
-     * @param  transEP      The endpoint object sending data.
-     * @param  data          The vector of received data.
-     * @return 0: success, other: failed.
-     *
-     **/
-
-    int addData(spdmtransport::TransportEndPoint& transEP,
-                const std::vector<uint8_t>& data);
-    /**
-     * @brief Called when message received.
-     *
      * The function is called in msgRecvCallback to process incoming received
      *data.
      * @param  transEP      The endpoint object sending data.
      * @return 0: success, other: failed.
      *
      **/
-    int processSPDMMessage(spdmtransport::TransportEndPoint& transEP);
+    int processSPDMMessage(spdmItem& transEP);
 
     /**
      * @brief Register to transport layer for handling received data.

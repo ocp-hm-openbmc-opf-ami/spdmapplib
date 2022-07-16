@@ -23,6 +23,46 @@
 
 namespace spdmtransport
 {
+
+/**
+ * @brief find if required dbus interface has created
+ *
+ * @return true : found, false : not found
+ */
+
+static bool
+    findRequiredMCTPInterface(std::shared_ptr<sdbusplus::asio::connection> conn,
+                              TransportIdentifier mediaType)
+{
+    std::map<TransportIdentifier, const std::string> supportInterfaceTable = {
+        {TransportIdentifier::mctpOverSMBus,
+         "xyz.openbmc_project.MCTP.Binding.SMBus"},
+        {TransportIdentifier::mctpOverPCIe,
+         "xyz.openbmc_project.MCTP.Binding.PCIe"},
+    };
+    auto ifcItem = supportInterfaceTable.find(mediaType);
+
+    if (ifcItem == supportInterfaceTable.end())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "findRequiredMCTPInterface error, not supported Type !");
+        return false;
+    }
+
+    auto methodCall = conn->new_method_call(
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths");
+
+    methodCall.append("/xyz/openbmc_project", 1,
+                      std::array<std::string, 1>({ifcItem->second}));
+
+    auto reply = conn->call(methodCall);
+    std::vector<std::string> paths;
+    reply.read(paths);
+    return paths.size() > 0 ? true : false;
+}
+
 /*Callback function for MCTPwplus  */
 /**
  * @brief Function registered to mctpwrapper as receiving message Callback.
@@ -85,6 +125,17 @@ int SPDMTransportMCTP::initTransport(
     AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
     MsgReceiveCallback msgRcvCB)
 {
+    if (findRequiredMCTPInterface(conn, transType) == false)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMTransportMCTP::initTransport ERROR: Assigned trasport type interface not ready!");
+        return spdmapplib::errorcodes::generalReturnError;
+    }
+    else
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMTransportMCTP::initTransport Trasport type interface is ready!");
+    }
     using namespace std::placeholders;
     pioc = ioc;
     pconn = conn;
@@ -106,7 +157,6 @@ int SPDMTransportMCTP::initTransport(
         std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
         std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
                   _4, _5, _6));
-
     boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
         mctpWrapper->detectMctpEndpoints(yield);
         mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
