@@ -37,6 +37,7 @@ INCLUDE_DIRECTORIES(
 )
 
 SET(src_spdmapplib
+    ${PROJECT_SOURCE_DIR}/src/spdmapplib.cpp
     ${PROJECT_SOURCE_DIR}/src/spdmapplib_requester_impl.cpp
     ${PROJECT_SOURCE_DIR}/src/spdmapplib_responder_impl.cpp
     ${PROJECT_SOURCE_DIR}/src/spdmtransport_mctp.cpp

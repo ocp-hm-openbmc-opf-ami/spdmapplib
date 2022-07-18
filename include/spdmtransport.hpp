@@ -20,6 +20,17 @@
 namespace spdmtransport
 {
 /**
+ * @brief These events are triggered when
+ * endPoints are added or removed
+ *
+ */
+enum class Event
+{
+    added,
+    removed
+};
+
+/**
  * @brief Defined callback function prototype
  *
  * @param transEP The TransportEndPoint object.
@@ -28,32 +39,20 @@ namespace spdmtransport
 struct TransportEndPoint;
 using MsgReceiveCallback = std::function<void(
     TransportEndPoint& transEP, const std::vector<uint8_t>& data)>;
-using AddRemoveDeviceCallback = std::function<int(TransportEndPoint& transEP)>;
-
-/**
- * @brief SPDM Transport type, could be extended.
- *
- */
-enum class TransportIdentifier : uint8_t
-{
-    mctpOverSMBus = 0x01,
-    mctpOverPCIe = 0x02,
-    pmtWatcher = 0x03, /*Intel specific transport*/
-};
-
+using OnDeviceCallback = std::function<void(
+    boost::asio::yield_context yield, spdmtransport::TransportEndPoint eidPoint,
+    spdmtransport::Event event)>;
 /**
  * @brief Endpoint information, could be extended.
  *
  */
 struct TransportEndPoint
 {
-    TransportIdentifier transType; /*interface type.*/
     uint8_t devIdentifier;
     bool operator==(const TransportEndPoint& p2) const
     {
         const TransportEndPoint& p1 = (*this);
-        return p1.transType == p2.transType &&
-               p1.devIdentifier == p2.devIdentifier;
+        return p1.devIdentifier == p2.devIdentifier;
     }
 };
 
@@ -66,34 +65,17 @@ class SPDMTransport
 {
   public:
     virtual ~SPDMTransport() = default;
-
     /* APIs for requester and responder */
     /**
-     * @brief Initial function of transport instance
-     *
-     * @param  ioc               shared_ptr to boost io_context object.
-     * @param  conn              shared_ptr to already existing boost
-     *asio::connection.
-     * @param  addCB             The callback function for new endpoint
-     *detected.
-     * @param  delCB             The callback function for EndPoint removed.
-     * @param  msgRcvCB          The callback function for messages received(for
-     *responder used).
-     * @return 0: success, other: failed.
-     **/
-    virtual int initTransport(
-        std::shared_ptr<boost::asio::io_context> ioc,
-        std::shared_ptr<sdbusplus::asio::connection> conn,
-        AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
-        MsgReceiveCallback msgRcvCB =
-            nullptr) = 0; // override this function in implementation
-
-    /**
-     * @brief Get the interface type of transport layer
-     * @return TransportIdentifier
+     * @brief The function is responsible for doing discovery of the endPoints
+     * @param  callback
      *
      **/
-    virtual TransportIdentifier getTransType(void) = 0;
+    virtual void
+        initDiscovery(std::function<void(boost::asio::yield_context yield,
+                                         TransportEndPoint endPoint,
+                                         spdmtransport::Event event)>
+                          onEndPointChange) = 0;
 
     /****************************************************
         APIs to responder and interface that implementation should override
@@ -113,6 +95,15 @@ class SPDMTransport
                               const std::vector<uint8_t>& request,
                               uint64_t timeout) = 0;
 
+    /**
+     * @brief register Callback for the messages received
+     *
+     * @param  msgRcvCB          The callback function for messages received(for
+     *responder used).
+     **/
+    virtual void registerCallback(
+        MsgReceiveCallback msgRcvCB =
+            nullptr) = 0; // override this function in implementation
     /****************************************************
         APIs for requester
     ******************************************************/

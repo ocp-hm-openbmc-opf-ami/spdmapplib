@@ -39,7 +39,6 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     { // only SPDM message arrive here.
         TransportEndPoint tmpEP;
         tmpEP.devIdentifier = srcEid;
-        tmpEP.transType = getTransType();
         msgReceiveCB(tmpEP, data);
     }
 };
@@ -79,43 +78,11 @@ void SPDMTransportMCTP::transOnDeviceUpdate(
  *responder used).
  * @return 0: success, other: failed.
  **/
-int SPDMTransportMCTP::initTransport(
-    std::shared_ptr<boost::asio::io_context> ioc,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
-    AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
-    MsgReceiveCallback msgRcvCB)
+
+void SPDMTransportMCTP::registerCallback(MsgReceiveCallback msgRcvCB)
 {
     using namespace std::placeholders;
-    pioc = ioc;
-    pconn = conn;
-    addNewDeviceCB = addCB;
-    removeDeviceCB = delCB;
     msgReceiveCB = msgRcvCB;
-    mctpw::BindingType bindingType;
-    if (transType == spdmtransport::TransportIdentifier::mctpOverSMBus)
-    {
-        bindingType = mctpw::BindingType::mctpOverSmBus;
-    }
-    else
-    {
-        bindingType = mctpw::BindingType::mctpOverPcieVdm;
-    }
-    mctpw::MCTPConfiguration config(mctpw::MessageType::spdm, bindingType);
-    mctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
-        conn, config,
-        std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
-        std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
-                  _4, _5, _6));
-
-    boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
-        mctpWrapper->detectMctpEndpoints(yield);
-        mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
-        for (auto& item : eidMap)
-        {
-            transAddNewDevice(item.first);
-        }
-    });
-    return spdmapplib::errorcodes::returnSuccess;
 }
 
 /**
@@ -128,10 +95,15 @@ int SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
     TransportEndPoint tmpEP;
     tmpEP.devIdentifier = eid;
-    tmpEP.transType = transType;
-    return removeDeviceCB == nullptr
-               ? spdmapplib::errorcodes::generalReturnError
-               : removeDeviceCB(tmpEP);
+
+    if (onDeviceUpdtCB)
+    {
+        boost::asio::spawn(*(pioc),
+                           [this, tmpEP](boost::asio::yield_context yield) {
+                               onDeviceUpdtCB(yield, tmpEP, Event::removed);
+                           });
+    }
+    return eid;
 }
 
 /**
@@ -143,11 +115,16 @@ int SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 int SPDMTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 {
     TransportEndPoint tmpEP;
+    // tmpEP.transType = transType;
     tmpEP.devIdentifier = eid;
-    tmpEP.transType = transType;
-    return addNewDeviceCB == nullptr
-               ? spdmapplib::errorcodes::generalReturnError
-               : addNewDeviceCB(tmpEP);
+    if (onDeviceUpdtCB)
+    {
+        boost::asio::spawn(*(pioc),
+                           [this, tmpEP](boost::asio::yield_context yield) {
+                               onDeviceUpdtCB(yield, tmpEP, Event::added);
+                           });
+    }
+    return eid;
 }
 
 /**
@@ -238,4 +215,49 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
     }
 }
 
+void SPDMTransportMCTP::initDiscovery(
+    std::function<void(boost::asio::yield_context yield,
+                       spdmtransport::TransportEndPoint eidPoint,
+                       spdmtransport::Event event)>
+        onDeviceUpdateCB)
+{
+    using namespace std::placeholders;
+    onDeviceUpdtCB = onDeviceUpdateCB;
+
+    boost::asio::spawn(*(pioc), [this](boost::asio::yield_context yield) {
+        std::cerr << "Registering a SMBus SPDM responder" << std::endl;
+        mctpw::VersionFields specVersion = {0xF1, 0xF1, 0xF0, 0};
+        auto rcvStatus = mctpWrapper->registerResponder(specVersion);
+        if (rcvStatus == boost::system::errc::success)
+        {
+            std::cerr << "Success" << '\n';
+        }
+        else
+        {
+            std::cerr << "Failed \n";
+        }
+        mctpWrapper->detectMctpEndpoints(yield);
+        mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
+        for (auto& item : eidMap)
+        {
+            transAddNewDevice(item.first);
+        }
+    });
+}
+
+SPDMTransportMCTP::SPDMTransportMCTP(
+    std::shared_ptr<boost::asio::io_service> io,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    mctpw::BindingType tranType) :
+    pioc(io),
+    pconn(conn), transType(tranType)
+{
+    using namespace std::placeholders;
+    mctpw::MCTPConfiguration config(mctpw::MessageType::spdm, transType);
+    mctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
+        pconn, config,
+        std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
+        std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
+                  _4, _5, _6));
+}
 } // namespace spdmtransport

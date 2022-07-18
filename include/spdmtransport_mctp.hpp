@@ -32,44 +32,25 @@ class SPDMTransportMCTP : public SPDMTransport
     /*APIs called by spdmAppLib layer*/
     /**
      * @brief SPDMTransportMCTP constructor
-     *
+     * @param  ioc               shared_ptr to boost io_context object.
+     * @param  conn              shared_ptr to already existing boost
      * @param  id        Transport layer interface id(here only for MCTPoverPCIe
      *or MCTPoverSMBus).
      *
      **/
-    SPDMTransportMCTP(TransportIdentifier id)
-    {
-        transType = id;
-    };
+    SPDMTransportMCTP(std::shared_ptr<boost::asio::io_service> pio,
+                      std::shared_ptr<sdbusplus::asio::connection> pconn,
+                      mctpw::BindingType tranType);
 
     /**
      * @brief Initial function of transport instance
      *
-     * @param  ioc               shared_ptr to boost io_context object.
-     * @param  conn              shared_ptr to already existing boost
+
      *asio::connection.
-     * @param  addCB             The callback function for new endpoint
-     *detected.
-     * @param  delCB             The callback function for EndPoint removed.
      * @param  msgRcvCB          The callback function for messages received(for
      *responder used).
-     * @return 0: success, other: failed.
      **/
-    int initTransport(std::shared_ptr<boost::asio::io_context> ioc,
-                      std::shared_ptr<sdbusplus::asio::connection> conn,
-                      AddRemoveDeviceCallback addCB,
-                      AddRemoveDeviceCallback delCB,
-                      MsgReceiveCallback msgRcvCB = nullptr) override;
-
-    /**
-     * @brief Get the interface type of transport layer
-     * @return TransportIdentifier
-     *
-     **/
-    TransportIdentifier getTransType(void) override
-    {
-        return transType;
-    };
+    void registerCallback(MsgReceiveCallback msgRcvCB = nullptr) override;
 
     /**
      * @brief The async send data function for responder
@@ -99,6 +80,17 @@ class SPDMTransportMCTP : public SPDMTransport
     int sendRecvData(TransportEndPoint& transEP,
                      const std::vector<uint8_t>& request, uint64_t timeout,
                      MsgReceiveCallback rspRcvCB) override;
+
+    /**
+     * @brief The function is responsible for doing discovery of the endPoints.
+     * @param  callback
+     *
+     **/
+    void initDiscovery(
+        std::function<void(boost::asio::yield_context yield,
+                           spdmtransport::TransportEndPoint endPoint,
+                           spdmtransport::Event event)>
+            onEndPointChange) override;
 
     /*APIs called by mctpwrapper callback function*/
   private:
@@ -131,14 +123,13 @@ class SPDMTransportMCTP : public SPDMTransport
                              boost::asio::yield_context yield);
 
     /* Callback function pointers */
-    AddRemoveDeviceCallback addNewDeviceCB = nullptr;
-    AddRemoveDeviceCallback removeDeviceCB = nullptr;
+    OnDeviceCallback onDeviceUpdtCB = nullptr;
     MsgReceiveCallback msgReceiveCB = nullptr;
 
   protected:
-    TransportIdentifier transType; /*MCTP over PCIe, MCTP over SMBus, SDSi*/
     std::shared_ptr<boost::asio::io_context> pioc;
     std::shared_ptr<sdbusplus::asio::connection> pconn;
+    mctpw::BindingType transType; /*MCTP over PCIe, MCTP over SMBus*/
     std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper;
 };
 } // namespace spdmtransport

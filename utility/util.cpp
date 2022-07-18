@@ -310,7 +310,7 @@ spdmapplib::SPDMConfiguration getConfigurationFromEntityManager(
     const std::string objectPath =
         getSPDMConfigurationPaths(conn, configurationName);
 
-    ConfigurationMap map;
+    ConfigurationMap map{};
     if (objectPath.empty())
     {
         return spdmConfig;
