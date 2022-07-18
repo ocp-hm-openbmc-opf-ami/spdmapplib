@@ -20,6 +20,8 @@
 
 namespace spdmapplib
 {
+class SPDMRequesterImpl;
+class SPDMResponderImpl;
 /**
  * @brief SPDM configurations from EntityManager
  *
@@ -46,22 +48,27 @@ struct SPDMConfiguration
 class SPDMResponder
 {
   public:
-    virtual ~SPDMResponder() = default;
+    ~SPDMResponder() noexcept;
     /*APIs called by SPDM responder daemon*/
     /**
      * @brief Initial function of SPDM responder
      *  When the function is called, it will enter daemon mode and never return.
      *
-     * @param  ioc                boost io_context object..
+     * @param  ioc                boost io_context object.
+     * @param  conn              The Pointer to sdbusplus conn.
      * @param  trans             The pointer of transport instance.
      * @param  spdmConfig        Application assigned SPDMConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    virtual int
-        initResponder(std::shared_ptr<boost::asio::io_context> ioc,
-                      std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
-                      SPDMConfiguration& spdmConfig) = 0;
+    SPDMResponder(std::shared_ptr<boost::asio::io_context> ioc,
+                  std::shared_ptr<sdbusplus::asio::connection> conn,
+                  std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                  SPDMConfiguration& pSpdmConfig);
+
+    int removeDevice(spdmtransport::TransportEndPoint& endPoint);
+
+  private:
+    std::shared_ptr<SPDMResponderImpl> pRespimpl;
 };
 
 /**
@@ -71,66 +78,51 @@ class SPDMResponder
 class SPDMRequester
 {
   public:
-    virtual ~SPDMRequester() = default;
     /*Requester APIs*/
     /**
      * @brief Initial function of SPDM requester
      *
-     * @param  ioc               The shared_ptr to boost io_context object..
+     * @param  ioc               The shared_ptr to boost io_context object.
+     * @param  conn              The shared_ptr of sdbusplus conn.
      * @param  trans             The pointer of transport instance.
      * @param  ptransResponder   The pointer to assigned responder EndPoint.
-     * @return 0: success, other: listed in spdmapplib::errorCodes.
+     * @param  pSpdmConfig       The SPDM configuration read from
+     *entity-manager.
      *
      **/
-    virtual int
-        initRequester(std::shared_ptr<boost::asio::io_context> ioc,
-                      std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
-                      spdmtransport::TransportEndPoint& transResponder,
-                      SPDMConfiguration& pSpdmConfig) = 0;
+    SPDMRequester(std::shared_ptr<boost::asio::io_context> ioc,
+                  std::shared_ptr<sdbusplus::asio::connection> conn,
+                  std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                  spdmtransport::TransportEndPoint& endPoint,
+                  SPDMConfiguration& pSpdmConfig);
+
     /**
-     * @brief The authentication function
+     * @brief Destroy the SPDMRequester object
      *
-     * @return 0: success, other: failed.
-     **/
-    virtual int doAuthentication(void) = 0;
-    /**
-     * @brief The measurement function
-     *
-     * @param  sessionid          The session id pointer(reserved for further
-     *use).
-     * @return 0: success, other: failed.
-     *
-     **/
-    virtual int doMeasurement(const uint32_t* sessionid) = 0;
+     */
+    ~SPDMRequester() noexcept;
     /**
      * @brief Get all measurement function
-     * @return vector of all measurements.
+     *
+     * @param   measurements     The certificate returned for specific endPoint
+     * @return  bool             Indicating success or failure of the operation.
+     * @return  True             Indicates Success and False indicate Failure.
      *
      **/
-    virtual std::optional<std::vector<uint8_t>> getMeasurements() = 0;
+    bool getMeasurements(std::vector<uint8_t>& certificate);
+
     /**
-     * @brief Get certification function
-     * @return vector of certification.
+     * @brief Get certificate function
+     *
+     * @param   measurements     The certificate returned for specific endPoint.
+     * @return  bool             Indicating success or failure of the operation.
+     * @return  True             Indicates Success and False indicate Failure.
      *
      **/
-    virtual std::optional<std::vector<uint8_t>> getCertificate() = 0;
+    bool getCertificate(std::vector<uint8_t>& measurements);
+
+  private:
+    std::shared_ptr<SPDMRequesterImpl> pReqimpl;
 };
-
-/**
- * @brief Requester object create Factory function.
- *
- * @return Pointer to Requester implementation object.
- *
- **/
-std::shared_ptr<SPDMRequester> createRequester();
-
-/**
- * @brief Responder object create Factory function.
- *
- * @return Pointer to Responder implementation object.
- *
- **/
-std::shared_ptr<SPDMResponder> createResponder();
 
 } // namespace spdmapplib

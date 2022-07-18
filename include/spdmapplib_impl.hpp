@@ -75,27 +75,25 @@ typedef struct
  * @brief SPDM responder implementation class
  *
  */
-class SPDMResponderImpl : public SPDMResponder
+class SPDMResponderImpl
 {
   public:
     /*APIs called by SPDM daemon*/
-    SPDMResponderImpl() = default;
-    virtual ~SPDMResponderImpl();
+    ~SPDMResponderImpl();
+
     /**
-     * @brief Initial function of SPDM responder.
+     * @brief Constructor of SPDM responder.
      *
-     * The function will enter daemon mode. Accept request from assigned
-     *transport layer.
-     *
-     * @param  ioc                boost io_context object..
+     * @param  ioc               boost io_context object..
+     * @param  conn              sdbusplus conn
      * @param  trans             The pointer of transport instance.
      * @param  spdmConfig        Application assigned SPDMConfiguration.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initResponder(std::shared_ptr<boost::asio::io_context> ioc,
+    SPDMResponderImpl(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::SPDMTransport> trans,
-                      SPDMConfiguration& spdmConfig) override;
+                      SPDMConfiguration& pSpdmConfig);
 
     /*APIs called by transport layer*/
     /**
@@ -209,27 +207,26 @@ class SPDMResponderImpl : public SPDMResponder
 
   private:
     std::shared_ptr<boost::asio::io_context> pioc;
-
+    std::shared_ptr<sdbusplus::asio::connection> pconn;
     uint8_t useSlotCount;
     uint8_t curIndex;
     uint32_t useResponderCapabilityFlags;
     uint8_t useMutAuth;
     uint8_t useBasicMutAuth;
+    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
     SPDMConfiguration spdmResponderCfg;
     std::vector<spdmItem> spdmPool;
-    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
 };
 
 /**
  * @brief SPDM requester implementation class
  *
  */
-class SPDMRequesterImpl : public SPDMRequester
+class SPDMRequesterImpl
 {
   public:
-    SPDMRequesterImpl() = default;
-    virtual ~SPDMRequesterImpl();
     /* APIs for requester*/
+    ~SPDMRequesterImpl();
     /**
      * @brief Initial function of SPDM requester
      *
@@ -238,17 +235,18 @@ class SPDMRequesterImpl : public SPDMRequester
      * @param  ptransResponder   The pointer to assigned responder EndPoint.
      * @return 0: success, other: listed in spdmapplib::errorCodes.
      **/
-    int initRequester(std::shared_ptr<boost::asio::io_context> ioc,
+    SPDMRequesterImpl(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
                       std::shared_ptr<spdmtransport::SPDMTransport> trans,
                       spdmtransport::TransportEndPoint& transResponder,
-                      SPDMConfiguration& spdmConfig) override;
+                      SPDMConfiguration& pSpdmConfig);
+
     /**
      * @brief The authentication function
      *
      * @return 0: success, other: failed.
      **/
-    int doAuthentication(void) override;
+    int doAuthentication(void);
     /**
      * @brief The measurement function
      *
@@ -257,19 +255,19 @@ class SPDMRequesterImpl : public SPDMRequester
      *
      * @return 0: success, other: failed.
      **/
-    int doMeasurement(const uint32_t* sessionid) override;
+    int doMeasurement(const uint32_t* sessionid);
     /**
      * @brief Get all measurement function
      *
      * @return vector of all measurements.
      **/
-    std::optional<std::vector<uint8_t>> getMeasurements() override;
+    bool getMeasurements(std::vector<uint8_t>& measurement);
     /**
      * @brief Get certification function
      *
      * @return vector of certification.
      **/
-    std::optional<std::vector<uint8_t>> getCertificate() override;
+    bool getCertificate(std::vector<uint8_t>& certificate);
 
     /*APIs called by transport layer*/
     /**
@@ -282,16 +280,6 @@ class SPDMRequesterImpl : public SPDMRequester
      **/
     int addData(spdmtransport::TransportEndPoint& transEP,
                 const std::vector<uint8_t>& data);
-
-    /**
-     * @brief Function to check if found endpoint is the responder assigned by
-     *user.
-     *
-     * @param  transEP          The endpoint object to be checked.
-     * @return 0: success, other: failed.
-     *
-     **/
-    int checkResponderDevice(spdmtransport::TransportEndPoint& transEP);
 
     /**
      * @brief Function to pass as parameter of syncSendRecvData of transport
@@ -355,9 +343,8 @@ class SPDMRequesterImpl : public SPDMRequester
     int settingFromConfig(void);
 
   private:
-    bool bResponderFound;
     std::shared_ptr<boost::asio::io_context> pioc;
-
+    std::shared_ptr<sdbusplus::asio::connection> pconn;
     uint8_t useSlotCount;
     uint8_t useSlotId;
     uint32_t useRequesterCapabilityFlags;
@@ -370,10 +357,10 @@ class SPDMRequesterImpl : public SPDMRequester
     uint8_t mUseMeasurementSummaryHashType;
     uint8_t mUseMeasurementOperation;
     uint8_t mUseMeasurementAttribute;
-    SPDMConfiguration spdmRequesterCfg;
+    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder; // only one instance for requester.
     spdmtransport::TransportEndPoint transResponder;
-    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
+    SPDMConfiguration spdmRequesterCfg;
 };
 
 /*Utility function*/

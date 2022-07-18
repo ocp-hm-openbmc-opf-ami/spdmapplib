@@ -83,79 +83,6 @@ SPDMRequesterImpl::~SPDMRequesterImpl()
         spdmResponder.pspdmContext = nullptr;
     }
 }
-/**
- * @brief Initial function of SPDM requester
- *
- * @param  ioc               The shared_ptr to boost io_context object..
- * @param  trans             The pointer of transport instance.
- * @param  cfgTransResponder Assigned responder EndPoint.
- * @param  spdmConfig        User input SPDMConfiguration.
- * @return 0: success, other: listed in spdmapplib::errorCodes
- **/
-int SPDMRequesterImpl::initRequester(
-    std::shared_ptr<boost::asio::io_context> ioc,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::SPDMTransport> trans,
-    spdmtransport::TransportEndPoint& cfgTransResponder,
-    SPDMConfiguration& spdmConfig)
-{
-    using namespace std::placeholders;
-    int intResult = -1;
-    bResponderFound = false; // init member variable.
-    pioc = ioc;
-    spdmRequesterCfg = spdmConfig;
-    if (spdmRequesterCfg.version)
-    {
-        setCertificatePath(spdmRequesterCfg.certPath);
-
-        mExeConnection = (0 | exeConnectionDigest | exeConnectionCert |
-                          exeConnectionChal | exeConnectionMeas);
-        transResponder = cfgTransResponder;
-        spdmTrans = trans;
-        intResult = setupResponder(transResponder);
-        if (intResult == 0)
-        {
-            spdmTrans->initTransport(
-                ioc, conn,
-                std::bind(&SPDMRequesterImpl::checkResponderDevice, this, _1),
-                nullptr,
-                std::bind(&SPDMRequesterImpl::msgRecvCallback, this, _1, _2));
-        }
-        phosphor::logging::log<phosphor::logging::level::INFO>(
-            ("SPDMRequesterImpl::initRequester intResult: " +
-             std::to_string(intResult) +
-             ", bResponderFound: " + std::to_string(bResponderFound))
-                .c_str());
-    }
-    else
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::initRequester getConfigurationFromEntityManager failed!");
-        intResult = errorcodes::spdmConfigurationNotFoundInEntityManager;
-    }
-    return intResult;
-}
-
-/**
- * @brief Function to check if found endpoint is the responder assigned by
- *user.
- *
- * @param  ptransEP          Pointer of endpoint object to be checked.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMRequesterImpl::checkResponderDevice(
-    spdmtransport::TransportEndPoint& transEP)
-{
-    if (spdmResponder.transEP == transEP)
-    {
-        phosphor::logging::log<phosphor::logging::level::INFO>(
-            "Found Responder!!");
-        this->bResponderFound = true;
-        return true;
-    }
-    return errorcodes::generalReturnError;
-}
 
 /**
  * @brief Function to setup user assigned endpoint initial configuration.
@@ -543,119 +470,89 @@ return_status
 int SPDMRequesterImpl::doAuthentication(void)
 {
     constexpr uint8_t lastSlotIndex = 0xFF;
-    if (bResponderFound)
+    uint8_t slotMask;
+    uint8_t totalDigestBuffer[LIBSPDM_MAX_HASH_SIZE * SPDM_MAX_SLOT_COUNT];
+    uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
+    uint32_t certChainSize;
+    uint8_t certChain[LIBSPDM_MAX_CERT_CHAIN_SIZE];
+
+    zero_mem(totalDigestBuffer, sizeof(totalDigestBuffer));
+    certChainSize = sizeof(certChain);
+    zero_mem(certChain, sizeof(certChain));
+    zero_mem(measurementHash, sizeof(measurementHash));
+    return_status status;
+    if (settingFromConfig() == RETURN_SUCCESS)
     {
-        uint8_t slotMask;
-        uint8_t totalDigestBuffer[LIBSPDM_MAX_HASH_SIZE * SPDM_MAX_SLOT_COUNT];
-        uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
-        uint32_t certChainSize;
-        uint8_t certChain[LIBSPDM_MAX_CERT_CHAIN_SIZE];
-
-        zero_mem(totalDigestBuffer, sizeof(totalDigestBuffer));
-        certChainSize = sizeof(certChain);
-        zero_mem(certChain, sizeof(certChain));
-        zero_mem(measurementHash, sizeof(measurementHash));
-        return_status status;
-        if (settingFromConfig() == RETURN_SUCCESS)
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::doAuthentication starting...");
+        /** Executing following functions.
+            get_digest
+            get_certificate
+            challenge
+        **/
+        spdmResponder.dataCert = {};
+        if ((mExeConnection & exeConnectionDigest) != 0)
         {
-            phosphor::logging::log<phosphor::logging::level::INFO>(
-                "SPDMRequesterImpl::doAuthentication starting...");
-            /** Executing following functions.
-                get_digest
-                get_certificate
-                challenge
-            **/
-            if ((mExeConnection & exeConnectionDigest) != 0)
+            status = libspdm_get_digest(spdmResponder.pspdmContext, &slotMask,
+                                        totalDigestBuffer);
+            if (RETURN_ERROR(status))
             {
-                status = libspdm_get_digest(spdmResponder.pspdmContext,
-                                            &slotMask, totalDigestBuffer);
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("SPDMRequesterImpl::doAuthentication libspdm_get_digest Error!- " +
+                     std::to_string(status))
+                        .c_str());
+                free_pool(spdmResponder.pspdmContext);
+                spdmResponder.pspdmContext = nullptr;
+                return status;
+            }
+            else
+            {
+                phosphor::logging::log<phosphor::logging::level::INFO>(
+                    "SPDMRequesterImpl::doAuthentication libspdm_get_digest completed!");
+            }
+        }
+        if ((mExeConnection & exeConnectionCert) != 0)
+        {
+            if (useSlotId != lastSlotIndex)
+            {
+                status = libspdm_get_certificate(spdmResponder.pspdmContext,
+                                                 useSlotId, &certChainSize,
+                                                 certChain);
                 if (RETURN_ERROR(status))
                 {
                     phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("SPDMRequesterImpl::doAuthentication libspdm_get_digest Error!- " +
+                        ("SPDMRequesterImpl::doAuthentication libspdm_get_certificate Error! - " +
                          std::to_string(status))
                             .c_str());
                     free_pool(spdmResponder.pspdmContext);
                     spdmResponder.pspdmContext = nullptr;
+                    spdmResponder.dataCert = {};
                     return status;
                 }
                 else
                 {
                     phosphor::logging::log<phosphor::logging::level::INFO>(
-                        "SPDMRequesterImpl::doAuthentication libspdm_get_digest completed!");
-                }
-            }
-
-            if ((mExeConnection & exeConnectionCert) != 0)
-            {
-                if (useSlotId != lastSlotIndex)
-                {
-                    status = libspdm_get_certificate(spdmResponder.pspdmContext,
-                                                     useSlotId, &certChainSize,
-                                                     certChain);
-                    if (RETURN_ERROR(status))
+                        "SPDMRequesterImpl::doAuthentication libspdm_get_certificate completed!");
+                    // Keep certificate to reserved vector.
+                    if (spdmResponder.dataCert.size() == 0)
                     {
-                        phosphor::logging::log<phosphor::logging::level::ERR>(
-                            ("SPDMRequesterImpl::doAuthentication libspdm_get_certificate Error! - " +
-                             std::to_string(status))
-                                .c_str());
-                        free_pool(spdmResponder.pspdmContext);
-                        spdmResponder.pspdmContext = nullptr;
-                        spdmResponder.dataCert = {};
-                        return status;
-                    }
-                    else
-                    {
-                        phosphor::logging::log<phosphor::logging::level::INFO>(
-                            "SPDMRequesterImpl::doAuthentication libspdm_get_certificate completed!");
-                        // Keep certificate to reserved vector.
-                        if (spdmResponder.dataCert.size() == 0)
-                        {
-                            spdmResponder.dataCert.insert(
-                                spdmResponder.dataCert.end(), certChain,
-                                certChain + certChainSize);
-                        }
+                        spdmResponder.dataCert.insert(
+                            spdmResponder.dataCert.end(), certChain,
+                            certChain + certChainSize);
                     }
                 }
             }
-
-            if ((mExeConnection & exeConnectionChal) != 0)
-            {
-                status = libspdm_challenge(
-                    spdmResponder.pspdmContext, useSlotId,
-                    mUseMeasurementSummaryHashType, measurementHash, nullptr);
-                if (RETURN_ERROR(status))
-                {
-                    phosphor::logging::log<phosphor::logging::level::ERR>(
-                        ("SPDMRequesterImpl::doAuthentication libspdm_challenge Error! - " +
-                         std::to_string(status))
-                            .c_str());
-                    free_pool(spdmResponder.pspdmContext);
-                    spdmResponder.pspdmContext = nullptr;
-                    return status;
-                }
-                else
-                {
-                    phosphor::logging::log<phosphor::logging::level::INFO>(
-                        "SPDMRequesterImpl::doAuthentication libspdm_challenge completed!");
-                }
-            }
-            phosphor::logging::log<phosphor::logging::level::INFO>(
-                "SPDMRequesterImpl::doAuthentication Pass!!");
         }
-        else
-        {
-            phosphor::logging::log<phosphor::logging::level::ERR>(
-                "SPDMRequesterImpl::doAuthentication responder setting error!");
-            return errorcodes::generalReturnError;
-        }
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::doAuthentication Pass!!");
     }
     else
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::doAuthentication responder not found yet!");
+            "SPDMRequesterImpl::doAuthentication responder setting error!");
         return errorcodes::generalReturnError;
     }
+
     return RETURN_SUCCESS;
 }
 
@@ -676,18 +573,42 @@ int SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     uint8_t receivedNumberOfBlock;
     uint32_t measurementRecordLength;
     uint8_t measurementRecord[LIBSPDM_MAX_MEASUREMENT_RECORD_SIZE];
+    uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
     uint8_t index;
     uint8_t requestAttribute;
 
+    zero_mem(measurementHash, sizeof(measurementHash));
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Requesting all the Measurements.");
-    if (bResponderFound && (spdmResponder.pspdmContext != nullptr))
+    if (spdmResponder.pspdmContext != nullptr && !doAuthentication())
     {
+        if ((mExeConnection & exeConnectionChal) != 0)
+        {
+            status = libspdm_challenge(spdmResponder.pspdmContext, useSlotId,
+                                       mUseMeasurementSummaryHashType,
+                                       measurementHash, nullptr);
+            if (RETURN_ERROR(status))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    ("SPDMRequesterImpl::doAuthentication libspdm_challenge Error! - " +
+                     std::to_string(status))
+                        .c_str());
+                free_pool(spdmResponder.pspdmContext);
+                spdmResponder.pspdmContext = nullptr;
+                return status;
+            }
+            else
+            {
+                phosphor::logging::log<phosphor::logging::level::INFO>(
+                    "SPDMRequesterImpl::doAuthentication libspdm_challenge completed!");
+            }
+        }
+
         if (mUseMeasurementOperation ==
             SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS)
         {
             /* request all at one time.*/
-
+            spdmResponder.dataMeas = {};
             requestAttribute =
                 SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE;
             measurementRecordLength = sizeof(measurementRecord);
@@ -803,9 +724,15 @@ int SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
  *function.
  * @return vector of all measurements.
  **/
-std::optional<std::vector<uint8_t>> SPDMRequesterImpl::getMeasurements()
+bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& meaurements)
 {
-    return spdmResponder.dataMeas;
+    if (!doMeasurement(NULL) && !spdmResponder.dataMeas.empty())
+    {
+        meaurements = spdmResponder.dataMeas;
+        spdmResponder.dataMeas.clear();
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -815,21 +742,56 @@ std::optional<std::vector<uint8_t>> SPDMRequesterImpl::getMeasurements()
  *function.
  * @return vector of certification.
  **/
-std::optional<std::vector<uint8_t>> SPDMRequesterImpl::getCertificate()
+bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
 {
-    return spdmResponder.dataCert;
+    if (!doAuthentication() && !spdmResponder.dataCert.empty())
+    {
+        certificate = spdmResponder.dataCert;
+        spdmResponder.dataCert.clear();
+        return true;
+    }
+    return false;
 }
 
 /**
- * @brief Requester object create Factory function.
+ * @brief Constructor of SPDM requester
  *
- * @return Pointer to Requester implementation object.
- *
+ * @param  ioc               The shared_ptr to boost io_context object.
+ * @param  conn              sdbusplus connection
+ * @param  trans             The pointer of transport instance.
+ * @param  endPoint          Assigned responder EndPoint.
+ * @param  spdmConfig        User input SPDMConfiguration.
  **/
-
-std::shared_ptr<SPDMRequester> createRequester()
+SPDMRequesterImpl::SPDMRequesterImpl(
+    std::shared_ptr<boost::asio::io_context> ioc,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    std::shared_ptr<spdmtransport::SPDMTransport> trans,
+    spdmtransport::TransportEndPoint& endPointDevice,
+    SPDMConfiguration& pSpdmConfig) :
+    pioc(ioc),
+    pconn(conn), spdmTrans(trans), transResponder(endPointDevice),
+    spdmRequesterCfg(pSpdmConfig)
 {
-    return std::make_shared<SPDMRequesterImpl>();
+    using namespace std::placeholders;
+
+    if (spdmRequesterCfg.version)
+    {
+        setCertificatePath(spdmRequesterCfg.certPath);
+
+        mExeConnection = (0 | exeConnectionDigest | exeConnectionCert |
+                          exeConnectionChal | exeConnectionMeas);
+
+        if (setupResponder(transResponder) != RETURN_SUCCESS)
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "SPDMRequesterImpl init set up failed!");
+        }
+    }
+    else
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl getConfigurationFromEntityManager failed!");
+    }
 }
 
 } // namespace spdmapplib

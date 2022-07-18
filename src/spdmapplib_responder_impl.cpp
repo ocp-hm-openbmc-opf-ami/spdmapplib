@@ -152,45 +152,6 @@ SPDMResponderImpl::~SPDMResponderImpl()
 }
 
 /**
- * @brief Initial function of SPDM responder.
- *
- * The function will enter daemon mode. Accept request from assigned
- *transport layer.
- *
- * @param  ioc               The shared_ptr to boost io_context object..
- * @param  trans             The pointer of transport instance.
- * @return 0: success, other: listed in spdmapplib::errorCodes
- **/
-int SPDMResponderImpl::initResponder(
-    std::shared_ptr<boost::asio::io_context> ioc,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::SPDMTransport> trans,
-    SPDMConfiguration& spdmConfig)
-{
-    using namespace std::placeholders;
-    curIndex = 0;
-    pioc = ioc;
-    spdmResponderCfg = spdmConfig;
-    if (spdmResponderCfg.version)
-    {
-        setCertificatePath(spdmResponderCfg.certPath);
-
-        spdmTrans = trans;
-        spdmTrans->initTransport(
-            ioc, conn, std::bind(&SPDMResponderImpl::addNewDevice, this, _1),
-            std::bind(&SPDMResponderImpl::removeDevice, this, _1),
-            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
-    }
-    else
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMResponderImpl::initResponder getConfigurationFromEntityManager failed!");
-        return errorcodes::spdmConfigurationNotFoundInEntityManager;
-    }
-    return RETURN_SUCCESS;
-}
-
-/**
  * @brief Called when endpoint remove is detected.
  *
  * @param  transEndpoint          The endpoint to be removed.
@@ -209,6 +170,7 @@ int SPDMResponderImpl::removeDevice(
     if (i >= curIndex)
     {
         return errorcodes::generalReturnError;
+        ;
     }
     if (spdmPool[i].pspdmContext != nullptr)
     {
@@ -508,6 +470,13 @@ int SPDMResponderImpl::processSPDMMessage(
 int SPDMResponderImpl::msgRecvCallback(
     spdmtransport::TransportEndPoint& transEP, const std::vector<uint8_t>& data)
 {
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+        return (item.transEP == transEP);
+    });
+    if (it == spdmPool.end())
+    {
+        addNewDevice(transEP);
+    }
     addData(transEP, data);
     return processSPDMMessage(transEP);
 };
@@ -816,15 +785,22 @@ void SPDMResponderImpl::processSessionState(
     }
 }
 
-/**
- * @brief Responder object create Factory function.
- *
- * @return Pointer to Responder implementation object.
- *
- **/
-std::shared_ptr<SPDMResponder> createResponder()
+SPDMResponderImpl::SPDMResponderImpl(
+    std::shared_ptr<boost::asio::io_context> ioc,
+    std::shared_ptr<sdbusplus::asio::connection> conn,
+    std::shared_ptr<spdmtransport::SPDMTransport> trans,
+    SPDMConfiguration& pSpdmConfig) :
+    pioc(ioc),
+    pconn(conn), spdmTrans(trans), spdmResponderCfg(pSpdmConfig)
 {
-    return std::make_shared<SPDMResponderImpl>();
+    using namespace std::placeholders;
+    curIndex = 0;
+    if (spdmResponderCfg.version)
+    {
+        setCertificatePath(spdmResponderCfg.certPath);
+        spdmTrans->registerCallback(
+            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
+    }
 }
 
 } // namespace spdmapplib
