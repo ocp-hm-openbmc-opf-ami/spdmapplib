@@ -21,7 +21,7 @@
 #include <functional>
 #include <iostream>
 
-namespace spdmtransport
+namespace spdm_transport
 {
 /*Callback function for MCTPwplus  */
 /**
@@ -79,9 +79,8 @@ void SPDMTransportMCTP::transOnDeviceUpdate(
  * @return 0: success, other: failed.
  **/
 
-void SPDMTransportMCTP::registerCallback(MsgReceiveCallback msgRcvCB)
+void SPDMTransportMCTP::setListener(MsgReceiveCallback msgRcvCB)
 {
-    using namespace std::placeholders;
     msgReceiveCB = msgRcvCB;
 }
 
@@ -91,19 +90,17 @@ void SPDMTransportMCTP::registerCallback(MsgReceiveCallback msgRcvCB)
  * @param  eid          The EID of detected new endpoint.
  * @return true: success, false: failed.
  **/
-int SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
+void SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
 {
     TransportEndPoint tmpEP;
     tmpEP.devIdentifier = eid;
 
     if (onDeviceUpdtCB)
     {
-        boost::asio::spawn(*(pioc),
-                           [this, tmpEP](boost::asio::yield_context yield) {
-                               onDeviceUpdtCB(yield, tmpEP, Event::removed);
-                           });
+        boost::asio::spawn(*(ioc), [&](boost::asio::yield_context yield) {
+            onDeviceUpdtCB(yield, tmpEP, Event::removed);
+        });
     }
-    return eid;
 }
 
 /**
@@ -112,19 +109,16 @@ int SPDMTransportMCTP::transRemoveDevice(const mctpw::eid_t eid)
  * @param  eid          The EID of detected new endpoint.
  * @return true: success, false: failed.
  **/
-int SPDMTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
+void SPDMTransportMCTP::transAddNewDevice(const mctpw::eid_t eid)
 {
     TransportEndPoint tmpEP;
-    // tmpEP.transType = transType;
     tmpEP.devIdentifier = eid;
     if (onDeviceUpdtCB)
     {
-        boost::asio::spawn(*(pioc),
-                           [this, tmpEP](boost::asio::yield_context yield) {
-                               onDeviceUpdtCB(yield, tmpEP, Event::added);
-                           });
+        boost::asio::spawn(*(ioc), [&](boost::asio::yield_context yield) {
+            onDeviceUpdtCB(yield, tmpEP, Event::added);
+        });
     }
-    return eid;
 }
 
 /**
@@ -143,14 +137,14 @@ int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
 {
     mctpw::eid_t eid = transEP.devIdentifier;
 
-    boost::asio::spawn(*(pioc), [this, eid,
-                                 request](boost::asio::yield_context yield) {
+    boost::asio::spawn(*(ioc), [this, eid,
+                                request](boost::asio::yield_context yield) {
         mctpWrapper->sendYield(yield, eid,
                                static_cast<uint8_t>(mctpw::MessageType::spdm),
                                false, request);
     });
 
-    return spdmapplib::errorcodes::returnSuccess;
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 /**
@@ -168,7 +162,7 @@ int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
 int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
                                     const std::vector<uint8_t>& request,
                                     uint64_t timeout,
-                                    MsgReceiveCallback rspRcvCB)
+                                    std::vector<uint8_t>& responsePacket)
 {
     constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{500};
     mctpw::eid_t eid = transEP.devIdentifier;
@@ -185,7 +179,7 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
     }
     else
     {
-        std::vector<uint8_t> responsePacket = reply.second;
+        responsePacket = reply.second;
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
             ("SPDMTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
              std::to_string(responsePacket.size()))
@@ -208,34 +202,19 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
         ss << std::endl;
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
             ss.str().c_str());
-
-        rspRcvCB(transEP, responsePacket);
-
-        return spdmapplib::errorcodes::returnSuccess;
+        return spdm_app_lib::error_codes::returnSuccess;
     }
 }
 
 void SPDMTransportMCTP::initDiscovery(
     std::function<void(boost::asio::yield_context yield,
-                       spdmtransport::TransportEndPoint eidPoint,
-                       spdmtransport::Event event)>
+                       spdm_transport::TransportEndPoint eidPoint,
+                       spdm_transport::Event event)>
         onDeviceUpdateCB)
 {
-    using namespace std::placeholders;
     onDeviceUpdtCB = onDeviceUpdateCB;
 
-    boost::asio::spawn(*(pioc), [this](boost::asio::yield_context yield) {
-        std::cerr << "Registering a SMBus SPDM responder" << std::endl;
-        mctpw::VersionFields specVersion = {0xF1, 0xF1, 0xF0, 0};
-        auto rcvStatus = mctpWrapper->registerResponder(specVersion);
-        if (rcvStatus == boost::system::errc::success)
-        {
-            std::cerr << "Success" << '\n';
-        }
-        else
-        {
-            std::cerr << "Failed \n";
-        }
+    boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
         mctpWrapper->detectMctpEndpoints(yield);
         mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
         for (auto& item : eidMap)
@@ -247,17 +226,17 @@ void SPDMTransportMCTP::initDiscovery(
 
 SPDMTransportMCTP::SPDMTransportMCTP(
     std::shared_ptr<boost::asio::io_service> io,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
+    std::shared_ptr<sdbusplus::asio::connection> con,
     mctpw::BindingType tranType) :
-    pioc(io),
-    pconn(conn), transType(tranType)
+    ioc(io),
+    conn(con), transType(tranType)
 {
     using namespace std::placeholders;
     mctpw::MCTPConfiguration config(mctpw::MessageType::spdm, transType);
     mctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
-        pconn, config,
+        conn, config,
         std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
         std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
                   _4, _5, _6));
 }
-} // namespace spdmtransport
+} // namespace spdm_transport

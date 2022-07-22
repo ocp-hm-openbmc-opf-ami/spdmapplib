@@ -17,7 +17,7 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <sdbusplus/asio/connection.hpp>
-namespace spdmtransport
+namespace spdm_transport
 {
 /**
  * @brief These events are triggered when
@@ -40,8 +40,8 @@ struct TransportEndPoint;
 using MsgReceiveCallback = std::function<void(
     TransportEndPoint& transEP, const std::vector<uint8_t>& data)>;
 using OnDeviceCallback = std::function<void(
-    boost::asio::yield_context yield, spdmtransport::TransportEndPoint eidPoint,
-    spdmtransport::Event event)>;
+    boost::asio::yield_context yield,
+    spdm_transport::TransportEndPoint eidPoint, spdm_transport::Event event)>;
 /**
  * @brief Endpoint information, could be extended.
  *
@@ -49,10 +49,10 @@ using OnDeviceCallback = std::function<void(
 struct TransportEndPoint
 {
     uint8_t devIdentifier;
-    bool operator==(const TransportEndPoint& p2) const
+    bool operator==(const TransportEndPoint& secondDevice) const
     {
-        const TransportEndPoint& p1 = (*this);
-        return p1.devIdentifier == p2.devIdentifier;
+        const TransportEndPoint& firstDevice = (*this);
+        return firstDevice.devIdentifier == secondDevice.devIdentifier;
     }
 };
 
@@ -74,7 +74,7 @@ class SPDMTransport
     virtual void
         initDiscovery(std::function<void(boost::asio::yield_context yield,
                                          TransportEndPoint endPoint,
-                                         spdmtransport::Event event)>
+                                         spdm_transport::Event event)>
                           onEndPointChange) = 0;
 
     /****************************************************
@@ -101,9 +101,9 @@ class SPDMTransport
      * @param  msgRcvCB          The callback function for messages received(for
      *responder used).
      **/
-    virtual void registerCallback(
-        MsgReceiveCallback msgRcvCB =
-            nullptr) = 0; // override this function in implementation
+    virtual void
+        setListener(MsgReceiveCallback msgRcvCB) = 0; // override this function
+                                                      // in implementation
     /****************************************************
         APIs for requester
     ******************************************************/
@@ -121,7 +121,8 @@ class SPDMTransport
      **/
     virtual int sendRecvData(TransportEndPoint& transEP,
                              const std::vector<uint8_t>& request,
-                             uint64_t timeout, MsgReceiveCallback rspRcvCB) = 0;
+                             uint64_t timeout,
+                             std::vector<uint8_t>& response) = 0;
 };
 
-} // namespace spdmtransport
+} // namespace spdm_transport

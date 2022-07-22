@@ -93,7 +93,7 @@ extern "C"
         return true;
     }
 }
-namespace spdmapplib
+namespace spdm_app_lib
 {
 /**
  * @brief set cert file Path
@@ -104,4 +104,4 @@ void setCertificatePath(std::string& certPath)
 {
     setCertPath = certPath.data();
 }
-} // namespace spdmapplib
+} // namespace spdm_app_lib

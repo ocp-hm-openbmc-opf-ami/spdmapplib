@@ -301,12 +301,12 @@ responder.
  * @return SPDM configuration
  */
 
-spdmapplib::SPDMConfiguration getConfigurationFromEntityManager(
+spdm_app_lib::SPDMConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName)
 {
     uint32_t u32Data;
-    spdmapplib::SPDMConfiguration spdmConfig{};
+    spdm_app_lib::SPDMConfiguration spdmConfig{};
     const std::string objectPath =
         getSPDMConfigurationPaths(conn, configurationName);
 

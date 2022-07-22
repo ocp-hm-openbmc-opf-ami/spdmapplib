@@ -32,7 +32,7 @@ inline constexpr uint32_t exeConnectionCert = 0x4;
 inline constexpr uint32_t exeConnectionChal = 0x8;
 inline constexpr uint32_t exeConnectionMeas = 0x10;
 
-namespace spdmapplib
+namespace spdm_app_lib
 {
 /**
  * @brief SPDM version enum
@@ -57,7 +57,7 @@ enum class SPDMDeviceEvent : uint8_t
 typedef struct
 {
     void* pspdmContext;
-    spdmtransport::TransportEndPoint transEP;
+    spdm_transport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
     uint32_t useVersion;
@@ -92,7 +92,7 @@ class SPDMResponderImpl
      **/
     SPDMResponderImpl(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                      std::shared_ptr<spdm_transport::SPDMTransport> trans,
                       SPDMConfiguration& pSpdmConfig);
 
     /*APIs called by transport layer*/
@@ -100,10 +100,10 @@ class SPDMResponderImpl
      * @brief Called when new endpoint detected.
      *
      * @param  transEP          The new endpoint object.
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
-    int addNewDevice(spdmtransport::TransportEndPoint& transEP);
+    bool addNewDevice(spdm_transport::TransportEndPoint& transEP);
 
     /**
      * @brief Called when endpoint remove is detected.
@@ -112,40 +112,40 @@ class SPDMResponderImpl
      * @return 0: success, other: failed.
      *
      **/
-    int removeDevice(spdmtransport::TransportEndPoint& transEP);
+    bool updateSPDMPool(spdm_transport::TransportEndPoint& transEP);
 
     /**
      * @brief Called when message received.
      *
      * @param  transEP      The endpoint object sending data.
      * @param  data          The vector of received data.
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
 
-    int addData(spdmtransport::TransportEndPoint& transEP,
-                const std::vector<uint8_t>& data);
+    bool addData(spdm_transport::TransportEndPoint& transEP,
+                 const std::vector<uint8_t>& data);
     /**
      * @brief Called when message received.
      *
      * The function is called in msgRecvCallback to process incoming received
      *data.
      * @param  transEP      The endpoint object sending data.
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
-    int processSPDMMessage(spdmtransport::TransportEndPoint& transEP);
+    bool processSPDMMessage(spdm_transport::TransportEndPoint& transEP);
 
     /**
      * @brief Register to transport layer for handling received data.
      *
      * @param  transEP      The endpoint object to receive data.
      * @param  data          The vector of received data.
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
-    int msgRecvCallback(spdmtransport::TransportEndPoint& transEP,
-                        const std::vector<uint8_t>& data);
+    bool msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
+                         const std::vector<uint8_t>& data);
 
     /*Cabllback functions implementation for libspdm */
     /**
@@ -200,22 +200,22 @@ class SPDMResponderImpl
      * @brief Function to setup specific endpoint initial configuration.
      *
      * @param  ItemIndex      The endpoint index.
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
-    int settingFromConfig(uint8_t ItemIndex);
+    bool settingFromConfig(uint8_t ItemIndex);
 
   private:
-    std::shared_ptr<boost::asio::io_context> pioc;
-    std::shared_ptr<sdbusplus::asio::connection> pconn;
-    uint8_t useSlotCount;
-    uint8_t curIndex;
-    uint32_t useResponderCapabilityFlags;
-    uint8_t useMutAuth;
-    uint8_t useBasicMutAuth;
-    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
-    SPDMConfiguration spdmResponderCfg;
-    std::vector<spdmItem> spdmPool;
+    std::shared_ptr<boost::asio::io_context> ioc;
+    std::shared_ptr<sdbusplus::asio::connection> conn;
+    uint8_t useSlotCount = 0;
+    uint8_t curIndex = 0;
+    uint32_t useResponderCapabilityFlags = 0;
+    uint8_t useMutAuth = 0;
+    uint8_t useBasicMutAuth = 0;
+    std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
+    SPDMConfiguration spdmResponderCfg{};
+    std::vector<spdmItem> spdmPool{};
 };
 
 /**
@@ -237,8 +237,8 @@ class SPDMRequesterImpl
      **/
     SPDMRequesterImpl(std::shared_ptr<boost::asio::io_context> ioc,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      std::shared_ptr<spdmtransport::SPDMTransport> trans,
-                      spdmtransport::TransportEndPoint& transResponder,
+                      std::shared_ptr<spdm_transport::SPDMTransport> trans,
+                      spdm_transport::TransportEndPoint& transResponder,
                       SPDMConfiguration& pSpdmConfig);
 
     /**
@@ -246,7 +246,7 @@ class SPDMRequesterImpl
      *
      * @return 0: success, other: failed.
      **/
-    int doAuthentication(void);
+    bool doAuthentication(void);
     /**
      * @brief The measurement function
      *
@@ -255,7 +255,7 @@ class SPDMRequesterImpl
      *
      * @return 0: success, other: failed.
      **/
-    int doMeasurement(const uint32_t* sessionid);
+    bool doMeasurement(const uint32_t* sessionid);
     /**
      * @brief Get all measurement function
      *
@@ -278,8 +278,8 @@ class SPDMRequesterImpl
      * @return 0: success, other: failed.
      *
      **/
-    int addData(spdmtransport::TransportEndPoint& transEP,
-                const std::vector<uint8_t>& data);
+    void addData(spdm_transport::TransportEndPoint& transEP,
+                 const std::vector<uint8_t>& data);
 
     /**
      * @brief Function to pass as parameter of syncSendRecvData of transport
@@ -290,11 +290,10 @@ class SPDMRequesterImpl
      * @param  transEP         The endpoint to receive data after send.
      *to.
      * @param  data             The received data buffer.
-     * @return 0: success, other: failed.
      *
      **/
-    int msgRecvCallback(spdmtransport::TransportEndPoint& transEP,
-                        const std::vector<uint8_t>& data);
+    void msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
+                         const std::vector<uint8_t>& data);
 
     /*Callback functions implementation for libspdm*/
     /**
@@ -333,34 +332,34 @@ class SPDMRequesterImpl
      * @return return_status defined in libspdm.
      *
      **/
-    int setupResponder(const spdmtransport::TransportEndPoint& transEP);
+    bool setupResponder(const spdm_transport::TransportEndPoint& transEP);
     /**
      * @brief Function to setup user assigned endpoint initial configuration.
      *
-     * @return 0: success, other: failed.
+     * @return true: success, false: failure.
      *
      **/
-    int settingFromConfig(void);
+    bool settingFromConfig(void);
 
   private:
-    std::shared_ptr<boost::asio::io_context> pioc;
-    std::shared_ptr<sdbusplus::asio::connection> pconn;
-    uint8_t useSlotCount;
-    uint8_t useSlotId;
-    uint32_t useRequesterCapabilityFlags;
-    uint8_t useMutAuth;
-    uint8_t useBasicMutAuth;
-    uint16_t mUseReqAsymAlgo;
-    uint32_t mUseAsymAlgo;
-    uint32_t mUseHashAlgo;
-    uint32_t mExeConnection;
-    uint8_t mUseMeasurementSummaryHashType;
-    uint8_t mUseMeasurementOperation;
-    uint8_t mUseMeasurementAttribute;
-    std::shared_ptr<spdmtransport::SPDMTransport> spdmTrans;
-    spdmItem spdmResponder; // only one instance for requester.
-    spdmtransport::TransportEndPoint transResponder;
-    SPDMConfiguration spdmRequesterCfg;
+    std::shared_ptr<boost::asio::io_context> ioc;
+    std::shared_ptr<sdbusplus::asio::connection> conn;
+    uint8_t useSlotCount = 0;
+    uint8_t useSlotId = 0;
+    uint32_t useRequesterCapabilityFlags = 0;
+    uint8_t useMutAuth = 0;
+    uint8_t useBasicMutAuth = 0;
+    uint16_t mUseReqAsymAlgo = 0;
+    uint32_t mUseAsymAlgo = 0;
+    uint32_t mUseHashAlgo = 0;
+    uint32_t mExeConnection = 0;
+    uint8_t mUseMeasurementSummaryHashType = 0;
+    uint8_t mUseMeasurementOperation = 0;
+    uint8_t mUseMeasurementAttribute = 0;
+    std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
+    spdmItem spdmResponder{}; // only one instance for requester.
+    spdm_transport::TransportEndPoint transResponder{};
+    SPDMConfiguration spdmRequesterCfg{};
 };
 
 /*Utility function*/
@@ -371,4 +370,4 @@ class SPDMRequesterImpl
  */
 void setCertificatePath(std::string& certPath);
 
-} // namespace spdmapplib
+} // namespace spdm_app_lib

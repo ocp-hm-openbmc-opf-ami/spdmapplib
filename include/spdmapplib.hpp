@@ -18,7 +18,7 @@
 #include "spdmapplib_errorcodes.hpp"
 #include "spdmtransport.hpp"
 
-namespace spdmapplib
+namespace spdm_app_lib
 {
 class SPDMRequesterImpl;
 class SPDMResponderImpl;
@@ -62,13 +62,13 @@ class SPDMResponder
      **/
     SPDMResponder(std::shared_ptr<boost::asio::io_context> ioc,
                   std::shared_ptr<sdbusplus::asio::connection> conn,
-                  std::shared_ptr<spdmtransport::SPDMTransport> trans,
+                  std::shared_ptr<spdm_transport::SPDMTransport> trans,
                   SPDMConfiguration& pSpdmConfig);
 
-    int removeDevice(spdmtransport::TransportEndPoint& endPoint);
+    bool updateSPDMPool(spdm_transport::TransportEndPoint& endPoint);
 
   private:
-    std::shared_ptr<SPDMResponderImpl> pRespimpl;
+    std::shared_ptr<SPDMResponderImpl> pRespImpl;
 };
 
 /**
@@ -92,8 +92,8 @@ class SPDMRequester
      **/
     SPDMRequester(std::shared_ptr<boost::asio::io_context> ioc,
                   std::shared_ptr<sdbusplus::asio::connection> conn,
-                  std::shared_ptr<spdmtransport::SPDMTransport> trans,
-                  spdmtransport::TransportEndPoint& endPoint,
+                  std::shared_ptr<spdm_transport::SPDMTransport> trans,
+                  spdm_transport::TransportEndPoint& endPoint,
                   SPDMConfiguration& pSpdmConfig);
 
     /**
@@ -122,7 +122,7 @@ class SPDMRequester
     bool getCertificate(std::vector<uint8_t>& measurements);
 
   private:
-    std::shared_ptr<SPDMRequesterImpl> pReqimpl;
+    std::shared_ptr<SPDMRequesterImpl> pReqImpl;
 };
 
-} // namespace spdmapplib
+} // namespace spdm_app_lib

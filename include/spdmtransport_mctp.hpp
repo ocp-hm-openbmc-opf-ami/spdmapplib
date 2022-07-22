@@ -19,7 +19,7 @@
 #include "spdmapplib_errorcodes.hpp"
 #include "spdmtransport.hpp"
 
-namespace spdmtransport
+namespace spdm_transport
 {
 /**
  * @brief SPDM transport layer implemented using MCTP
@@ -50,7 +50,7 @@ class SPDMTransportMCTP : public SPDMTransport
      * @param  msgRcvCB          The callback function for messages received(for
      *responder used).
      **/
-    void registerCallback(MsgReceiveCallback msgRcvCB = nullptr) override;
+    void setListener(MsgReceiveCallback msgRcvCB) override;
 
     /**
      * @brief The async send data function for responder
@@ -79,7 +79,7 @@ class SPDMTransportMCTP : public SPDMTransport
      **/
     int sendRecvData(TransportEndPoint& transEP,
                      const std::vector<uint8_t>& request, uint64_t timeout,
-                     MsgReceiveCallback rspRcvCB) override;
+                     std::vector<uint8_t>& response) override;
 
     /**
      * @brief The function is responsible for doing discovery of the endPoints.
@@ -88,8 +88,8 @@ class SPDMTransportMCTP : public SPDMTransport
      **/
     void initDiscovery(
         std::function<void(boost::asio::yield_context yield,
-                           spdmtransport::TransportEndPoint endPoint,
-                           spdmtransport::Event event)>
+                           spdm_transport::TransportEndPoint endPoint,
+                           spdm_transport::Event event)>
             onEndPointChange) override;
 
     /*APIs called by mctpwrapper callback function*/
@@ -99,13 +99,13 @@ class SPDMTransportMCTP : public SPDMTransport
      *
      * @param eid  The EID of detected new endpoint.
      **/
-    int transAddNewDevice(const mctpw::eid_t eid);
+    void transAddNewDevice(const mctpw::eid_t eid);
     /**
      * @brief Called by mctpwrapper when device updated.
      *
      * @param eid The EID of detected removed endpoint.
      **/
-    int transRemoveDevice(const mctpw::eid_t eid);
+    void transRemoveDevice(const mctpw::eid_t eid);
 
     /**
      * @brief Function registered to mctpwrapper as receiving message Callback.
@@ -127,9 +127,9 @@ class SPDMTransportMCTP : public SPDMTransport
     MsgReceiveCallback msgReceiveCB = nullptr;
 
   protected:
-    std::shared_ptr<boost::asio::io_context> pioc;
-    std::shared_ptr<sdbusplus::asio::connection> pconn;
+    std::shared_ptr<boost::asio::io_context> ioc;
+    std::shared_ptr<sdbusplus::asio::connection> conn;
     mctpw::BindingType transType; /*MCTP over PCIe, MCTP over SMBus*/
     std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper;
 };
-} // namespace spdmtransport
+} // namespace spdm_transport

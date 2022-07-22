@@ -30,7 +30,7 @@
 #define UNUSED(x) (void)(x)
 #endif
 
-extern spdmapplib::SPDMConfiguration getConfigurationFromEntityManager(
+extern spdm_app_lib::SPDMConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName);
 
@@ -38,10 +38,10 @@ static std::shared_ptr<boost::asio::io_context> ioc =
     std::make_shared<boost::asio::io_context>();
 static std::shared_ptr<sdbusplus::asio::connection> conn =
     std::make_shared<sdbusplus::asio::connection>(*ioc);
-static auto trans = std::make_shared<spdmtransport::SPDMTransportMCTP>(
+static auto trans = std::make_shared<spdm_transport::SPDMTransportMCTP>(
     ioc, conn, mctpw::BindingType::mctpOverSmBus);
 
-static spdmapplib::SPDMConfiguration spdmRequesterCfg{};
+static spdm_app_lib::SPDMConfiguration spdmRequesterCfg{};
 
 using ConfigurationField =
     std::variant<bool, uint64_t, std::string, std::vector<uint64_t>>;
@@ -102,13 +102,13 @@ static void startSPDMRequester()
         "Staring SPDM requester!!");
 
     trans->initDiscovery([&](boost::asio::yield_context,
-                             spdmtransport::TransportEndPoint eidPoint,
-                             spdmtransport::Event event) {
-        if (event == spdmtransport::Event::added)
+                             spdm_transport::TransportEndPoint eidPoint,
+                             spdm_transport::Event event) {
+        if (event == spdm_transport::Event::added)
         {
             std::cerr << "Added eid: " << std::to_string(eidPoint.devIdentifier)
                       << "\n";
-            auto pspdmRequester = std::make_shared<spdmapplib::SPDMRequester>(
+            auto pspdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
                 ioc, conn, trans, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
             if (pspdmRequester->getCertificate(data))
@@ -132,7 +132,7 @@ static void startSPDMRequester()
             }
             data.clear();
         }
-        else if (event == spdmtransport::Event::removed)
+        else if (event == spdm_transport::Event::removed)
         {
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "Remove the device from the inventory");

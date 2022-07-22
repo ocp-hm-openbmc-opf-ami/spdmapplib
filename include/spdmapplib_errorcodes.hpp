@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 #pragma once
-namespace spdmapplib
+namespace spdm_app_lib
 {
 /**
  * @brief spdmapplib error codes list.
  *
  */
 
-namespace errorcodes
+namespace error_codes
 {
 inline constexpr int generalReturnError = -1;
 inline constexpr int returnSuccess = 0;
 inline constexpr int spdmConfigurationNotFoundInEntityManager = 1;
 inline constexpr int libspdmReturnError =
     2; // libspdm function calls return error.
-} // namespace errorcodes
-} // namespace spdmapplib
+} // namespace error_codes
+} // namespace spdm_app_lib

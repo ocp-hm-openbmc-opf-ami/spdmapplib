@@ -19,26 +19,26 @@
 #include "spdmapplib_impl.hpp"
 #include "spdmtransport.hpp"
 
-namespace spdmapplib
+namespace spdm_app_lib
 {
 SPDMRequester::SPDMRequester(
     std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::SPDMTransport> trans,
-    spdmtransport::TransportEndPoint& transResponder,
+    std::shared_ptr<spdm_transport::SPDMTransport> trans,
+    spdm_transport::TransportEndPoint& transResponder,
     SPDMConfiguration& pSpdmConfig) :
-    pReqimpl(std::make_shared<SPDMRequesterImpl>(ioc, conn, trans,
+    pReqImpl(std::make_shared<SPDMRequesterImpl>(ioc, conn, trans,
                                                  transResponder, pSpdmConfig))
 {}
 
 bool SPDMRequester::getCertificate(std::vector<uint8_t>& certificate)
 {
-    return pReqimpl->getCertificate(certificate);
+    return pReqImpl->getCertificate(certificate);
 }
 
 bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements)
 {
-    return pReqimpl->getMeasurements(measurements);
+    return pReqImpl->getMeasurements(measurements);
 }
 
 SPDMRequester::~SPDMRequester() noexcept = default;
@@ -46,16 +46,16 @@ SPDMRequester::~SPDMRequester() noexcept = default;
 SPDMResponder::SPDMResponder(
     std::shared_ptr<boost::asio::io_context> ioc,
     std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::SPDMTransport> trans,
+    std::shared_ptr<spdm_transport::SPDMTransport> trans,
     SPDMConfiguration& pSpdmConfig) :
-    pRespimpl(
+    pRespImpl(
         std::make_shared<SPDMResponderImpl>(ioc, conn, trans, pSpdmConfig))
 {}
 
-int SPDMResponder::removeDevice(spdmtransport::TransportEndPoint& endPoint)
+bool SPDMResponder::updateSPDMPool(spdm_transport::TransportEndPoint& endPoint)
 {
-    return pRespimpl->removeDevice(endPoint);
+    return pRespImpl->updateSPDMPool(endPoint);
 }
 
 SPDMResponder::~SPDMResponder() noexcept = default;
-} // namespace spdmapplib
+} // namespace spdm_app_lib
