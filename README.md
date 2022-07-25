@@ -171,7 +171,7 @@ Example configurations.
 ```text
 ┌───────────────────────────────────────────────────┐
 │                                                   │
-│     SPDM Responder/Rquester  Applications         │
+│     SPDM Responder/Requester Applications         │
 │                                                   │
 └─────────────┬─────────────────────────────┬───────┘
               │                             │
