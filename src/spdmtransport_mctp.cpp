@@ -200,51 +200,53 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
          ", request size: " + std::to_string(request.size()) +
          ", timeout: " + std::to_string(timeout))
             .c_str());
+    std::pair<boost::system::error_code, mctpw::ByteArray> reply;
     try
     {
-        auto reply = mctpWrapper->sendReceiveBlocked(eid, request,
-                                                    sendReceiveBlockedTimeout);
-        if (reply.first)
-        {
-            return reply.first.value();
-        }
-        else
-        {
-            std::vector<uint8_t> responsePacket = reply.second;
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("SPDMTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
-                std::to_string(responsePacket.size()))
-                    .c_str());
-            std::stringstream ss;
-            ss << std::uppercase << std::hex << std::endl;
-            for (unsigned int i = 0; i < responsePacket.size(); ++i)
-            {
-                ss << std::setfill('0') << std::setw(3)
-                << static_cast<uint16_t>(responsePacket[i]);
-                if ((i % 32) == 0)
-                {
-                    ss << '\n';
-                }
-                else
-                {
-                    ss << ' ';
-                }
-            }
-            ss << std::endl;
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ss.str().c_str());
-    
-            rspRcvCB(transEP, responsePacket);
-    
-            return spdmapplib::errorcodes::returnSuccess;
-        }
+        reply = mctpWrapper->sendReceiveBlocked(eid, request,
+                                                sendReceiveBlockedTimeout);
     }
     catch (const std::exception& exceptionIn)
     {
         std::string exceptionStr = exceptionIn.what();
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("SPDMTransportMCTP::sendRecvData Exception: " + exceptionStr).c_str());
+            ("SPDMTransportMCTP::sendRecvData Exception: " + exceptionStr)
+                .c_str());
         return spdmapplib::errorcodes::generalReturnError;
+    }
+    if (reply.first)
+    {
+        return reply.first.value();
+    }
+    else
+    {
+        std::vector<uint8_t> responsePacket = reply.second;
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            ("SPDMTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
+             std::to_string(responsePacket.size()))
+                .c_str());
+        std::stringstream ss;
+        ss << std::uppercase << std::hex << std::endl;
+        for (unsigned int i = 0; i < responsePacket.size(); ++i)
+        {
+            ss << std::setfill('0') << std::setw(3)
+               << static_cast<uint16_t>(responsePacket[i]);
+            if ((i % 32) == 0)
+            {
+                ss << '\n';
+            }
+            else
+            {
+                ss << ' ';
+            }
+        }
+        ss << std::endl;
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            ss.str().c_str());
+
+        rspRcvCB(transEP, responsePacket);
+
+        return spdmapplib::errorcodes::returnSuccess;
     }
 }
 
