@@ -55,11 +55,19 @@ extern "C"
         FILE* fp;
         uint32_t tempResult;
         char newFileName[256];
+        char* pfmLoc = "/dev/mtd/pfm";
 
-        if (setCertPath != nullptr)
-            sprintf(newFileName, "%s/%s", setCertPath, fileName);
-        else
+        if (!strcmp(pfmLoc, fileName))
+        {
             sprintf(newFileName, "%s", fileName);
+        }
+        else
+        {
+            if (setCertPath != nullptr)
+                sprintf(newFileName, "%s/%s", setCertPath, fileName);
+            else
+                sprintf(newFileName, "%s", fileName);
+        }
         if ((fp = fopen(newFileName, "rb")) == nullptr)
         {
             printf("Unable to open file %s\n", newFileName);
@@ -93,7 +101,7 @@ extern "C"
         return true;
     }
 }
-namespace spdmapplib
+namespace spdm_app_lib
 {
 /**
  * @brief set cert file Path
@@ -104,4 +112,4 @@ void setCertificatePath(std::string& certPath)
 {
     setCertPath = certPath.data();
 }
-} // namespace spdmapplib
+} // namespace spdm_app_lib

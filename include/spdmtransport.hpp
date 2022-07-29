@@ -17,8 +17,19 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <sdbusplus/asio/connection.hpp>
-namespace spdmtransport
+namespace spdm_transport
 {
+/**
+ * @brief These events are triggered when
+ * endPoints are added or removed
+ *
+ */
+enum class Event
+{
+    added,
+    removed
+};
+
 /**
  * @brief Defined callback function prototype
  *
@@ -28,32 +39,19 @@ namespace spdmtransport
 struct TransportEndPoint;
 using MsgReceiveCallback = std::function<void(
     TransportEndPoint& transEP, const std::vector<uint8_t>& data)>;
-using AddRemoveDeviceCallback = std::function<int(TransportEndPoint& transEP)>;
-
-/**
- * @brief SPDM Transport type, could be extended.
- *
- */
-enum class TransportIdentifier : uint8_t
-{
-    mctpOverSMBus = 0x01,
-    mctpOverPCIe = 0x02,
-    pmtWatcher = 0x03, /*Intel specific transport*/
-};
-
+using OnDeviceCallback = std::function<void(
+    spdm_transport::TransportEndPoint eidPoint, spdm_transport::Event event)>;
 /**
  * @brief Endpoint information, could be extended.
  *
  */
 struct TransportEndPoint
 {
-    TransportIdentifier transType; /*interface type.*/
     uint8_t devIdentifier;
-    bool operator==(const TransportEndPoint& p2) const
+    bool operator==(const TransportEndPoint& secondDevice) const
     {
-        const TransportEndPoint& p1 = (*this);
-        return p1.transType == p2.transType &&
-               p1.devIdentifier == p2.devIdentifier;
+        const TransportEndPoint& firstDevice = (*this);
+        return firstDevice.devIdentifier == secondDevice.devIdentifier;
     }
 };
 
@@ -66,34 +64,14 @@ class SPDMTransport
 {
   public:
     virtual ~SPDMTransport() = default;
-
     /* APIs for requester and responder */
     /**
-     * @brief Initial function of transport instance
-     *
-     * @param  ioc               shared_ptr to boost io_context object.
-     * @param  conn              shared_ptr to already existing boost
-     *asio::connection.
-     * @param  addCB             The callback function for new endpoint
-     *detected.
-     * @param  delCB             The callback function for EndPoint removed.
-     * @param  msgRcvCB          The callback function for messages received(for
-     *responder used).
-     * @return 0: success, other: failed.
+     * @brief The function is responsible for doing discovery of the endPoints
+     * @param  callback
      **/
-    virtual int initTransport(
-        std::shared_ptr<boost::asio::io_context> ioc,
-        std::shared_ptr<sdbusplus::asio::connection> conn,
-        AddRemoveDeviceCallback addCB, AddRemoveDeviceCallback delCB,
-        MsgReceiveCallback msgRcvCB =
-            nullptr) = 0; // override this function in implementation
-
-    /**
-     * @brief Get the interface type of transport layer
-     * @return TransportIdentifier
-     *
-     **/
-    virtual TransportIdentifier getTransType(void) = 0;
+    virtual void initDiscovery(std::function<void(TransportEndPoint endPoint,
+                                                  spdm_transport::Event event)>
+                                   onEndPointChange) = 0;
 
     /****************************************************
         APIs to responder and interface that implementation should override
@@ -106,13 +84,22 @@ class SPDMTransport
      * @param  transEP           The destination endpoint.
      * @param  request           The vector of payload.
      * @param  timeout           The timeout time.
-     * @return 0: success, other: failed.
+     * @return 0                 Send is successful
+     * @return other values      Send failed
      *
      **/
     virtual int asyncSendData(TransportEndPoint& transEP,
                               const std::vector<uint8_t>& request,
                               uint64_t timeout) = 0;
 
+    /**
+     * @brief set Listener for the messages received
+     *
+     * @param  msgRcvCB          Listener for async messages
+     **/
+    virtual void
+        setListener(MsgReceiveCallback msgRcvCB) = 0; // override this function
+                                                      // in implementation
     /****************************************************
         APIs for requester
     ******************************************************/
@@ -123,14 +110,14 @@ class SPDMTransport
      * @param  transEP           The destination endpoint.
      * @param  request           The vector of data payload.
      * @param  timeout           The timeout time.
-     * @param  rspRcvCB          The resRcvCB to be called when response data
-     *received.
-     * @return 0: success, other: failed.
-     *
+     * @param  rspRcvCB          The resRcvCB when response data received.
+     * @return 0                 Send is successful
+     * @return other values      Send failed
      **/
     virtual int sendRecvData(TransportEndPoint& transEP,
                              const std::vector<uint8_t>& request,
-                             uint64_t timeout, MsgReceiveCallback rspRcvCB) = 0;
+                             uint64_t timeout,
+                             std::vector<uint8_t>& response) = 0;
 };
 
-} // namespace spdmtransport
+} // namespace spdm_transport

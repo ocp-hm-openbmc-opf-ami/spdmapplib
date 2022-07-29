@@ -25,19 +25,10 @@
 #include <functional>
 #include <iostream>
 
-namespace spdmapplib
+namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
-/**
- * @brief Register to libspdm for sending SPDM request payload.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  requestSize     The request payload size.
- * @param  request         The request data buffer pointer.
- * @param  timeout          The timeout time.
- * @return return_status defined in libspdm.
- *
- **/
+
 return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
                                          const void* request, uint64_t timeout)
 {
@@ -45,10 +36,10 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
     {
-        return errorcodes::generalReturnError;
+        return spdm_app_lib::error_codes::generalReturnError;
     }
     SPDMResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
+    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
 
     uint32_t j;
     std::vector<uint8_t> data;
@@ -64,16 +55,6 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }
 
-/**
- * @brief Register to libspdm for receiving SPDM response payload.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  responseSize     The variable pointer for received data size.
- * @param  response         The response data buffer pointer.
- * @param  timeout          The timeout time.
- * @return return_status defined in libspdm.
- *
- **/
 return_status responderDeviceReceiveMessage(void* spdmContext,
                                             uintn* responseSize, void* response,
                                             uint64_t timeout)
@@ -83,10 +64,10 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
     {
-        return errorcodes::generalReturnError;
+        return spdm_app_lib::error_codes::generalReturnError;
     }
     SPDMResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
+    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
 
     std::vector<uint8_t> rspData{};
     status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
@@ -96,13 +77,6 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     return status;
 }
 
-/**
- * @brief Register to libspdm for handling connection state change.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  connectionState  The connection state.
- *
- **/
 void spdmServerConnectionStateCallback(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
@@ -113,17 +87,9 @@ void spdmServerConnectionStateCallback(
     {
         return;
     }
-    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
+    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
     pspdmTmp->processConnectionState(spdmContext, connectionState);
 }
-/**
- * @brief Register to libspdm for handling session state change.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  sessionID        The session ID.
- * @param  sessionState     The session state.
- *
- **/
 
 void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
                                     libspdm_session_state_t sessionState)
@@ -133,11 +99,9 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
     pTmp = libspdm_get_app_ptr_data(spdmContext);
     if (pTmp == nullptr)
         return;
-    pspdmTmp = static_cast<SPDMResponderImpl*>(pTmp);
+    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
     return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
 }
-
-/*Implement SPDMAppLib responder*/
 
 SPDMResponderImpl::~SPDMResponderImpl()
 {
@@ -151,54 +115,8 @@ SPDMResponderImpl::~SPDMResponderImpl()
     }
 }
 
-/**
- * @brief Initial function of SPDM responder.
- *
- * The function will enter daemon mode. Accept request from assigned
- *transport layer.
- *
- * @param  ioc               The shared_ptr to boost io_context object..
- * @param  trans             The pointer of transport instance.
- * @return 0: success, other: listed in spdmapplib::errorCodes
- **/
-int SPDMResponderImpl::initResponder(
-    std::shared_ptr<boost::asio::io_context> ioc,
-    std::shared_ptr<sdbusplus::asio::connection> conn,
-    std::shared_ptr<spdmtransport::SPDMTransport> trans,
-    SPDMConfiguration& spdmConfig)
-{
-    using namespace std::placeholders;
-    curIndex = 0;
-    pioc = ioc;
-    spdmResponderCfg = spdmConfig;
-    if (spdmResponderCfg.version)
-    {
-        setCertificatePath(spdmResponderCfg.certPath);
-
-        spdmTrans = trans;
-        spdmTrans->initTransport(
-            ioc, conn, std::bind(&SPDMResponderImpl::addNewDevice, this, _1),
-            std::bind(&SPDMResponderImpl::removeDevice, this, _1),
-            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
-    }
-    else
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMResponderImpl::initResponder getConfigurationFromEntityManager failed!");
-        return errorcodes::spdmConfigurationNotFoundInEntityManager;
-    }
-    return RETURN_SUCCESS;
-}
-
-/**
- * @brief Called when endpoint remove is detected.
- *
- * @param  transEndpoint          The endpoint to be removed.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::removeDevice(
-    spdmtransport::TransportEndPoint& transEndpoint)
+bool SPDMResponderImpl::updateSPDMPool(
+    spdm_transport::TransportEndPoint& transEndpoint)
 {
     uint8_t i;
     for (i = 0; i < curIndex; i++)
@@ -208,7 +126,7 @@ int SPDMResponderImpl::removeDevice(
     }
     if (i >= curIndex)
     {
-        return errorcodes::generalReturnError;
+        return false;
     }
     if (spdmPool[i].pspdmContext != nullptr)
     {
@@ -217,30 +135,12 @@ int SPDMResponderImpl::removeDevice(
     }
     spdmPool.erase(spdmPool.begin() + i);
     curIndex = curIndex - 1;
-    return RETURN_SUCCESS;
+    return true;
 }
 
-/**
- * @brief Called when new endpoint detected.
- *
- * @param  transEndpoint          The new endpoint object.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::addNewDevice(
-    spdmtransport::TransportEndPoint& transEndpoint)
+bool SPDMResponderImpl::addNewDevice(
+    spdm_transport::TransportEndPoint& transEndpoint)
 {
-    using namespace std::placeholders;
-
-    for (auto& item : spdmPool)
-    {
-        if (item.transEP == transEndpoint)
-        {
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                "SPDMResponderImpl::addNewDevice, Found old EP item, delete it.");
-            removeDevice(transEndpoint);
-        }
-    }
     spdmItem newItem;
     uint8_t newIndex;
     return_status status;
@@ -248,7 +148,7 @@ int SPDMResponderImpl::addNewDevice(
     newItem.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (newItem.pspdmContext == nullptr)
     {
-        return errorcodes::generalReturnError;
+        return false;
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         "SPDMResponderImpl::addNewDevice");
@@ -272,7 +172,7 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_init_context failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        return false;
     }
     libspdm_register_device_io_func(spdmPool[newIndex].pspdmContext,
                                     responderDeviceSendMessage,
@@ -289,7 +189,7 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_register_session_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        return false;
     }
     status = libspdm_register_connection_state_callback_func(
         spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
@@ -299,20 +199,13 @@ int SPDMResponderImpl::addNewDevice(
             ("SPDMResponderImpl::addNewDevice libspdm_register_connection_state_callback_func failed" +
              std::to_string(status))
                 .c_str());
-        return errorcodes::generalReturnError;
+        return false;
     }
 
     return settingFromConfig(newIndex);
 }
 
-/**
- * @brief Function to setup specific endpoint initial configuration.
- *
- * @param  ItemIndex      The endpoint index.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
+bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
 {
     libspdm_data_parameter_t parameter;
     uint8_t u8Value;
@@ -335,7 +228,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &tmpThis, sizeof(void*));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u8Value = 0;
@@ -344,7 +237,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     useResponderCapabilityFlags = spdmResponderCfg.capability;
@@ -354,7 +247,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
@@ -363,7 +256,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u32Value = spdmResponderCfg.measHash;
@@ -372,7 +265,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u32Value = spdmResponderCfg.asym;
@@ -381,7 +274,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.reqasym;
@@ -390,7 +283,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u32Value = spdmResponderCfg.hash;
@@ -399,7 +292,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.dhe;
@@ -408,7 +301,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u16Value = (uint16_t)spdmResponderCfg.aead;
@@ -417,7 +310,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u16Value = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
@@ -426,7 +319,7 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               sizeof(u16Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
     u8Value = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
@@ -435,45 +328,29 @@ int SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
     {
-        return errorcodes::libspdmReturnError;
+        return false;
     }
 
-    return RETURN_SUCCESS;
+    return true;
 }
 
-/**
- * @brief Called when message received.
- *
- * @param  transEndpoint      The endpoint object sending data.
- * @param  data          The vector of received data.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::addData(spdmtransport::TransportEndPoint& transEndpoint,
-                               const std::vector<uint8_t>& data)
+bool SPDMResponderImpl::addData(
+    spdm_transport::TransportEndPoint& transEndpoint,
+    const std::vector<uint8_t>& data)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
         return (item.transEP == transEndpoint);
     });
     if (it == spdmPool.end())
     {
-        return errorcodes::generalReturnError;
+        return false;
     }
     it->data = std::move(data);
-    return RETURN_SUCCESS;
+    return true;
 }
 
-/**
- * @brief Called when message received.
- *
- * The function is called in msgRecvCallback to process incoming received
- *data.
- * @param  transEndpoint      The endpoint object sending data.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::processSPDMMessage(
-    spdmtransport::TransportEndPoint& transEndpoint)
+bool SPDMResponderImpl::processSPDMMessage(
+    spdm_transport::TransportEndPoint& transEndpoint)
 {
     return_status status;
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
@@ -481,7 +358,7 @@ int SPDMResponderImpl::processSPDMMessage(
     });
     if (it == spdmPool.end())
     {
-        return errorcodes::generalReturnError;
+        return false;
     }
     if (it->data.size() > 0)
     {
@@ -492,35 +369,29 @@ int SPDMResponderImpl::processSPDMMessage(
                 ("spdmRequesterImpl::setupResponder libspdm_responder_dispatch_message failed! status: " +
                  std::to_string(status))
                     .c_str());
+            return false;
         }
     }
-    return RETURN_SUCCESS;
+    return true;
 }
 
-/**
- * @brief Register to transport layer for handling received data.
- *
- * @param  transEP      The endpoint object to receive data.
- * @param  data          The vector of received data.
- * @return 0: success, other: failed.
- *
- **/
-int SPDMResponderImpl::msgRecvCallback(
-    spdmtransport::TransportEndPoint& transEP, const std::vector<uint8_t>& data)
+bool SPDMResponderImpl::msgRecvCallback(
+    spdm_transport::TransportEndPoint& transEP,
+    const std::vector<uint8_t>& data)
 {
-    addData(transEP, data);
+    auto it = find_if(spdmPool.begin(), spdmPool.end(),
+                      [&](spdmItem item) { return (item.transEP == transEP); });
+    if (it == spdmPool.end())
+    {
+        addNewDevice(transEP);
+    }
+    if (!addData(transEP, data))
+    {
+        return false;
+    }
     return processSPDMMessage(transEP);
 };
 
-/**
- * @brief Register to libspdm for receiving SPDM response payload.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  response         The response data buffer vector.
- * @param  timeout          The timeout time.
- * @return return_status defined in libspdm.
- *
- **/
 return_status SPDMResponderImpl::deviceReceiveMessage(
     void* spdmContext, std::vector<uint8_t>& response, uint64_t /*timeout*/)
 {
@@ -542,15 +413,6 @@ return_status SPDMResponderImpl::deviceReceiveMessage(
     return RETURN_SUCCESS;
 }
 
-/**
- * @brief Register to libspdm for sending SPDM payload.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  request          The request payload data vector.
- * @param  timeout          The timeout time.
- * @return return_status defined in libspdm.
- *
- **/
 return_status SPDMResponderImpl::deviceSendMessage(
     void* spdmContext, const std::vector<uint8_t>& request, uint64_t timeout)
 {
@@ -565,13 +427,6 @@ return_status SPDMResponderImpl::deviceSendMessage(
     return spdmTrans->asyncSendData(spdmPool[i].transEP, request, timeout);
 }
 
-/**
- * @brief Register to libspdm for handling connection state change.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  connectionState  The connection state.
- *
- **/
 void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
@@ -743,14 +598,6 @@ void SPDMResponderImpl::processConnectionState(
     return;
 }
 
-/**
- * @brief Register to libspdm for handling session state change.
- *
- * @param  spdmContext      The pointer of the spdmcontext.
- * @param  sessionID        The session ID.
- * @param  sessionState     The session state.
- *
- **/
 void SPDMResponderImpl::processSessionState(
     void* spdmContext, uint32_t sessionID, libspdm_session_state_t sessionState)
 {
@@ -816,15 +663,22 @@ void SPDMResponderImpl::processSessionState(
     }
 }
 
-/**
- * @brief Responder object create Factory function.
- *
- * @return Pointer to Responder implementation object.
- *
- **/
-std::shared_ptr<SPDMResponder> createResponder()
+SPDMResponderImpl::SPDMResponderImpl(
+    std::shared_ptr<boost::asio::io_context> io,
+    std::shared_ptr<sdbusplus::asio::connection> con,
+    std::shared_ptr<spdm_transport::SPDMTransport> trans,
+    SPDMConfiguration& pSpdmConfig) :
+    ioc(io),
+    conn(con), spdmTrans(trans), spdmResponderCfg(pSpdmConfig)
 {
-    return std::make_shared<SPDMResponderImpl>();
+    using namespace std::placeholders;
+    curIndex = 0;
+    if (spdmResponderCfg.version)
+    {
+        setCertificatePath(spdmResponderCfg.certPath);
+        spdmTrans->setListener(
+            std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
+    }
 }
 
-} // namespace spdmapplib
+} // namespace spdm_app_lib

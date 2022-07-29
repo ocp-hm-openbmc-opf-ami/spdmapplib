@@ -26,8 +26,11 @@
 
 #include <iostream>
 #include <unordered_set>
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
 
-extern spdmapplib::SPDMConfiguration getConfigurationFromEntityManager(
+extern spdm_app_lib::SPDMConfiguration getConfigurationFromEntityManager(
     std::shared_ptr<sdbusplus::asio::connection> conn,
     const std::string& configurationName);
 
@@ -35,12 +38,10 @@ static std::shared_ptr<boost::asio::io_context> ioc =
     std::make_shared<boost::asio::io_context>();
 static std::shared_ptr<sdbusplus::asio::connection> conn =
     std::make_shared<sdbusplus::asio::connection>(*ioc);
-static auto pSpdmRequester = spdmapplib::createRequester();
-static auto trans = std::make_shared<spdmtransport::SPDMTransportMCTP>(
-    spdmtransport::TransportIdentifier::mctpOverSMBus);
-static spdmapplib::SPDMConfiguration spdmRequesterCfg{};
-static boost::asio::steady_timer requesterTimer(*ioc);
-static uint8_t responderEid;
+static auto trans = std::make_shared<spdm_transport::SPDMTransportMCTP>(
+    ioc, conn, mctpw::BindingType::mctpOverSmBus);
+
+static spdm_app_lib::SPDMConfiguration spdmRequesterCfg{};
 
 using ConfigurationField =
     std::variant<bool, uint64_t, std::string, std::vector<uint64_t>>;
@@ -73,20 +74,6 @@ static std::vector<std::string> getConfigurationPaths()
 }
 
 /**
- * @brief Function to display Unit test menu.
- *
- */
-
-static void displayMenu(void)
-{
-    std::cerr << "1: doAuthentication()" << std::endl;
-    std::cerr << "2: doMeasurement()" << std::endl;
-    std::cerr << "3: getCertificate()" << std::endl;
-    std::cerr << "4: getMeasurements()" << std::endl;
-    std::cerr << "0: Quit" << std::endl;
-}
-
-/**
  * @brief Function to dump values of input vector.
  *
  * @param vec : The vector to be dumped
@@ -111,65 +98,45 @@ static void dumpVector(std::vector<unsigned char> vec)
  */
 static void startSPDMRequester()
 {
-    spdmtransport::TransportEndPoint responderCfg = {
-        spdmtransport::TransportIdentifier::mctpOverSMBus, 0};
-
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Staring SPDM requester!!");
-    responderCfg.devIdentifier = responderEid;
 
-    if (pSpdmRequester->initRequester(ioc, conn, trans, responderCfg,
-                                      spdmRequesterCfg) == 0)
-    {
-        requesterTimer.expires_after(std::chrono::seconds(1));
-        requesterTimer.async_wait([&](boost::system::error_code ec) {
-            if (ec == boost::asio::error::operation_aborted)
+    trans->initDiscovery([&](spdm_transport::TransportEndPoint eidPoint,
+                             spdm_transport::Event event) {
+        if (event == spdm_transport::Event::added)
+        {
+            std::cerr << "Added eid: " << std::to_string(eidPoint.devIdentifier)
+                      << "\n";
+            auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
+                ioc, conn, trans, eidPoint, spdmRequesterCfg);
+            std::vector<uint8_t> data = {};
+            if (spdmRequester->getCertificate(data))
             {
-                return;
+                dumpVector(data);
             }
-            else if (ec)
+            else
             {
-                std::cerr << "Timer error " << ec.message() << std::endl;
-                return;
+                std::cerr << "Failed getting Certificate for EID: "
+                          << std::to_string(eidPoint.devIdentifier) << "\n";
             }
-            int selTest = 0;
-            bool testRun = true;
-            while (testRun)
+            data.clear();
+            if (spdmRequester->getMeasurements(data))
             {
-                displayMenu();
-                std::cerr << "Enter test selection Number: ";
-                std::cin >> selTest;
-                std::cerr << "\nThe selection is " << selTest << std::endl;
-                switch (selTest)
-                {
-                    case 1:
-                        std::cerr << "Execute doAuthentication()." << std::endl;
-                        pSpdmRequester->doAuthentication();
-                        break;
-                    case 2:
-                        std::cerr << "Execute doMeasurement()." << std::endl;
-                        pSpdmRequester->doMeasurement(nullptr);
-                        break;
-                    case 3:
-                        std::cerr << "Execute getCertificate()." << std::endl;
-                        dumpVector(pSpdmRequester->getCertificate().value());
-                        break;
-                    case 4:
-                        std::cerr << "Execute getMeasurements()." << std::endl;
-                        dumpVector(pSpdmRequester->getMeasurements().value());
-                        break;
-                    default:
-                        testRun = false;
-                        std::cerr << "Quit!" << std::endl;
-                        ioc->stop();
-                }
+                dumpVector(data);
             }
-        });
-    }
-    else
-    {
-        std::cerr << "spdm_requester init failed." << std::endl;
-    }
+            else
+            {
+                std::cerr << "Failed getting Measurements for EID: "
+                          << std::to_string(eidPoint.devIdentifier) << "\n";
+            }
+            data.clear();
+        }
+        else if (event == spdm_transport::Event::removed)
+        {
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                "Remove the device from the inventory");
+        }
+    });
 }
 
 /**
@@ -216,17 +183,9 @@ static void startExistingConfigurations(std::string& spdmConfig)
     }
 }
 
-int main(int argc, char* argv[])
+int main()
 {
     std::string requesterConfigName{"SPDM_requester"};
-
-    CLI::App app("SPDM requester verify tool");
-    app.add_option("--eid", responderEid, "Responder MCTP EID    : uint8_t")
-        ->required();
-    CLI11_PARSE(app, argc, argv);
-
-    std::cerr << "Assigned responder EID: "
-              << static_cast<uint16_t>(responderEid) << std::endl;
 
     startExistingConfigurations(requesterConfigName);
 
