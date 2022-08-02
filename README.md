@@ -1,15 +1,19 @@
-# libspdmapplib: SPDM Application Library
+# spdmapplib: SPDM Application Library
 
-The purpose of the “SPDM Application Library” is to provide abstraction of Secure Protocol Data Modelling (SPDM) API commands.
+The purpose of the “SPDM Application Library” is to provide abstraction of 
+Secure Protocol Data Modelling (SPDM) API commands.
 Logical transport layer is encapsulated in easy-to-use wrappers,
 while underlying physical transport layer is left to be implemented
 by library user.
 
-“SPDM Application Library”  is designed for applications that requires SPDM responder and requester functions.
-The `libspdmapplib` wrap libspdm(DMTP DSP0274 1.0.0) in easy-to-use way for users.  
+“SPDM Application Library”  is designed for applications that requires SPDM 
+responder and requester functions.
+The `spdmapplib` wrap libspdm(DMTP DSP0274 1.0.0) in easy-to-use way for users.  
 
-In the package, it also include transport layer example based on `MCTP over SMBus` for SPDM devices.
-Other transport channel can follow same transport layer abstraction to implement their own transport layer.
+In the package, it also include transport layer example based on 
+`MCTP over SMBus` for SPDM devices.
+Other transport channel can follow same transport layer abstraction to 
+implement their own transport layer.
 
 ## SPDM Application library concept diagram
 
@@ -60,7 +64,7 @@ Other transport channel can follow same transport layer abstraction to implement
 
 ## Prerequisites
 
-`libspdmapplib` is based on the libspdm library which is maintained in
+`spdmapplib` is based on the libspdm library which is maintained in
 
 <https://github.com/DMTF/libspdm>
 
@@ -68,7 +72,8 @@ The MCTP trasport layer is based on the mctpwplus which is maintained in
 
 <https://github.com/intel-collab/firmware.bmc.openbmc.libraries.mctpwplus>
 
-The EntityManager configurations should be maintained for responder and requester applications.
+The EntityManager configurations should be maintained for responder and 
+requester applications.
 
 ## Background and References
 
@@ -185,11 +190,11 @@ Example configurations.
               │
        <instantiates>
               │
---------------│---------[libspdmapplib]---------------------
+--------------│---------[spdmapplib]------------------------
               │
 ┌─────────────▼────────────┐
 │                          │
-│    SPDMResponderImpl     ◄
+│    SPDMResponderImpl     │
 │    SPDMRequesterImpl     │
 │                          │
 └─────────────┬────────────┘
