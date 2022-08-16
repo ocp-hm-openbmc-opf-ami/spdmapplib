@@ -128,6 +128,17 @@ class SPDMRequester
      **/
     bool getCertificate(std::vector<uint8_t>& measurements);
 
+    /**
+     * @brief Get capabilities function
+     *
+     * @param   caps             The capabilities returned for specific
+     *endPoint.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     *
+     **/
+    bool getCapabilities(uint32_t& caps);
+
   private:
     std::shared_ptr<SPDMRequesterImpl> pReqImpl;
 };

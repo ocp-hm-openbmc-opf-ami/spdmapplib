@@ -657,6 +657,29 @@ bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
     return false;
 }
 
+bool SPDMRequesterImpl::getCapabilities(uint32_t& caps)
+{
+    return_status status;
+    libspdm_data_parameter_t parameter;
+    zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
+    uint32_t data_size;
+    uint32_t u32Value;
+
+    data_size = sizeof(u32Value);
+    status = libspdm_get_data(spdmResponder.pspdmContext,
+                              LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
+                              &u32Value, &data_size);
+    if (RETURN_ERROR(status))
+    {
+        return false;
+    }
+    caps = u32Value;
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("SPDMRequesterImpl::getCaps caps - " + std::to_string(caps)).c_str());
+    return true;
+}
+
 SPDMRequesterImpl::SPDMRequesterImpl(
     std::shared_ptr<boost::asio::io_context> io,
     std::shared_ptr<sdbusplus::asio::connection> con,

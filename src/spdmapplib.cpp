@@ -43,6 +43,11 @@ bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements)
     return pReqImpl->getMeasurements(measurements);
 }
 
+bool SPDMRequester::getCapabilities(uint32_t& caps)
+{
+    return pReqImpl->getCapabilities(caps);
+}
+
 SPDMRequester::~SPDMRequester() noexcept = default;
 
 SPDMResponder::SPDMResponder(

@@ -110,6 +110,7 @@ static void startSPDMRequester()
             auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
                 ioc, conn, trans, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
+            uint32_t caps(0);
             if (spdmRequester->getCertificate(data))
             {
                 dumpVector(data);
@@ -120,6 +121,18 @@ static void startSPDMRequester()
                           << std::to_string(eidPoint.devIdentifier) << "\n";
             }
             data.clear();
+
+            if (spdmRequester->getCapabilities(caps))
+            {
+                std::cerr << "Capability Flags of EID "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << " is: " << std::to_string(caps) << "\n";
+            }
+            else
+            {
+                std::cerr << "Failed getting Capabilities for EID: "
+                          << std::to_string(eidPoint.devIdentifier) << "\n";
+            }
             if (spdmRequester->getMeasurements(data))
             {
                 dumpVector(data);

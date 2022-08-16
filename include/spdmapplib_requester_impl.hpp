@@ -77,6 +77,16 @@ class SPDMRequesterImpl
      * @return false          If, vector is empty
      **/
     bool getCertificate(std::vector<uint8_t>& certificate);
+    /**
+     * @brief Get capabilities function
+     *
+     * @param   caps             The capabilities returned for specific
+     *endPoint.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     *
+     **/
+    bool getCapabilities(uint32_t& caps);
     /*APIs called by transport layer*/
     /**
      * @brief Set received data to assigned endpoint.
