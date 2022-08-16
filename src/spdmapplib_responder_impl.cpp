@@ -14,6 +14,8 @@
  * limitation
  */
 
+#include "spdmapplib_responder_impl.hpp"
+
 #include "library/spdm_transport_none_lib.h"
 
 #include "mctp_wrapper.hpp"

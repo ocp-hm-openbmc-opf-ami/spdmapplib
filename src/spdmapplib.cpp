@@ -17,6 +17,8 @@
 #include "spdmapplib.hpp"
 
 #include "spdmapplib_impl.hpp"
+#include "spdmapplib_requester_impl.hpp"
+#include "spdmapplib_responder_impl.hpp"
 #include "spdmtransport.hpp"
 
 namespace spdm_app_lib
