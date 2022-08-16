@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitation
  */
+#include "spdmapplib_requester_impl.hpp"
+
 #include "library/spdm_transport_none_lib.h"
 
 #include "mctp_wrapper.hpp"
