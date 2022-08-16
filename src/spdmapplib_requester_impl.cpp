@@ -94,31 +94,13 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     return_status status;
 
     uint32_t data_size;
-    useSlotCount = static_cast<uint8_t>(spdmRequesterCfg.slotcount);
     phosphor::logging::log<phosphor::logging::level::INFO>(
         ("SPDMRequesterImpl::settingFromConfig Requester useSlotCount: " +
          std::to_string(spdmRequesterCfg.slotcount))
             .c_str());
 
-    useSlotId = 0;
-    mUseMeasurementSummaryHashType =
-        SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH;
-    useRequesterCapabilityFlags =
-        (0 | SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CERT_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_CHAL_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCRYPT_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MUT_AUTH_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_EX_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_PSK_CAP_REQUESTER |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP |
-         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HANDSHAKE_IN_THE_CLEAR_CAP);
     mUseMeasurementOperation =
         SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
-    mUseMeasurementAttribute = 0;
-
     zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
 
@@ -138,8 +120,7 @@ bool SPDMRequesterImpl::settingFromConfig(void)
         return false;
     }
 
-    useRequesterCapabilityFlags = spdmRequesterCfg.capability;
-    u32Value = useRequesterCapabilityFlags;
+    u32Value = spdmRequesterCfg.capability;
     status = libspdm_set_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
                               &u32Value, sizeof(u32Value));
@@ -167,7 +148,6 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     }
 
     u32Value = spdmRequesterCfg.asym;
-    mUseAsymAlgo = spdmRequesterCfg.asym;
     status = libspdm_set_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
                               &u32Value, sizeof(u32Value));
@@ -177,7 +157,6 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     }
 
     u16Value = static_cast<uint16_t>(spdmRequesterCfg.reqasym);
-    mUseReqAsymAlgo = static_cast<uint16_t>(spdmRequesterCfg.reqasym);
     status = libspdm_set_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
                               &u16Value, sizeof(u16Value));
@@ -187,7 +166,6 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     }
 
     u32Value = spdmRequesterCfg.hash;
-    mUseHashAlgo = spdmRequesterCfg.hash;
     status = libspdm_set_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
                               &u32Value, sizeof(u32Value));
@@ -289,7 +267,10 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     {
         return false;
     }
-    mUseAsymAlgo = u32Value;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("SPDMRequesterImpl::settingFromConfig mUseAsymAlgo: " +
+         std::to_string(u32Value))
+            .c_str());
     data_size = sizeof(u32Value);
     status = libspdm_get_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
@@ -298,7 +279,10 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     {
         return false;
     }
-    mUseHashAlgo = u32Value;
+    phosphor::logging::log<phosphor::logging::level::INFO>(
+        ("SPDMRequesterImpl::settingFromConfig mUseHashAlgo: " +
+         std::to_string(u32Value))
+            .c_str());
     data_size = sizeof(u16Value);
     status = libspdm_get_data(spdmResponder.pspdmContext,
                               LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
@@ -307,19 +291,9 @@ bool SPDMRequesterImpl::settingFromConfig(void)
     {
         return false;
     }
-    mUseReqAsymAlgo = u16Value;
-
-    phosphor::logging::log<phosphor::logging::level::INFO>(
-        ("SPDMRequesterImpl::settingFromConfig mUseAsymAlgo: " +
-         std::to_string(mUseAsymAlgo))
-            .c_str());
-    phosphor::logging::log<phosphor::logging::level::INFO>(
-        ("SPDMRequesterImpl::settingFromConfig mUseHashAlgo: " +
-         std::to_string(mUseHashAlgo))
-            .c_str());
     phosphor::logging::log<phosphor::logging::level::INFO>(
         ("SPDMRequesterImpl::settingFromConfig mUseReqAsymAlgo: " +
-         std::to_string(mUseReqAsymAlgo))
+         std::to_string(u16Value))
             .c_str());
 
     return true;
@@ -421,6 +395,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
     uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
     uint32_t certChainSize;
     uint8_t certChain[LIBSPDM_MAX_CERT_CHAIN_SIZE];
+    uint8_t useSlotId = 0;
 
     zero_mem(totalDigestBuffer, sizeof(totalDigestBuffer));
     certChainSize = sizeof(certChain);
@@ -437,7 +412,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
             challenge
         **/
         spdmResponder.dataCert = {};
-        if ((mExeConnection & exeConnectionDigest) != 0)
+        if ((exeConnection & exeConnectionDigest) != 0)
         {
             status = libspdm_get_digest(spdmResponder.pspdmContext, &slotMask,
                                         totalDigestBuffer);
@@ -457,7 +432,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
                     "SPDMRequesterImpl::doAuthentication libspdm_get_digest completed!");
             }
         }
-        if ((mExeConnection & exeConnectionCert) != 0)
+        if ((exeConnection & exeConnectionCert) != 0)
         {
             if (useSlotId != lastSlotIndex)
             {
@@ -514,17 +489,20 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
     uint8_t index;
     uint8_t requestAttribute;
+    uint8_t useSlotId = 0;
+    uint8_t mUseMeasurementAttribute = 0;
 
     zero_mem(measurementHash, sizeof(measurementHash));
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Requesting all the Measurements.");
     if (spdmResponder.pspdmContext != nullptr && doAuthentication())
     {
-        if ((mExeConnection & exeConnectionChal) != 0)
+        if ((exeConnection & exeConnectionChal) != 0)
         {
-            status = libspdm_challenge(spdmResponder.pspdmContext, useSlotId,
-                                       mUseMeasurementSummaryHashType,
-                                       measurementHash, nullptr);
+            status =
+                libspdm_challenge(spdmResponder.pspdmContext, useSlotId,
+                                  SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH,
+                                  measurementHash, nullptr);
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -682,18 +660,14 @@ SPDMRequesterImpl::SPDMRequesterImpl(
     std::shared_ptr<sdbusplus::asio::connection> con,
     std::shared_ptr<spdm_transport::SPDMTransport> trans,
     spdm_transport::TransportEndPoint& endPointDevice,
-    SPDMConfiguration& pSpdmConfig) :
+    SPDMConfiguration& spdmConfig) :
     ioc(io),
     conn(con), spdmTrans(trans), transResponder(endPointDevice),
-    spdmRequesterCfg(pSpdmConfig)
+    spdmRequesterCfg(spdmConfig)
 {
     if (spdmRequesterCfg.version)
     {
         setCertificatePath(spdmRequesterCfg.certPath);
-
-        mExeConnection = (0 | exeConnectionDigest | exeConnectionCert |
-                          exeConnectionChal | exeConnectionMeas);
-
         if (!setupResponder(transResponder))
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(

@@ -214,7 +214,6 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     void* tmpThis = static_cast<void*>(this);
     return_status status;
 
-    useSlotCount = static_cast<uint8_t>(spdmResponderCfg.slotcount);
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
         ("SPDMResponderImpl::settingFromConfig Responder useSlotCount: " +
          std::to_string(spdmResponderCfg.slotcount))
@@ -240,8 +239,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
         return false;
     }
 
-    useResponderCapabilityFlags = spdmResponderCfg.capability;
-    u32Value = useResponderCapabilityFlags;
+    u32Value = spdmResponderCfg.capability;
     status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
                               LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
                               &u32Value, sizeof(u32Value));
@@ -547,7 +545,7 @@ void SPDMResponderImpl::processConnectionState(
             {
                 zero_mem(&parameter, sizeof(parameter));
                 parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
-                u8Value = useSlotCount;
+                u8Value = static_cast<uint8_t>(spdmResponderCfg.slotcount);
                 status = libspdm_set_data(
                     spdmPool[i].pspdmContext, LIBSPDM_DATA_LOCAL_SLOT_COUNT,
                     &parameter, &u8Value, sizeof(u8Value));
@@ -560,7 +558,9 @@ void SPDMResponderImpl::processConnectionState(
                     break;
                 }
 
-                for (index = 0; index < useSlotCount; index++)
+                for (index = 0;
+                     index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
+                     index++)
                 {
                     parameter.additional_data[0] = index;
                     status =
@@ -667,9 +667,9 @@ SPDMResponderImpl::SPDMResponderImpl(
     std::shared_ptr<boost::asio::io_context> io,
     std::shared_ptr<sdbusplus::asio::connection> con,
     std::shared_ptr<spdm_transport::SPDMTransport> trans,
-    SPDMConfiguration& pSpdmConfig) :
+    SPDMConfiguration& spdmConfig) :
     ioc(io),
-    conn(con), spdmTrans(trans), spdmResponderCfg(pSpdmConfig)
+    conn(con), spdmTrans(trans), spdmResponderCfg(spdmConfig)
 {
     using namespace std::placeholders;
     curIndex = 0;

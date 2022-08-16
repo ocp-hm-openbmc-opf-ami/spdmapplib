@@ -31,6 +31,9 @@ inline constexpr uint32_t exeConnectionDigest = 0x2;
 inline constexpr uint32_t exeConnectionCert = 0x4;
 inline constexpr uint32_t exeConnectionChal = 0x8;
 inline constexpr uint32_t exeConnectionMeas = 0x10;
+inline constexpr uint32_t exeConnection =
+    (exeConnectionDigest | exeConnectionCert | exeConnectionChal |
+     exeConnectionMeas);
 
 namespace spdm_app_lib
 {
@@ -207,11 +210,7 @@ class SPDMResponderImpl
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    uint8_t useSlotCount = 0;
     uint8_t curIndex = 0;
-    uint32_t useResponderCapabilityFlags = 0;
-    uint8_t useMutAuth = 0;
-    uint8_t useBasicMutAuth = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     SPDMConfiguration spdmResponderCfg{};
     std::vector<spdmItem> spdmPool{};
@@ -345,18 +344,7 @@ class SPDMRequesterImpl
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    uint8_t useSlotCount = 0;
-    uint8_t useSlotId = 0;
-    uint32_t useRequesterCapabilityFlags = 0;
-    uint8_t useMutAuth = 0;
-    uint8_t useBasicMutAuth = 0;
-    uint16_t mUseReqAsymAlgo = 0;
-    uint32_t mUseAsymAlgo = 0;
-    uint32_t mUseHashAlgo = 0;
-    uint32_t mExeConnection = 0;
-    uint8_t mUseMeasurementSummaryHashType = 0;
     uint8_t mUseMeasurementOperation = 0;
-    uint8_t mUseMeasurementAttribute = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder{}; // only one instance for requester.
     spdm_transport::TransportEndPoint transResponder{};
