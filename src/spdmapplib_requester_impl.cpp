@@ -662,7 +662,7 @@ bool SPDMRequesterImpl::getCapabilities(uint32_t& caps)
     return_status status;
     libspdm_data_parameter_t parameter;
     zero_mem(&parameter, sizeof(parameter));
-    parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
     uint32_t data_size;
     uint32_t u32Value;
 
