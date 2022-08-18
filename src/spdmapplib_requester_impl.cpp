@@ -497,7 +497,13 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     zero_mem(measurementHash, sizeof(measurementHash));
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Requesting all the Measurements.");
-    if (spdmResponder.pspdmContext != nullptr && doAuthentication())
+    if (spdmResponder.dataCert.empty())
+    {
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+            "SPDMRequesterImpl::doMeasurement doAuthentication()");
+        doAuthentication();
+    }
+    if (spdmResponder.pspdmContext != nullptr)
     {
         if ((exeConnection & exeConnectionChal) != 0)
         {
@@ -508,7 +514,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             if (RETURN_ERROR(status))
             {
                 phosphor::logging::log<phosphor::logging::level::ERR>(
-                    ("SPDMRequesterImpl::doAuthentication libspdm_challenge Error! - " +
+                    ("SPDMRequesterImpl::doMeasurement libspdm_challenge Error! - " +
                      std::to_string(status))
                         .c_str());
                 free_pool(spdmResponder.pspdmContext);
@@ -518,7 +524,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             else
             {
                 phosphor::logging::log<phosphor::logging::level::INFO>(
-                    "SPDMRequesterImpl::doAuthentication libspdm_challenge completed!");
+                    "SPDMRequesterImpl::doMeasurement libspdm_challenge completed!");
             }
         }
 
@@ -641,6 +647,7 @@ bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& meaurements)
     {
         meaurements = spdmResponder.dataMeas;
         spdmResponder.dataMeas.clear();
+        spdmResponder.dataCert.clear();
         return true;
     }
     return false;
@@ -651,7 +658,6 @@ bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
     if (doAuthentication() && !spdmResponder.dataCert.empty())
     {
         certificate = spdmResponder.dataCert;
-        spdmResponder.dataCert.clear();
         return true;
     }
     return false;
