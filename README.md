@@ -80,13 +80,16 @@ requester applications.
 - DMTF DSP0274 1.0.0, Security Protocol and Data Model (SPDM) Specification.
 
 ## SPDM Requester Interface
-[SPDMAppLib.pdf](./SPDMAppLib.pdf) chapter 6.3.
+Define required APIs for SPDMRequester, detail list in the file
+[spdmapplib.hpp](./include/spdmapplib.hpp).
 
 ## SPDM Responder Interface
-[SPDMAppLib.pdf](./SPDMAppLib.pdf) chapter 6.5.
+Define required APIs for SPDMResponder, detail list in the file
+[spdmapplib.hpp](./include/spdmapplib.hpp).
 
 ## Transport Layer Interface
-[SPDMAppLib.pdf](./SPDMAppLib.pdf) chapter 6.7.
+Define required APIs for SPDMTransport, detail list in the file
+[spdmtransport.hpp](./include/spdmtransport.hpp).
 
 ## Entity Manager Configuration
 Example configurations.
@@ -129,6 +132,7 @@ Example configurations.
         ],
         "BasicMutAuth": "BASIC",
         "MutAuth": "W_ENCAP",
+        "SlotCount": "3",
         "Type": "SPDMConfiguration",
         "Name": "SPDM responder"
     },
@@ -166,6 +170,7 @@ Example configurations.
         ],
         "BasicMutAuth": "BASIC",
         "MutAuth": "W_ENCAP",
+        "SlotCount": "3",
         "Type": "SPDMConfiguration",
         "Name": "SPDM requester"
     }
