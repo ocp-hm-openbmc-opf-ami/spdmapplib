@@ -80,16 +80,122 @@ requester applications.
 - DMTF DSP0274 1.0.0, Security Protocol and Data Model (SPDM) Specification.
 
 ## SPDM Requester Interface
-Define required APIs for SPDMRequester, detail list in the file
-[spdmapplib.hpp](./include/spdmapplib.hpp).
+
+Defined required APIs for SPDMRequester listed below, detail information is in the file [spdmapplib.hpp](./include/spdmapplib.hpp).
+
+
+```c++
+    /**
+     * @brief Initial function of SPDM requester
+     *
+     * @param  ioc               The shared_ptr to boost io_context object.
+     * @param  conn              The shared_ptr of sdbusplus conn.
+     * @param  trans             The pointer of transport instance.
+     * @param  ptransResponder   The pointer to assigned responder EndPoint.
+     * @param  pSpdmConfig       Configuration read from entity-manager.
+     *
+     **/
+    SPDMRequester(std::shared_ptr<boost::asio::io_context> ioc,
+                  std::shared_ptr<sdbusplus::asio::connection> conn,
+                  std::shared_ptr<spdm_transport::SPDMTransport> trans,
+                  spdm_transport::TransportEndPoint& endPoint,
+                  SPDMConfiguration& spdmConfig);
+    /**
+     * @brief Get all measurement function
+     *
+     * @param   measurements     The certificate returned for specific endPoint
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     **/
+    bool getMeasurements(std::vector<uint8_t>& certificate);
+
+    /**
+     * @brief Get certificate function
+     *
+     * @param   measurements     The certificate returned for specific endPoint.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     *
+     **/
+    bool getCertificate(std::vector<uint8_t>& measurements);
+```
 
 ## SPDM Responder Interface
-Define required APIs for SPDMResponder, detail list in the file
-[spdmapplib.hpp](./include/spdmapplib.hpp).
+
+Defined required APIs for SPDMResponder listed below, detail information is in the file [spdmapplib.hpp](./include/spdmapplib.hpp).
+
+```c++
+  /**
+     * @brief Initial function of SPDM responder
+     *  When the function is called, it will enter daemon mode and never return.
+     *
+     * @param  ioc                boost io_context object.
+     * @param  conn              The Pointer to sdbusplus conn.
+     * @param  trans             The pointer of transport instance.
+     * @param  spdmConfig        Application assigned SPDMConfiguration.
+     **/
+    SPDMResponder(std::shared_ptr<boost::asio::io_context> ioc,
+                  std::shared_ptr<sdbusplus::asio::connection> conn,
+                  std::shared_ptr<spdm_transport::SPDMTransport> trans,
+                  SPDMConfiguration& spdmConfig);
+
+    bool updateSPDMPool(spdm_transport::TransportEndPoint& endPoint);
+```
 
 ## Transport Layer Interface
-Define required APIs for SPDMTransport, detail list in the file
-[spdmtransport.hpp](./include/spdmtransport.hpp).
+
+Defined required APIs for SPDMTransport listed below, detail information is in the file [spdmtransport.hpp](./include/spdmtransport.hpp).
+
+```c++
+    /**
+     * @brief The function is responsible for doing discovery of the endPoints
+     * @param  callback
+     **/
+    virtual void initDiscovery(std::function<void(TransportEndPoint endPoint,
+                                                  spdm_transport::Event event)>
+                                   onEndPointChange) = 0;
+    /**
+     * @brief The async send data function for responder
+     *  nonblocking function to send message to remote endpoint.
+     *
+     * @param  transEP           The destination endpoint.
+     * @param  request           The vector of payload.
+     * @param  timeout           The timeout time.
+     * @return 0                 Send is successful
+     * @return other values      Send failed
+     *
+     **/
+    virtual int asyncSendData(TransportEndPoint& transEP,
+                              const std::vector<uint8_t>& request,
+                              uint64_t timeout) = 0;
+
+    /**
+     * @brief set Listener for the messages received
+     *
+     * @param  msgRcvCB          Listener for async messages
+     **/
+    virtual void
+        setListener(MsgReceiveCallback msgRcvCB) = 0; // override this function
+                                                      // in implementation
+    /****************************************************
+        APIs for requester
+    ******************************************************/
+    /**
+     * @brief The sync send and receive data function for requester
+     *  blocking function to send SPDM payload and get response data.
+     *
+     * @param  transEP           The destination endpoint.
+     * @param  request           The vector of data payload.
+     * @param  timeout           The timeout time.
+     * @param  rspRcvCB          The resRcvCB when response data received.
+     * @return 0                 Send is successful
+     * @return other values      Send failed
+     **/
+    virtual int sendRecvData(TransportEndPoint& transEP,
+                             const std::vector<uint8_t>& request,
+                             uint64_t timeout,
+                             std::vector<uint8_t>& response) = 0;
+```
 
 ## Entity Manager Configuration
 Example configurations.
