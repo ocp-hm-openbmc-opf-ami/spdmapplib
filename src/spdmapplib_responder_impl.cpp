@@ -121,12 +121,12 @@ bool SPDMResponderImpl::updateSPDMPool(
     spdm_transport::TransportEndPoint& transEndpoint)
 {
     uint8_t i;
-    for (i = 0; i < curIndex; i++)
+    for (i = 0; i < spdmPool.size(); i++)
     {
         if (spdmPool[i].transEP == transEndpoint)
             break;
     }
-    if (i >= curIndex)
+    if (i >= spdmPool.size())
     {
         return false;
     }
@@ -136,7 +136,6 @@ bool SPDMResponderImpl::updateSPDMPool(
         spdmPool[i].pspdmContext = nullptr;
     }
     spdmPool.erase(spdmPool.begin() + i);
-    curIndex = curIndex - 1;
     return true;
 }
 
@@ -144,7 +143,6 @@ bool SPDMResponderImpl::addNewDevice(
     spdm_transport::TransportEndPoint& transEndpoint)
 {
     spdmItem newItem;
-    uint8_t newIndex;
     return_status status;
 
     newItem.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
@@ -165,9 +163,8 @@ bool SPDMResponderImpl::addNewDevice(
     newItem.connectStatus = LIBSPDM_CONNECTION_STATE_NOT_STARTED;
     newItem.data.clear();
     spdmPool.push_back(newItem);
-    newIndex = curIndex;
-    curIndex++;
-    status = libspdm_init_context(spdmPool[newIndex].pspdmContext);
+
+    status = libspdm_init_context(spdmPool.back().pspdmContext);
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -176,15 +173,15 @@ bool SPDMResponderImpl::addNewDevice(
                 .c_str());
         return false;
     }
-    libspdm_register_device_io_func(spdmPool[newIndex].pspdmContext,
+    libspdm_register_device_io_func(spdmPool.back().pspdmContext,
                                     responderDeviceSendMessage,
                                     responderDeviceReceiveMessage);
-    libspdm_register_transport_layer_func(spdmPool[newIndex].pspdmContext,
+    libspdm_register_transport_layer_func(spdmPool.back().pspdmContext,
                                           spdm_transport_none_encode_message,
                                           spdm_transport_none_decode_message);
 
     status = libspdm_register_session_state_callback_func(
-        spdmPool[newIndex].pspdmContext, spdmServerSessionStateCallback);
+        spdmPool.back().pspdmContext, spdmServerSessionStateCallback);
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -194,7 +191,7 @@ bool SPDMResponderImpl::addNewDevice(
         return false;
     }
     status = libspdm_register_connection_state_callback_func(
-        spdmPool[newIndex].pspdmContext, spdmServerConnectionStateCallback);
+        spdmPool.back().pspdmContext, spdmServerConnectionStateCallback);
     if (RETURN_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -204,10 +201,10 @@ bool SPDMResponderImpl::addNewDevice(
         return false;
     }
 
-    return settingFromConfig(newIndex);
+    return settingFromConfig();
 }
 
-bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
+bool SPDMResponderImpl::settingFromConfig()
 {
     libspdm_data_parameter_t parameter;
     uint8_t u8Value;
@@ -224,7 +221,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     zero_mem(&parameter, sizeof(parameter));
     parameter.location = LIBSPDM_DATA_LOCATION_LOCAL;
 
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
                               &tmpThis, sizeof(void*));
     if (RETURN_ERROR(status))
@@ -233,7 +230,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u8Value = 0;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_CAPABILITY_CT_EXPONENT, &parameter,
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
@@ -242,7 +239,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u32Value = spdmResponderCfg.capability;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_CAPABILITY_FLAGS, &parameter,
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
@@ -251,7 +248,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_MEASUREMENT_SPEC, &parameter,
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
@@ -260,7 +257,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u32Value = spdmResponderCfg.measHash;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_MEASUREMENT_HASH_ALGO, &parameter,
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
@@ -269,7 +266,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u32Value = spdmResponderCfg.asym;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_BASE_ASYM_ALGO, &parameter,
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
@@ -278,7 +275,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u16Value = (uint16_t)spdmResponderCfg.reqasym;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_REQ_BASE_ASYM_ALG, &parameter,
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
@@ -287,7 +284,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u32Value = spdmResponderCfg.hash;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_BASE_HASH_ALGO, &parameter,
                               &u32Value, sizeof(u32Value));
     if (RETURN_ERROR(status))
@@ -296,7 +293,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u16Value = (uint16_t)spdmResponderCfg.dhe;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_DHE_NAME_GROUP, &parameter,
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
@@ -305,7 +302,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u16Value = (uint16_t)spdmResponderCfg.aead;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_AEAD_CIPHER_SUITE, &parameter,
                               &u16Value, sizeof(u16Value));
     if (RETURN_ERROR(status))
@@ -314,7 +311,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u16Value = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_KEY_SCHEDULE, &parameter, &u16Value,
                               sizeof(u16Value));
     if (RETURN_ERROR(status))
@@ -323,7 +320,7 @@ bool SPDMResponderImpl::settingFromConfig(uint8_t itemIndex)
     }
 
     u8Value = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
-    status = libspdm_set_data(spdmPool[itemIndex].pspdmContext,
+    status = libspdm_set_data(spdmPool.back().pspdmContext,
                               LIBSPDM_DATA_OTHER_PARAMS_SUPPORT, &parameter,
                               &u8Value, sizeof(u8Value));
     if (RETURN_ERROR(status))
@@ -397,12 +394,12 @@ return_status SPDMResponderImpl::deviceReceiveMessage(
 {
     uint8_t i;
 
-    for (i = 0; i < curIndex; i++)
+    for (i = 0; i < spdmPool.size(); i++)
     {
         if (spdmPool[i].pspdmContext == spdmContext)
             break;
     }
-    if (i >= curIndex)
+    if (i >= spdmPool.size())
         return RETURN_DEVICE_ERROR;
 
     response = std::move(spdmPool[i].data);
@@ -417,12 +414,12 @@ return_status SPDMResponderImpl::deviceSendMessage(
     void* spdmContext, const std::vector<uint8_t>& request, uint64_t timeout)
 {
     uint8_t i;
-    for (i = 0; i < curIndex; i++)
+    for (i = 0; i < spdmPool.size(); i++)
     {
         if (spdmPool[i].pspdmContext == spdmContext)
             break;
     }
-    if (i >= curIndex)
+    if (i >= spdmPool.size())
         return RETURN_DEVICE_ERROR;
     return spdmTrans->asyncSendData(spdmPool[i].transEP, request, timeout);
 }
@@ -442,12 +439,12 @@ void SPDMResponderImpl::processConnectionState(
     uint8_t i;
     return_status status;
 
-    for (i = 0; i < curIndex; i++)
+    for (i = 0; i < spdmPool.size(); i++)
     {
         if (spdmPool[i].pspdmContext == spdmContext)
             break;
     }
-    if (i >= curIndex)
+    if (i >= spdmPool.size())
         return;
     spdmPool[i].connectStatus = connectionState;
     switch (connectionState)
@@ -609,12 +606,12 @@ void SPDMResponderImpl::processSessionState(
     uint8_t i;
     return_status status;
 
-    for (i = 0; i < curIndex; i++)
+    for (i = 0; i < spdmPool.size(); i++)
     {
         if (spdmPool[i].pspdmContext == spdmContext)
             break;
     }
-    if (i >= curIndex)
+    if (i >= spdmPool.size())
         return;
 
     switch (sessionState)
@@ -674,7 +671,6 @@ SPDMResponderImpl::SPDMResponderImpl(
     conn(con), spdmTrans(trans), spdmResponderCfg(spdmConfig)
 {
     using namespace std::placeholders;
-    curIndex = 0;
     if (spdmResponderCfg.version)
     {
         setCertificatePath(spdmResponderCfg.certPath);

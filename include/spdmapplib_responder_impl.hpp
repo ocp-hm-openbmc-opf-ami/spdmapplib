@@ -150,12 +150,11 @@ class SPDMResponderImpl
      * @return true           If getting config is success.
      * @return false          If,getting config fails.
      **/
-    bool settingFromConfig(uint8_t ItemIndex);
+    bool settingFromConfig();
 
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    uint8_t curIndex = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     SPDMConfiguration spdmResponderCfg{};
     std::vector<spdmItem> spdmPool{};
