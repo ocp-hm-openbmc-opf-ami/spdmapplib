@@ -63,9 +63,7 @@ install_headers(
             'include/spdmapplib.hpp',
             'include/spdmapplib_errorcodes.hpp',
             'include/spdmtransport.hpp',
-            'include/spdmtransport_mctp.hpp',
-            'include/spdmapplib_requester_impl.hpp',
-            'include/spdmapplib_responder_impl.hpp'
+            'include/spdmtransport_mctp.hpp'
             )
 
 spdmapplib_dep = declare_dependency(include_directories : root_inc,
