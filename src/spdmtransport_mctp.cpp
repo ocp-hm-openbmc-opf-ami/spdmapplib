@@ -164,6 +164,13 @@ void SPDMTransportMCTP::initDiscovery(
 
     boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
         mctpWrapper->detectMctpEndpoints(yield);
+        mctpw::VersionFields specVersion = {0xF1, 0xF0, 0xF1, 0x00};
+        auto rcvStatus = mctpWrapper->registerResponder(specVersion);
+        if (rcvStatus != boost::system::errc::success)
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "SPDMTransportMCTP::initDiscovery registerResponder Failed");
+        }
         mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
         for (auto& item : eidMap)
         {
