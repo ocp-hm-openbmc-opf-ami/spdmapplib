@@ -142,7 +142,20 @@ class SPDMRequesterImpl
      * @return false          If,getting config fails.
      **/
     bool settingFromConfig(void);
-
+    /** @brief isConnStateNegotiated checks for Connection state
+     *
+     * @return true     if connection State is Negotiated
+     * @return false    if connection State is NOT Negotiated
+     **/
+    bool isConnStateNegotiated();
+    /**
+     * @brief getVCA performs GET_VERSION, GET_CAPS, NEO_ALGO
+     *
+     * @param onlyVersion   if true, only GET_VERSION is performed
+     * @return true         if getVCA is successful
+     * @return false        if getVCA fails
+     */
+    bool getVCA(bool onlyVersion);
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
