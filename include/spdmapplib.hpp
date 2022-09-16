@@ -41,6 +41,23 @@ struct SPDMConfiguration
     std::string certPath;
 };
 
+enum class SPDMConfigIdentifier
+{
+    version,
+    secureVersion,
+    requesterCaps,
+    responderCaps,
+    baseHash,
+    measHash,
+    asymHash,
+    dheValue,
+    aeadValue,
+    basicMutualSupport,
+    mutualAuthValue
+};
+std::map<std::string, uint32_t>
+    getSPDMConfigMap(SPDMConfigIdentifier configIdentifier);
+
 /**
  * @brief The responder base class
  *
