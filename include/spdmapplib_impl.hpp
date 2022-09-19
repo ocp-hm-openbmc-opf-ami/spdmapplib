@@ -38,22 +38,6 @@ inline constexpr uint32_t exeConnection =
 namespace spdm_app_lib
 {
 /**
- * @brief SPDM version enum
- *
- */
-
-enum class SPDMVersions : uint32_t
-{
-    spdmv1p1 = 0x01
-};
-
-enum class SPDMDeviceEvent : uint8_t
-{
-    deviceAdded = 0x01,
-    deviceRemoved
-};
-
-/**
  * @brief SPDM device context structure
  *
  */
