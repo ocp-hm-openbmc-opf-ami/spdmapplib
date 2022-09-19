@@ -34,26 +34,29 @@ namespace spdm_app_lib
 return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
                                          const void* request, uint64_t timeout)
 {
-    void* pTmp = nullptr;
-    pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == nullptr)
+    return_status status;
+    uint32_t dataSize = 0;
+    void* spdmAppContext = nullptr;
+    libspdm_data_parameter_t parameter;
+
+    dataSize = sizeof(spdmAppContext);
+    zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
+    status = libspdm_get_data(spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA,
+                              &parameter, &spdmAppContext, &dataSize);
+    if (RETURN_ERROR(status))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
-
-    uint32_t j;
-    std::vector<uint8_t> data;
     uint8_t* requestPayload = (uint8_t*)request;
-
+    SPDMResponderImpl* pspdmTmp =
+        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
+    std::vector<uint8_t> data{};
     data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
-
-    for (j = 0; j < requestSize; j++)
+    for (uint32_t j = 0; j < requestSize; j++)
     {
         data.push_back(*(requestPayload + j));
     }
-
     return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
 }
 
@@ -61,17 +64,23 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
                                             uintn* responseSize, void* response,
                                             uint64_t timeout)
 {
-    void* pTmp = nullptr;
     return_status status;
-    pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == nullptr)
+    uint32_t dataSize = 0;
+    void* spdmAppContext = nullptr;
+    libspdm_data_parameter_t parameter;
+
+    dataSize = sizeof(spdmAppContext);
+    zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
+    status = libspdm_get_data(spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA,
+                              &parameter, &spdmAppContext, &dataSize);
+    if (RETURN_ERROR(status))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMResponderImpl* pspdmTmp = nullptr;
-    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
-
     std::vector<uint8_t> rspData{};
+    SPDMResponderImpl* pspdmTmp =
+        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
     status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
     *responseSize = rspData.size() - 1; // skip MessageType byte
     std::copy(rspData.begin() + 1, rspData.end(),
@@ -82,26 +91,44 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
 void spdmServerConnectionStateCallback(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
-    void* pTmp = nullptr;
-    SPDMResponderImpl* pspdmTmp = nullptr;
-    pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == nullptr)
+    return_status status;
+    uint32_t dataSize = 0;
+    void* spdmAppContext = nullptr;
+    libspdm_data_parameter_t parameter;
+
+    dataSize = sizeof(spdmAppContext);
+    zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
+    status = libspdm_get_data(spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA,
+                              &parameter, &spdmAppContext, &dataSize);
+    if (RETURN_ERROR(status))
     {
         return;
     }
-    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
+    SPDMResponderImpl* pspdmTmp =
+        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
     pspdmTmp->processConnectionState(spdmContext, connectionState);
 }
 
 void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
                                     libspdm_session_state_t sessionState)
 {
-    void* pTmp = nullptr;
-    SPDMResponderImpl* pspdmTmp = nullptr;
-    pTmp = libspdm_get_app_ptr_data(spdmContext);
-    if (pTmp == nullptr)
+    return_status status;
+    uint32_t dataSize = 0;
+    void* spdmAppContext = nullptr;
+    libspdm_data_parameter_t parameter;
+
+    dataSize = sizeof(spdmAppContext);
+    zero_mem(&parameter, sizeof(parameter));
+    parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
+    status = libspdm_get_data(spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA,
+                              &parameter, &spdmAppContext, &dataSize);
+    if (RETURN_ERROR(status))
+    {
         return;
-    pspdmTmp = reinterpret_cast<SPDMResponderImpl*>(pTmp);
+    }
+    SPDMResponderImpl* pspdmTmp =
+        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
     return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
 }
 
