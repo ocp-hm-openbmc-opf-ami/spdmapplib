@@ -98,16 +98,11 @@ int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
 
 int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
                                     const std::vector<uint8_t>& request,
-                                    uint64_t timeout,
+                                    uint64_t /*timeout*/,
                                     std::vector<uint8_t>& responsePacket)
 {
     constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{1000};
     mctpw::eid_t eid = transEP.devIdentifier;
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("SPDMTransportMCTP::syncSendRecvData eid: " + std::to_string(eid) +
-         ", request size: " + std::to_string(request.size()) +
-         ", timeout: " + std::to_string(timeout))
-            .c_str());
     std::pair<boost::system::error_code, mctpw::ByteArray> reply;
     try
     {
@@ -129,28 +124,6 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
     else
     {
         responsePacket = reply.second;
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("SPDMTransportMCTP::syncSendRecvData send recv :response_vector.size():" +
-             std::to_string(responsePacket.size()))
-                .c_str());
-        std::stringstream ss;
-        ss << std::uppercase << std::hex << std::endl;
-        for (unsigned int i = 0; i < responsePacket.size(); ++i)
-        {
-            ss << std::setfill('0') << std::setw(3)
-               << static_cast<uint16_t>(responsePacket[i]);
-            if ((i % 32) == 0)
-            {
-                ss << '\n';
-            }
-            else
-            {
-                ss << ' ';
-            }
-        }
-        ss << std::endl;
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ss.str().c_str());
         return spdm_app_lib::error_codes::returnSuccess;
     }
 }
