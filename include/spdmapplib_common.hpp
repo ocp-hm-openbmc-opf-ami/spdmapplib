@@ -15,6 +15,12 @@
  */
 #pragma once
 #include "spdmapplib.hpp"
+
+#include <phosphor-logging/log.hpp>
+
+#include <cstdint>
+#include <functional>
+#include <iostream>
 // clang-format off
 extern "C"
 {

@@ -14,13 +14,8 @@
  * limitation
  */
 
-#include "spdmapplib_impl.hpp"
+#include "spdmapplib_common.hpp"
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <iostream>
 char* setCertPath = nullptr;
 
 extern "C"

@@ -18,13 +18,6 @@
 #include "library/spdm_transport_none_lib.h"
 
 #include "mctp_wrapper.hpp"
-#include "spdmapplib_impl.hpp"
-
-#include <phosphor-logging/log.hpp>
-
-#include <cstdint>
-#include <functional>
-#include <iostream>
 
 namespace spdm_app_lib
 {

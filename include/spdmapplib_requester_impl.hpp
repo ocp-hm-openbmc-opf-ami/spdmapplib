@@ -15,7 +15,7 @@
  */
 #pragma once
 #include "spdmapplib.hpp"
-#include "spdmapplib_impl.hpp"
+#include "spdmapplib_common.hpp"
 
 namespace spdm_app_lib
 {
@@ -156,6 +156,7 @@ class SPDMRequesterImpl
      * @return false        if getVCA fails
      */
     bool getVCA(bool onlyVersion);
+
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;

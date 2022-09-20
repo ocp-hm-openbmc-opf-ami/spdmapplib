@@ -15,7 +15,7 @@
  */
 #pragma once
 #include "spdmapplib.hpp"
-#include "spdmapplib_impl.hpp"
+#include "spdmapplib_common.hpp"
 
 namespace spdm_app_lib
 {
