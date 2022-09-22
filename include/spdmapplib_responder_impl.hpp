@@ -105,11 +105,12 @@ class SPDMResponderImpl
      * @param  spdmContext      The pointer of the spdmcontext.
      * @param  request          The request payload data vector.
      * @param  timeout          The timeout time.
-     * @return return_status    defined in libspdm.
+     * @return true             when payload is sent successfully
+     * @return false            failure in sending payload
      **/
-    return_status deviceSendMessage(void* spdmContext,
-                                    const std::vector<uint8_t>& request,
-                                    uint64_t timeout);
+    bool deviceSendMessage(void* spdmContext,
+                           const std::vector<uint8_t>& request,
+                           uint64_t timeout);
 
     /**
      * @brief Register to libspdm for receiving SPDM response payload.
@@ -117,11 +118,11 @@ class SPDMResponderImpl
      * @param  spdmContext      The pointer of the spdmcontext.
      * @param  response         The response data buffer vector.
      * @param  timeout          The timeout time.
-     * @return return_status    defined in libspdm.
+     * @return true             when payload is received successfully
+     * @return false            failure in receiving payload
      **/
-    return_status deviceReceiveMessage(void* spdmContext,
-                                       std::vector<uint8_t>& response,
-                                       uint64_t timeout);
+    bool deviceReceiveMessage(void* spdmContext, std::vector<uint8_t>& response,
+                              uint64_t timeout);
 
     /**
      * @brief Register to libspdm for handling connection state change.

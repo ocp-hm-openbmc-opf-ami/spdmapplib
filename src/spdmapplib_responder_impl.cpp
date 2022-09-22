@@ -49,7 +49,11 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         data.push_back(*(requestPayload + j));
     }
-    return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
+    if (!pspdmTmp->deviceSendMessage(spdmContext, data, timeout))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 return_status responderDeviceReceiveMessage(void* spdmContext,
@@ -73,11 +77,14 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     std::vector<uint8_t> rspData{};
     SPDMResponderImpl* pspdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
+    if (!pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
     *responseSize = rspData.size() - 1; // skip MessageType byte
     std::copy(rspData.begin() + 1, rspData.end(),
               reinterpret_cast<uint8_t*>(response));
-    return status;
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 void spdmServerConnectionStateCallback(
@@ -405,35 +412,38 @@ bool SPDMResponderImpl::msgRecvCallback(
     return processSPDMMessage(transEP);
 };
 
-return_status SPDMResponderImpl::deviceReceiveMessage(
-    void* spdmContext, std::vector<uint8_t>& response, uint64_t /*timeout*/)
+bool SPDMResponderImpl::deviceReceiveMessage(void* spdmContext,
+                                             std::vector<uint8_t>& response,
+                                             uint64_t /*timeout*/)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
         return (item.pspdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
-        return RETURN_DEVICE_ERROR;
+        return false;
     }
     response = std::move(it->data);
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("SPDMResponderImpl::deviceReceiveMessage responseSize: " +
-         std::to_string(response.size()))
-            .c_str());
-    return RETURN_SUCCESS;
+    return true;
 }
 
-return_status SPDMResponderImpl::deviceSendMessage(
-    void* spdmContext, const std::vector<uint8_t>& request, uint64_t timeout)
+bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
+                                          const std::vector<uint8_t>& request,
+                                          uint64_t timeout)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
         return (item.pspdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
-        return RETURN_DEVICE_ERROR;
+        return false;
     }
-    return spdmTrans->asyncSendData(it->transEP, request, timeout);
+    int rc = spdmTrans->asyncSendData(it->transEP, request, timeout);
+    if (rc != spdm_app_lib::error_codes::returnSuccess)
+    {
+        return false;
+    }
+    return true;
 }
 
 void SPDMResponderImpl::processConnectionState(

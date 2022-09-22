@@ -49,7 +49,11 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         data.push_back(*(requestPayload + j));
     }
-    return pspdmTmp->deviceSendMessage(spdmContext, data, timeout);
+    if (!pspdmTmp->deviceSendMessage(spdmContext, data, timeout))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 return_status requesterDeviceReceiveMessage(void* spdmContext,
@@ -73,11 +77,14 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
     SPDMRequesterImpl* pspdmTmp =
         reinterpret_cast<SPDMRequesterImpl*>(spdmAppContext);
     std::vector<uint8_t> rspData{};
-    status = pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout);
+    if (!pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
     *responseSize = rspData.size() - 1; // skip MessageType byte
     std::copy(rspData.begin() + 1, rspData.end(),
               reinterpret_cast<uint8_t*>(response));
-    return status;
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 SPDMRequesterImpl::~SPDMRequesterImpl()
@@ -274,34 +281,31 @@ void SPDMRequesterImpl::msgRecvCallback(
     addData(transEP, data);
 };
 
-return_status SPDMRequesterImpl::deviceReceiveMessage(
-    void* /*spdmContext*/, std::vector<uint8_t>& response, uint64_t /*timeout*/)
+bool SPDMRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
+                                             std::vector<uint8_t>& response,
+                                             uint64_t /*timeout*/)
 {
+    if (spdmResponder.data.empty())
+    {
+        return false;
+    }
     response = std::move(spdmResponder.data);
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("deviceReceiveMessage responseSize: " +
-         std::to_string(response.size()))
-            .c_str());
-    return RETURN_SUCCESS;
+    return true;
 }
 
-return_status
-    SPDMRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
-                                         const std::vector<uint8_t>& request,
-                                         uint64_t timeout)
+bool SPDMRequesterImpl::deviceSendMessage(void* /*spdmContext*/,
+                                          const std::vector<uint8_t>& request,
+                                          uint64_t timeout)
 {
-    return_status status;
     std::vector<uint8_t> response{};
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("deviceSendMessage requestSize: " + std::to_string(request.size()))
-            .c_str());
-    status = spdmTrans->sendRecvData(spdmResponder.transEP, request, timeout,
-                                     response);
-    if (!status)
+    int rc = spdmTrans->sendRecvData(spdmResponder.transEP, request, timeout,
+                                      response);
+    if (rc != spdm_app_lib::error_codes::returnSuccess)
     {
-        addData(spdmResponder.transEP, response);
+        return false;
     }
-    return status;
+    addData(spdmResponder.transEP, response);
+    return true;
 }
 
 bool SPDMRequesterImpl::doAuthentication(void)
