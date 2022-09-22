@@ -31,7 +31,6 @@ extern "C"
 #include "library/malloclib.h"
 }
 // clang-format on
-
 inline constexpr uint32_t exeConnectionVersionOnly = 0x1;
 inline constexpr uint32_t exeConnectionDigest = 0x2;
 inline constexpr uint32_t exeConnectionCert = 0x4;
@@ -43,6 +42,11 @@ inline constexpr uint32_t exeConnection =
 
 namespace spdm_app_lib
 {
+/*Common Functions used across Requester and Responder */
+inline constexpr uint8_t operationGet = 0x01;
+inline constexpr uint8_t operationSet = 0x02;
+inline constexpr uint8_t operationSession = 0x03;
+
 /**
  * @brief SPDM device context structure
  *
@@ -64,12 +68,154 @@ typedef struct
     std::vector<uint8_t> dataMeas;
 } spdmItem;
 
-/*Utility function*/
+/**
+ * @brief get cert file Path
+ *
+ * @return pointer to certPath
+ */
+char* getCertificatePath();
+
 /**
  * @brief set cert file Path
  *
  * @param certPath : cert file location
  */
 void setCertificatePath(std::string& certPath);
+
+/**
+ * @brief freeSpdmContext deallocates spdm context
+ *
+ * @param spdm      spdmItem having context
+ */
+void freeSpdmContext(spdmItem& spdm);
+
+/**
+ * @brief validateSpdmRc checks the return status from libspdm
+ *
+ * @param status
+ * @return true     if return status is Success
+ * @return false    if return status is failure
+ */
+bool validateSpdmRc(return_status status);
+
+/**
+ * @brief getSPDMAppContext get spdm app context
+ *
+ * @param spdmContext       spdmContext returned by libspdm
+ * @param spdmAppContext    spdmAppContext to be obtained
+ * @return true             when spdmAppContext fetched successfully
+ * @return false            failure to get spdmAppContext
+ */
+bool getSPDMAppContext(void* spdmContext, void*& spdmAppContext);
+
+/**
+ * @brief spdmSetConfigData performs libspdm_set_data
+ *
+ * @param spdm          spdmItem having context
+ * @param spdmConfig    config passed from application
+ * @return true         when setting config is successful
+ * @return false        when setting config fails
+ */
+bool spdmSetConfigData(spdmItem& spdm, SPDMConfiguration& spdmConfig);
+
+/**
+ * @brief spdmGetAlgo gets values of Negotiated Algos
+ *
+ * @param spdm          spdmItem having context
+ * @param measHash      Measurement Hash Value
+ * @param baseAsym      Base Asym value
+ * @param baseHash      Base Hash value
+ * @param reqBaseAsym   Req Base Hash value
+ * @return true         when Algo value is fetched successfully
+ * @return false        when fetching algo value fails
+ */
+bool spdmGetAlgo(spdmItem& spdm, uint32_t& measHash, uint32_t& baseAsym,
+                 uint32_t& baseHash, uint16_t& reqBaseAsym);
+
+/**
+ * @brief initGetSetParameter inits libspdm_get_data/libspdm_set_data parameter
+ *
+ * @param parameter     libspdm_data_parameter_t from libspdm
+ * @param opReq         indicates GET/SET operation
+ */
+void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq);
+
+/**
+ * @brief spdmInit inits the context,registers callback with libspdm
+ *
+ * @param spdm          spdmItem having context
+ * @param transEP       endPoint id
+ * @param sendMessage   sendMessage Callback
+ * @param recvMessage   recvMessage callback
+ * @param encodeFunc    payload encode callback
+ * @param decodeFunc    payload decode callback
+ * @return true         when init is successful
+ * @return false        when init fails
+ */
+bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
+              libspdm_device_send_message_func sendMessage,
+              libspdm_device_receive_message_func recvMessage,
+              libspdm_transport_encode_message_func encodeFunc,
+              libspdm_transport_decode_message_func decodeFunc);
+
+/**
+ * @brief spdmGetData performs libspdm_get_data
+ *
+ * @tparam T            template with possible(uint8_t, uint16, uint32)
+ * @param spdm          spdmItem having context
+ * @param configType    indicates the config type
+ * @param configData    contains the required data
+ * @param parameter     libspdm_data_parameter_t
+ * @return true         when libspdm_get_data is successful
+ * @return false        when libspdm_get_data fails
+ */
+template <typename T>
+bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
+                 libspdm_data_parameter_t parameter)
+{
+    T data;
+    uint32_t data_size;
+
+    data_size = sizeof(data);
+    if (!validateSpdmRc(libspdm_get_data(spdm.pspdmContext, configType,
+                                         &parameter, &data, &data_size)))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            (" libspdm_get_data Failed for Config Type!- " +
+             std::to_string(configType))
+                .c_str());
+        return false;
+    }
+    configData = data;
+    return true;
+}
+
+/**
+ * @brief spdmGetData performs libspdm_set_data
+ *
+ * @tparam T            template with possible(uint8_t, uint16, uint32)
+ * @param spdm          spdmItem having context
+ * @param configType    indicates the config type
+ * @param configData    contains the required data
+ * @param parameter     libspdm_data_parameter_t
+ * @return true         when libspdm_set_data is successful
+ * @return false        when libspdm_set_data is fails
+ */
+template <typename T>
+bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
+                 libspdm_data_parameter_t parameter)
+{
+    if (!validateSpdmRc(libspdm_set_data(spdm.pspdmContext, configType,
+                                         &parameter, &configData,
+                                         sizeof(configData))))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            (" libspdm_set_data Failed for Config Type!- " +
+             std::to_string(configType))
+                .c_str());
+        return false;
+    }
+    return true;
+}
 
 } // namespace spdm_app_lib
