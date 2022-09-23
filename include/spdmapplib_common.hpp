@@ -43,9 +43,9 @@ inline constexpr uint32_t exeConnection =
 namespace spdm_app_lib
 {
 /*Common Functions used across Requester and Responder */
-inline constexpr uint8_t operationGet = 0x01;
-inline constexpr uint8_t operationSet = 0x02;
-inline constexpr uint8_t operationSession = 0x03;
+inline constexpr int operationGet = 0;
+inline constexpr int operationSet = 1;
+inline constexpr int operationSession = 2;
 
 /**
  * @brief SPDM device context structure
