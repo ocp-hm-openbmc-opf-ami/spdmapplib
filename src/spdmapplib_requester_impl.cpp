@@ -279,7 +279,7 @@ void SPDMRequesterImpl::msgRecvCallback(
     const std::vector<uint8_t>& data)
 {
     addData(transEP, data);
-};
+}
 
 bool SPDMRequesterImpl::deviceReceiveMessage(void* /*spdmContext*/,
                                              std::vector<uint8_t>& response,

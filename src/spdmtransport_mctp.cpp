@@ -36,7 +36,7 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
         tmpEP.devIdentifier = srcEid;
         msgReceiveCB(tmpEP, data);
     }
-};
+}
 
 void SPDMTransportMCTP::transOnDeviceUpdate(
     void*, const mctpw::Event& evt, boost::asio::yield_context /*yield*/)

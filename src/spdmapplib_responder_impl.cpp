@@ -410,7 +410,7 @@ bool SPDMResponderImpl::msgRecvCallback(
         return false;
     }
     return processSPDMMessage(transEP);
-};
+}
 
 bool SPDMResponderImpl::deviceReceiveMessage(void* spdmContext,
                                              std::vector<uint8_t>& response,

@@ -17,7 +17,6 @@
 #include "spdmapplib.hpp"
 #include "spdmtransport_mctp.hpp"
 
-#include <CLI/CLI.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/steady_timer.hpp>
