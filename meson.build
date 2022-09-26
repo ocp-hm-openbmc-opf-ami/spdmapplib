@@ -81,7 +81,7 @@ spdmapplib_dep = declare_dependency(include_directories : root_inc,
                                 dependencies: app_deps,
                                 link_with : spdmapplib)
 
-subdir('utility')
+subdir('sample_spdm_requester')
 
 pkg = import('pkgconfig')
 pkg.generate(
