@@ -11,6 +11,17 @@ project(
     ],
 )
 
+yocto_build = get_option('yocto_dep')
+
+dep_required = false
+
+if yocto_build.enabled()
+    dep_required = true
+    message('yocto_build enabled')
+else
+    message('yocto_build disabled')
+endif
+
 libspdm = dependency('libspdm')
 sdbusplus = dependency('sdbusplus')
 sdbusplus_partial_dep = sdbusplus.partial_dependency(compile_args : false, link_args: true,
