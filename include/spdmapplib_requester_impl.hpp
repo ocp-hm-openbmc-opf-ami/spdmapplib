@@ -127,26 +127,21 @@ class SPDMRequesterImpl
     /*Internal implementation*/
   protected:
     /**
-     * @brief Setup the configuration of user assigned endpoint as target
-     *responder.
+     * @brief initSpdmContext initiates spdm context
      *
-     * @param  transEP        The endpoint object to be configured.
-     * @return true           If, setupResponder is successful.
-     * @return false          If, setupResponder fails
-     **/
-    bool setupResponder(const spdm_transport::TransportEndPoint& transEP);
+     * @return true
+     * @return false
+     */
+    bool initSpdmContext(void);
+
     /**
-     * @brief Function to setup user assigned endpoint initial configuration.
-     * @return true           If getting config is success.
-     * @return false          If,getting config fails.
-     **/
-    bool settingFromConfig(void);
-    /** @brief isConnStateNegotiated checks for Connection state
+     * @brief isConnStateNegotiated checks for Connection state
      *
      * @return true     if connection State is Negotiated
      * @return false    if connection State is NOT Negotiated
-     **/
+     */
     bool isConnStateNegotiated();
+
     /**
      * @brief getVCA performs GET_VERSION, GET_CAPS, NEO_ALGO
      *

@@ -16,8 +16,6 @@
 
 #include "spdmapplib_common.hpp"
 
-char* setCertPath = nullptr;
-
 extern "C"
 {
     /**
@@ -49,6 +47,7 @@ extern "C"
     {
         FILE* fp;
         uint32_t tempResult;
+        char* setCerPath = nullptr;
         char newFileName[256];
         char* pfmLoc = "/dev/mtd/pfm";
 
@@ -58,8 +57,9 @@ extern "C"
         }
         else
         {
-            if (setCertPath != nullptr)
-                sprintf(newFileName, "%s/%s", setCertPath, fileName);
+            setCerPath = spdm_app_lib::getCertificatePath();
+            if (setCerPath != nullptr)
+                sprintf(newFileName, "%s/%s", setCerPath, fileName);
             else
                 sprintf(newFileName, "%s", fileName);
         }
@@ -96,15 +96,3 @@ extern "C"
         return true;
     }
 }
-namespace spdm_app_lib
-{
-/**
- * @brief set cert file Path
- *
- * @param certPath : cert file location
- */
-void setCertificatePath(std::string& certPath)
-{
-    setCertPath = certPath.data();
-}
-} // namespace spdm_app_lib

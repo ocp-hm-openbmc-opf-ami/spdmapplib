@@ -37,6 +37,7 @@ mctpwplus = dependency('mctpwplus')
 
 src_files = [
             'src/spdmapplib.cpp',
+            'src/spdmapplib_common.cpp',
             'src/spdmapplib_requester_impl.cpp',
             'src/spdmapplib_responder_impl.cpp',
             'src/spdmtransport_mctp.cpp',

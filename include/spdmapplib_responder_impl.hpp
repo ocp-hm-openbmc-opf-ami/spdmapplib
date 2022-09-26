@@ -145,13 +145,12 @@ class SPDMResponderImpl
     /*Internal implementation*/
   protected:
     /**
-     * @brief Function to setup specific endpoint initial configuration.
+     * @brief initSpdmContext initiates spdm context
      *
-     * @param  ItemIndex      The endpoint index.
-     * @return true           If getting config is success.
-     * @return false          If,getting config fails.
-     **/
-    bool settingFromConfig();
+     * @return true
+     * @return false
+     */
+    bool initSpdmContext(void);
 
   private:
     std::shared_ptr<boost::asio::io_context> ioc;
