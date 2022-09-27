@@ -24,10 +24,7 @@ endif
 
 if dep_required
     libspdm = dependency('libspdm')
-    root_inc = include_directories(
-                            'include',
-                            'src/include')
-    
+    root_inc = include_directories('include')
 else
     cc = meson.get_compiler('cpp')
     message('Compiler ID:'+cc.get_id())
@@ -65,9 +62,7 @@ src_files = [
             'src/spdmapplib_requester_impl.cpp',
             'src/spdmapplib_responder_impl.cpp',
             'src/spdmtransport_mctp.cpp',
-            'src/util.cpp',
-            'src/library/spdm_transport_none_lib/common.cpp',
-            'src/library/spdm_transport_none_lib/none.cpp'
+            'src/util.cpp'
             ]
 
 deps = [

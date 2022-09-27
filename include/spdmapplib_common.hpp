@@ -55,6 +55,7 @@ inline constexpr uint32_t exeConnection =
 typedef struct
 {
     void* spdmContext;
+    void* scratchBuffer;
     spdm_transport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
@@ -84,6 +85,12 @@ char* getCertificatePath();
 void setCertificatePath(std::string& certPath);
 
 /**
+ * @brief libspdm register proxy function.
+ * @param spdm_context pointer
+ **/
+void libspdmRegisterDeviceBufferFunc(void* spdm_context);
+
+/**
  * @brief freeSpdmContext deallocates spdm context
  *
  * @param spdm      spdmItem having context
@@ -97,7 +104,7 @@ void freeSpdmContext(spdmItem& spdm);
  * @return true     if return status is Success
  * @return false    if return status is failure
  */
-bool validateSpdmRc(return_status status);
+bool validateSpdmRc(libspdm_return_t status);
 
 /**
  * @brief getSPDMAppContext get spdm app context
@@ -150,6 +157,7 @@ void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq);
  * @param recvMessage   recvMessage callback
  * @param encodeFunc    payload encode callback
  * @param decodeFunc    payload decode callback
+ * @param decodeFunc    get header size callback
  * @return true         when init is successful
  * @return false        when init fails
  */
@@ -157,7 +165,8 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
               libspdm_device_send_message_func sendMessage,
               libspdm_device_receive_message_func recvMessage,
               libspdm_transport_encode_message_func encodeFunc,
-              libspdm_transport_decode_message_func decodeFunc);
+              libspdm_transport_decode_message_func decodeFunc,
+              libspdm_transport_get_header_size_func headerSizeFunc);
 
 /**
  * @brief spdmGetData performs libspdm_get_data

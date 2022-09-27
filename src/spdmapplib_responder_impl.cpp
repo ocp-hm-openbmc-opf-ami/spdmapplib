@@ -14,17 +14,20 @@
  * limitation
  */
 #include "spdmapplib_responder_impl.hpp"
-
+extern "C"
+{
 #include "library/spdm_transport_none_lib.h"
-
+}
 #include "mctp_wrapper.hpp"
 
 namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
 
-return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
-                                         const void* request, uint64_t timeout)
+libspdm_return_t responderDeviceSendMessage(void* spdmContext,
+                                            size_t requestSize,
+                                            const void* request,
+                                            uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -49,9 +52,10 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
-return_status responderDeviceReceiveMessage(void* spdmContext,
-                                            uintn* responseSize, void* response,
-                                            uint64_t timeout)
+libspdm_return_t responderDeviceReceiveMessage(void* spdmContext,
+                                               size_t* responseSize,
+                                               void** response,
+                                               uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -68,7 +72,7 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     }
     *responseSize = rspData.size() - 1; // skip MessageType byte
     std::copy(rspData.begin() + 1, rspData.end(),
-              reinterpret_cast<uint8_t*>(response));
+              reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
@@ -136,7 +140,8 @@ bool SPDMResponderImpl::addNewDevice(
     if (!spdmInit(newItem, transEndpoint, responderDeviceSendMessage,
                   responderDeviceReceiveMessage,
                   spdm_transport_none_encode_message,
-                  spdm_transport_none_decode_message))
+                  spdm_transport_none_decode_message,
+                  spdm_transport_none_get_header_size))
     {
         return false;
     }
@@ -308,7 +313,7 @@ void SPDMResponderImpl::processConnectionState(
             {
                 break;
             }
-            res = read_responder_public_certificate_chain(
+            res = libspdm_read_responder_public_certificate_chain(
                 it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
                 nullptr);
             if (res)

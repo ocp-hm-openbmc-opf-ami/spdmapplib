@@ -101,7 +101,7 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
                                     uint64_t /*timeout*/,
                                     std::vector<uint8_t>& responsePacket)
 {
-    constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{1000};
+    constexpr std::chrono::milliseconds sendReceiveBlockedTimeout{1500};
     mctpw::eid_t eid = transEP.devIdentifier;
     std::pair<boost::system::error_code, mctpw::ByteArray> reply;
     try
