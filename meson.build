@@ -22,7 +22,31 @@ else
     message('yocto_build disabled')
 endif
 
-libspdm = dependency('libspdm')
+if dep_required
+    libspdm = dependency('libspdm')
+    root_inc = include_directories(
+                            'include',
+                            'src/include')
+    
+else
+    cc = meson.get_compiler('cpp')
+    message('Compiler ID:'+cc.get_id())
+    message('building libspdm, wait ...')
+    ret_val = run_command('./libspdm-build.sh')
+    if ret_val.returncode() != 0
+        message('error run libspdm-build ! ', ret_val.returncode())
+    endif
+    libspdm = cc.find_library('libspdm',
+            dirs : [meson.current_source_dir()+'/libspdm/build/lib'])
+    root_inc = include_directories(
+                            'include',
+                            'src/include',
+                            'libspdm/include',
+                            'libspdm/include/hal/ia32',
+                            'libspdm/os_stub/spdm_device_secret_lib_sample',
+                            'libspdm/os_stub/include')
+endif
+
 sdbusplus = dependency('sdbusplus')
 sdbusplus_partial_dep = sdbusplus.partial_dependency(compile_args : false, link_args: true,
      includes : true, links: true)
@@ -57,10 +81,6 @@ app_deps = [
     boost_dep,
 ]
 
-root_inc = include_directories(
-                            'include',
-                            'src/include')
-
 mapfile = 'exportlist.txt'
 spdmapplib = shared_library('spdmapplib',
                             src_files,
@@ -68,8 +88,8 @@ spdmapplib = shared_library('spdmapplib',
                             install : true,
                             dependencies : deps,
                             include_directories: root_inc,
-                            cpp_args : '-Wno-write-strings',
-                            link_args: '-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile))
+                            cpp_args : ['-Wno-write-strings'],
+                            link_args: ['-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)])
 
 install_headers(
             'include/spdmapplib.hpp',
