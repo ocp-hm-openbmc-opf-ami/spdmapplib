@@ -148,53 +148,56 @@ Defined required APIs for SPDMTransport listed below, detail information is in t
 
 ```c++
     /**
-     * @brief The function is responsible for doing discovery of the endPoints
-     * @param  callback
+     * @brief SPDMTransportMCTP constructor
+     * @param  ioc       shared_ptr to boost io_context object.
+     * @param  conn      shared_ptr to already existing boost
+     * @param  id        Transport layer interface id.
      **/
-    virtual void initDiscovery(std::function<void(TransportEndPoint endPoint,
-                                                  spdm_transport::Event event)>
-                                   onEndPointChange) = 0;
+    SPDMTransportMCTP(std::shared_ptr<boost::asio::io_service> io,
+                      std::shared_ptr<sdbusplus::asio::connection> conn,
+                      mctpw::BindingType tranType);
+
+    /**
+     * @brief Initial function of transport instance
+     * @param  msgRcvCB  The callback function for messages received.
+     **/
+    void setListener(MsgReceiveCallback msgRcvCB) override;
+
     /**
      * @brief The async send data function for responder
      *  nonblocking function to send message to remote endpoint.
-     *
      * @param  transEP           The destination endpoint.
-     * @param  request           The vector of payload.
+     * @param  request           The buffer vector of data.
      * @param  timeout           The timeout time.
      * @return 0                 Send is successful
      * @return other values      Send failed
-     *
      **/
-    virtual int asyncSendData(TransportEndPoint& transEP,
-                              const std::vector<uint8_t>& request,
-                              uint64_t timeout) = 0;
+    int asyncSendData(TransportEndPoint& transEP,
+                      const std::vector<uint8_t>& request,
+                      uint64_t timeout) override;
 
-    /**
-     * @brief set Listener for the messages received
-     *
-     * @param  msgRcvCB          Listener for async messages
-     **/
-    virtual void
-        setListener(MsgReceiveCallback msgRcvCB) = 0; // override this function
-                                                      // in implementation
-    /****************************************************
-        APIs for requester
-    ******************************************************/
     /**
      * @brief The sync send and receive data function for requester
      *  blocking function to send SPDM payload and get response data.
-     *
-     * @param  transEP           The destination endpoint.
-     * @param  request           The vector of data payload.
-     * @param  timeout           The timeout time.
-     * @param  rspRcvCB          The resRcvCB when response data received.
+     * @param transEP     The destination endpoint.
+     * @param request     The vector of data payload.
+     * @param timeout     The timeout time.
+     * @param rspRcvCB    The resRcvCB to be called when response data received.
      * @return 0                 Send is successful
      * @return other values      Send failed
      **/
-    virtual int sendRecvData(TransportEndPoint& transEP,
-                             const std::vector<uint8_t>& request,
-                             uint64_t timeout,
-                             std::vector<uint8_t>& response) = 0;
+    int sendRecvData(TransportEndPoint& transEP,
+                     const std::vector<uint8_t>& request, uint64_t timeout,
+                     std::vector<uint8_t>& response) override;
+
+    /**
+     * @brief The function is responsible for doing discovery of the endPoints.
+     * @param  callback
+     **/
+    void initDiscovery(
+        std::function<void(spdm_transport::TransportEndPoint endPoint,
+                           spdm_transport::Event event)>
+            onEndPointChange) override;
 ```
 
 ## Entity Manager Configuration
@@ -320,7 +323,22 @@ Example configurations.
 ```
 
 ## Requester Application Example
-<https://github.com/intel-collab/firmware.bmc.openbmc.libraries.spdmapplib/tree/main/utility>
+<https://github.com/intel-collab/firmware.bmc.openbmc.libraries.spdmapplib/tree/main/sample_spdm_requester>
 
 ## Responder daemon Example
 <https://github.com/intel-collab/firmware.bmc.openbmc.applications.spdmd>
+
+## Standalone Build
+This library uses meson as build system. The build is tested only on Ubuntu 20.04 with meson version newer than 0.61.
+
+Execute this command to create a build subdirectory and setup meson
+```
+meson setup build
+```
+This will fetch and build prequisites if needed including libspdm boost 
+sdbusplus mctpwplus etc. Then make the library using
+```
+meson compile -C build -v
+```
+The output is libspdmapplib.so which can be linked against applications that 
+wish to use libspdm for communication.
