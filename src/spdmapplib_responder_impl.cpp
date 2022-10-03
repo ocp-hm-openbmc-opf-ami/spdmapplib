@@ -271,7 +271,7 @@ void SPDMResponderImpl::processConnectionState(
 {
     bool res;
     void* data;
-    uint32_t dataSize = 0;
+    size_t dataSize = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 

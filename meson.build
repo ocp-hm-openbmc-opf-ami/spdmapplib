@@ -37,9 +37,8 @@ else
             dirs : [meson.current_source_dir()+'/libspdm/build/lib'])
     root_inc = include_directories(
                             'include',
-                            'src/include',
                             'libspdm/include',
-                            'libspdm/include/hal/ia32',
+                            'libspdm/include/hal/x64',
                             'libspdm/os_stub/spdm_device_secret_lib_sample',
                             'libspdm/os_stub/include')
 endif
@@ -83,7 +82,7 @@ spdmapplib = shared_library('spdmapplib',
                             install : true,
                             dependencies : deps,
                             include_directories: root_inc,
-                            cpp_args : ['-Wno-write-strings'],
+                            cpp_args : ['-Wno-write-strings', '-Wno-error=attributes'],
                             link_args: ['-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)])
 
 install_headers(

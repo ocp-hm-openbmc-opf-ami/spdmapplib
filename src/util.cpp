@@ -24,9 +24,9 @@ extern "C"
      * @param buffer : dump data
      * @param buffer_size: size of dump data
      */
-    void libspdm_dump_hex_str(const uint8_t* buffer, uint32_t bufferSize)
+    void libspdm_dump_hex_str(const uint8_t* buffer, size_t bufferSize)
     {
-        uint32_t index;
+        size_t index;
 
         for (index = 0; index < bufferSize; index++)
         {
@@ -43,10 +43,10 @@ extern "C"
      * @return  true: success, false: not able to read file.
      */
     bool libspdm_read_input_file(const char* fileName, void** fileData,
-                                 uint32_t* fileSize)
+                                 size_t* fileSize)
     {
         FILE* fp;
-        uint32_t tempResult;
+        size_t tempResult;
         char* setCerPath = nullptr;
         char newFileName[256];
         char* pfmLoc = "/dev/mtd/pfm";

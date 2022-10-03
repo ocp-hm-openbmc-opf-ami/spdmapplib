@@ -80,7 +80,7 @@ bool validateSpdmRc(libspdm_return_t status)
 
 bool getSPDMAppContext(void* spdmContext, void*& spdmAppContext)
 {
-    uint32_t dataSize = 0;
+    size_t dataSize = 0;
     libspdm_data_parameter_t parameter;
     initGetSetParameter(parameter, spdm_app_lib::operationGet);
     dataSize = sizeof(dataSize);

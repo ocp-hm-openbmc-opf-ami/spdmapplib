@@ -2,6 +2,7 @@ create lib/libspdm.a
 addlib lib/libmemlib.a
 addlib lib/libdebuglib.a
 addlib lib/libspdm_requester_lib.a
+addlib lib/libspdm_responder_lib.a
 addlib lib/libspdm_common_lib.a
 addlib lib/librnglib.a
 addlib lib/libopenssllib.a
@@ -10,7 +11,7 @@ addlib lib/libmalloclib.a
 addlib lib/libspdm_crypt_lib.a
 addlib lib/libspdm_secured_message_lib.a
 addlib lib/libspdm_device_secret_lib_sample.a
-addlib lib/libspdm_transport_test_lib.a
+addlib lib/libspdm_transport_none_lib.a
 addlib lib/libcmockalib.a
 addlib lib/libplatform_lib.a
 save

@@ -147,7 +147,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         totalDigestBuffer{0};
 
     spdmResponder.dataCert.clear();
-    uint32_t certChainSize = certChain.size();
+    size_t certChainSize = certChain.size();
 
     if (!getVCA(false))
     {

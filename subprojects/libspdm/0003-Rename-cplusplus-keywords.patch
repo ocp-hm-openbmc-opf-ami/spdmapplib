@@ -1,0 +1,59 @@
+From e05bd3d11ab8c2311ec33e16d25ffdef93589a1e Mon Sep 17 00:00:00 2001
+From: Eddyhan <eddyhan@ami.com>
+Date: Fri, 9 Sep 2022 14:23:31 +0800
+Subject: [PATCH] Rename c++ keywords.
+
+
+diff --git a/include/hal/library/cryptlib.h b/include/hal/library/cryptlib.h
+old mode 100644
+new mode 100755
+index 1a021891..115515f9
+--- a/include/hal/library/cryptlib.h
++++ b/include/hal/library/cryptlib.h
+@@ -3535,8 +3535,13 @@ void libspdm_ecx_free(const void *ecx_context);
+  * @retval false  public_size is not large enough.
+  *
+  **/
++#ifndef __cplusplus  
+ bool libspdm_ecx_generate_key(void *ecx_context, uint8_t *public,
+                               size_t *public_size);
++#else
++bool libspdm_ecx_generate_key(void *ecx_context, uint8_t *Public,
++                              size_t *publicSize);
++#endif                      
+ 
+ /**
+  * Computes exchanged common key.
+@@ -3669,9 +3674,13 @@ bool libspdm_sm2_dsa_check_key(const void *sm2_context);
+  * @retval false  public_size is not large enough.
+  *
+  **/
++#ifndef __cplusplus  
+ bool libspdm_sm2_dsa_generate_key(void *sm2_context, uint8_t *public,
+                                   size_t *public_size);
+-
++#else
++bool libspdm_sm2_dsa_generate_key(void *sm2_context, uint8_t *Public,
++                                  size_t *publicSize);
++#endif
+ /**
+  * Allocates and Initializes one Shang-Mi2 context for subsequent use.
+  *
+@@ -3741,9 +3750,13 @@ bool libspdm_sm2_key_exchange_init(const void *sm2_context, size_t hash_nid,
+  * @retval false  public_size is not large enough.
+  *
+  **/
++#ifndef __cplusplus  
+ bool libspdm_sm2_key_exchange_generate_key(void *sm2_context, uint8_t *public,
+                                            size_t *public_size);
+-
++#else
++bool libspdm_sm2_key_exchange_generate_key(void *sm2_context, uint8_t *Public,
++                                           size_t *publicSize);
++#endif
+ /**
+  * Computes exchanged common key, based upon GB/T 32918.3-2016: SM2 - Part3.
+  *
+-- 
+2.17.1
+
