@@ -31,6 +31,14 @@ extern "C"
 #include "library/malloclib.h"
 }
 // clang-format on
+
+namespace spdm_app_lib
+{
+/*Common Functions used across Requester and Responder */
+inline constexpr int operationGet = 0;
+inline constexpr int operationSet = 1;
+inline constexpr int operationSession = 2;
+
 inline constexpr uint32_t exeConnectionVersionOnly = 0x1;
 inline constexpr uint32_t exeConnectionDigest = 0x2;
 inline constexpr uint32_t exeConnectionCert = 0x4;
@@ -40,20 +48,13 @@ inline constexpr uint32_t exeConnection =
     (exeConnectionDigest | exeConnectionCert | exeConnectionChal |
      exeConnectionMeas);
 
-namespace spdm_app_lib
-{
-/*Common Functions used across Requester and Responder */
-inline constexpr int operationGet = 0;
-inline constexpr int operationSet = 1;
-inline constexpr int operationSession = 2;
-
 /**
  * @brief SPDM device context structure
  *
  */
 typedef struct
 {
-    void* pspdmContext;
+    void* spdmContext;
     spdm_transport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
@@ -177,7 +178,7 @@ bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
     uint32_t data_size;
 
     data_size = sizeof(data);
-    if (!validateSpdmRc(libspdm_get_data(spdm.pspdmContext, configType,
+    if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext, configType,
                                          &parameter, &data, &data_size)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -205,7 +206,7 @@ template <typename T>
 bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
                  libspdm_data_parameter_t parameter)
 {
-    if (!validateSpdmRc(libspdm_set_data(spdm.pspdmContext, configType,
+    if (!validateSpdmRc(libspdm_set_data(spdm.spdmContext, configType,
                                          &parameter, &configData,
                                          sizeof(configData))))
     {

@@ -32,7 +32,7 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
     uint8_t* requestPayload =
         reinterpret_cast<uint8_t*>(const_cast<void*>(request));
@@ -42,7 +42,7 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         data.push_back(*(requestPayload + j));
     }
-    if (!pspdmTmp->deviceSendMessage(spdmContext, data, timeout))
+    if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
@@ -59,10 +59,10 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
     std::vector<uint8_t> rspData{};
-    if (!pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    if (!spdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
@@ -80,9 +80,9 @@ void spdmServerConnectionStateCallback(
     {
         return;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    pspdmTmp->processConnectionState(spdmContext, connectionState);
+    spdmTmp->processConnectionState(spdmContext, connectionState);
 }
 
 void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
@@ -94,16 +94,16 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
     {
         return;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
+    return spdmTmp->processSessionState(spdmContext, sessionID, sessionState);
 }
 
 SPDMResponderImpl::~SPDMResponderImpl()
 {
     for (auto& item : spdmPool)
     {
-        if (item.pspdmContext)
+        if (item.spdmContext)
         {
             freeSpdmContext(item);
         }
@@ -120,7 +120,7 @@ bool SPDMResponderImpl::updateSPDMPool(
     {
         return false;
     }
-    if (it->pspdmContext != nullptr)
+    if (it->spdmContext != nullptr)
     {
         freeSpdmContext(*it);
     }
@@ -142,13 +142,13 @@ bool SPDMResponderImpl::addNewDevice(
     }
 
     if (!validateSpdmRc(libspdm_register_session_state_callback_func(
-            newItem.pspdmContext, spdmServerSessionStateCallback)))
+            newItem.spdmContext, spdmServerSessionStateCallback)))
     {
         return false;
     }
 
     if (!validateSpdmRc(libspdm_register_connection_state_callback_func(
-            newItem.pspdmContext, spdmServerConnectionStateCallback)))
+            newItem.spdmContext, spdmServerConnectionStateCallback)))
     {
         return false;
     }
@@ -163,7 +163,7 @@ bool SPDMResponderImpl::initSpdmContext()
 
     initGetSetParameter(parameter, operationSet);
     return validateSpdmRc(libspdm_set_data(
-        spdmPool.back().pspdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
+        spdmPool.back().spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
         &tmpThis, sizeof(void*)));
 }
 
@@ -196,7 +196,7 @@ bool SPDMResponderImpl::processSPDMMessage(
     {
         return false;
     }
-    return validateSpdmRc(libspdm_responder_dispatch_message(it->pspdmContext));
+    return validateSpdmRc(libspdm_responder_dispatch_message(it->spdmContext));
 }
 
 bool SPDMResponderImpl::msgRecvCallback(
@@ -232,7 +232,7 @@ bool SPDMResponderImpl::deviceReceiveMessage(void* spdmContext,
                                              uint64_t /*timeout*/)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -247,7 +247,7 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
                                           uint64_t timeout)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -271,7 +271,7 @@ void SPDMResponderImpl::processConnectionState(
     libspdm_data_parameter_t parameter;
 
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -329,7 +329,7 @@ void SPDMResponderImpl::processConnectionState(
                 {
                     parameter.additional_data[0] = index;
                     if (!validateSpdmRc(libspdm_set_data(
-                            it->pspdmContext,
+                            it->spdmContext,
                             LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
                             data, dataSize)))
                     {
@@ -366,7 +366,7 @@ void SPDMResponderImpl::processSessionState(
     libspdm_data_parameter_t parameter;
 
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {

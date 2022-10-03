@@ -32,8 +32,8 @@ void setCertificatePath(std::string& certPath)
 
 void freeSpdmContext(spdmItem& spdm)
 {
-    free_pool(spdm.pspdmContext);
-    spdm.pspdmContext = nullptr;
+    free_pool(spdm.spdmContext);
+    spdm.spdmContext = nullptr;
     spdm.data.clear();
     spdm.dataCert.clear();
     spdm.dataMeas.clear();
@@ -182,8 +182,8 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
               libspdm_transport_encode_message_func encodeCB,
               libspdm_transport_decode_message_func decodeCB)
 {
-    spdm.pspdmContext = allocate_zero_pool(libspdm_get_context_size());
-    if (spdm.pspdmContext == nullptr)
+    spdm.spdmContext = allocate_zero_pool(libspdm_get_context_size());
+    if (spdm.spdmContext == nullptr)
     {
         return false;
     }
@@ -200,17 +200,15 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     spdm.dataCert.clear();
     spdm.dataMeas.clear();
 
-    if (!validateSpdmRc(libspdm_init_context(spdm.pspdmContext)))
+    if (!validateSpdmRc(libspdm_init_context(spdm.spdmContext)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmInit libspdm_init_context Failed!");
         return false;
     }
-    libspdm_register_device_io_func(spdm.pspdmContext, sendMessage,
-                                    recvMessage);
+    libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
 
-    libspdm_register_transport_layer_func(spdm.pspdmContext, encodeCB,
-                                          decodeCB);
+    libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB);
     return true;
 }
 

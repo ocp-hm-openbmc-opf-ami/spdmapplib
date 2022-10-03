@@ -32,7 +32,7 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMRequesterImpl* pspdmTmp =
+    SPDMRequesterImpl* spdmTmp =
         reinterpret_cast<SPDMRequesterImpl*>(spdmAppContext);
     uint8_t* requestPayload =
         reinterpret_cast<uint8_t*>(const_cast<void*>(request));
@@ -42,7 +42,7 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     {
         data.push_back(*(requestPayload + j));
     }
-    if (!pspdmTmp->deviceSendMessage(spdmContext, data, timeout))
+    if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
@@ -59,10 +59,10 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMRequesterImpl* pspdmTmp =
+    SPDMRequesterImpl* spdmTmp =
         reinterpret_cast<SPDMRequesterImpl*>(spdmAppContext);
     std::vector<uint8_t> rspData{};
-    if (!pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    if (!spdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
@@ -74,7 +74,7 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
 
 SPDMRequesterImpl::~SPDMRequesterImpl()
 {
-    if (spdmResponder.pspdmContext)
+    if (spdmResponder.spdmContext)
     {
         freeSpdmContext(spdmResponder);
     }
@@ -130,7 +130,7 @@ bool SPDMRequesterImpl::initSpdmContext()
 
     initGetSetParameter(parameter, operationSet);
     return validateSpdmRc(libspdm_set_data(
-        spdmResponder.pspdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
+        spdmResponder.spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
         &tmpThis, sizeof(void*)));
 }
 
@@ -160,7 +160,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
     **/
     if ((exeConnection & exeConnectionDigest))
     {
-        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.pspdmContext,
+        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext,
                                                &slotMask, &totalDigestBuffer)))
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -178,7 +178,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
     }
 
     if (!validateSpdmRc(libspdm_get_certificate(
-            spdmResponder.pspdmContext, useSlotId, &certChainSize, &certChain)))
+            spdmResponder.spdmContext, useSlotId, &certChainSize, &certChain)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doAuthentication libspdm_get_certificate Failed");
@@ -203,7 +203,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, LIBSPDM_MAX_MEASUREMENT_RECORD_SIZE> measurement{0};
     spdmResponder.dataMeas.clear();
 
-    if (spdmResponder.pspdmContext == nullptr)
+    if (spdmResponder.spdmContext == nullptr)
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doMeasurement Error!");
@@ -219,7 +219,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     if ((exeConnection & exeConnectionChal))
     {
         if (!validateSpdmRc(
-                libspdm_challenge(spdmResponder.pspdmContext, useSlotId,
+                libspdm_challenge(spdmResponder.spdmContext, useSlotId,
                                   SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH,
                                   &measurementHash, nullptr)))
         {
@@ -243,7 +243,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         /* request all Meas at one time.*/
         measurementRecordLength = measurement.size();
         if (!validateSpdmRc(libspdm_get_measurement(
-                spdmResponder.pspdmContext, session_id,
+                spdmResponder.spdmContext, session_id,
                 SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS,
                 useSlotId & 0xF, nullptr, &numberOfBlock,
@@ -272,7 +272,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         uint8_t requestAttribute = 0;
         /* 1. query the total number of measurements available.*/
         if (!validateSpdmRc(libspdm_get_measurement(
-                spdmResponder.pspdmContext, session_id, requestAttribute,
+                spdmResponder.spdmContext, session_id, requestAttribute,
                 SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS,
                 useSlotId & 0xF, nullptr, &numberOfBlocks, nullptr, nullptr)))
         {
@@ -301,7 +301,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             }
             measurementRecordLength = measurement.size();
             if (!validateSpdmRc(libspdm_get_measurement(
-                    spdmResponder.pspdmContext, session_id, requestAttribute,
+                    spdmResponder.spdmContext, session_id, requestAttribute,
                     index, useSlotId & 0xF, nullptr, &numberOfBlock,
                     &measurementRecordLength, &measurement)))
             {
@@ -351,7 +351,7 @@ bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
 bool SPDMRequesterImpl::getVCA(bool onlyVersion)
 {
     if (!validateSpdmRc(
-            libspdm_init_connection(spdmResponder.pspdmContext, onlyVersion)))
+            libspdm_init_connection(spdmResponder.spdmContext, onlyVersion)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::getVCA Failed!");
