@@ -14,19 +14,6 @@
  * limitation
  */
 #include "spdmapplib_common.hpp"
-extern "C"
-{
-    libspdm_return_t spdm_device_acquire_sender_buffer(void* context,
-                                                       size_t* max_msg_size,
-                                                       void** msg_buf_ptr);
-    void spdm_device_release_sender_buffer(void* context,
-                                           const void* msg_buf_ptr);
-    libspdm_return_t spdm_device_acquire_receiver_buffer(void* context,
-                                                         size_t* max_msg_size,
-                                                         void** msg_buf_ptr);
-    void spdm_device_release_receiver_buffer(void* context,
-                                             const void* msg_buf_ptr);
-}
 
 namespace spdm_app_lib
 {
@@ -47,12 +34,13 @@ void setCertificatePath(std::string& certPath)
  * @brief libspdm register proxy function.
  * @param spdm_context
  **/
-void libspdmRegisterDeviceBufferFunc(void* spdm_context)
+void libspdmRegisterDeviceBuffer(void* spdmContext)
 {
     libspdm_register_device_buffer_func(
-        spdm_context, spdm_device_acquire_sender_buffer,
-        spdm_device_release_sender_buffer, spdm_device_acquire_receiver_buffer,
-        spdm_device_release_receiver_buffer);
+        spdmContext, libspdm_external_apis::spdmDeviceAcquireSenderBuffer,
+        libspdm_external_apis::spdmDeviceReleaseSenderBuffer,
+        libspdm_external_apis::spdmDeviceAcquireReceiverBuffer,
+        libspdm_external_apis::spdmDeviceReleaseReceiverBuffer);
 }
 
 void freeSpdmContext(spdmItem& spdm)
@@ -208,7 +196,7 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
               libspdm_device_receive_message_func recvMessage,
               libspdm_transport_encode_message_func encodeCB,
               libspdm_transport_decode_message_func decodeCB,
-              libspdm_transport_get_header_size_func headerSizeFunc)
+              libspdm_transport_get_header_size_func headerSizeCB)
 {
     spdm.spdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (spdm.spdmContext == nullptr)
@@ -248,13 +236,59 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
 
     libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,
-                                          headerSizeFunc);
+                                          headerSizeCB);
 
-    libspdmRegisterDeviceBufferFunc(spdm.spdmContext);
+    libspdmRegisterDeviceBuffer(spdm.spdmContext);
     libspdm_set_scratch_buffer(spdm.spdmContext, spdm.scratchBuffer,
                                scratchBufferSize);
 
     return true;
 }
+
+namespace libspdm_external_apis
+{
+bool sendReceiveBufferAcquired = false;
+size_t sendReceiveBufferSize;
+std::array<uint8_t, LIBSPDM_SENDER_RECEIVE_BUFFER_SIZE> sendReceiveBuffer;
+libspdm_return_t spdmDeviceAcquireSenderBuffer(void* /*context*/,
+                                               size_t* max_msg_size,
+                                               void** msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
+    *max_msg_size = sendReceiveBuffer.size();
+    *msg_buf_ptr = &sendReceiveBuffer;
+    std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
+    sendReceiveBufferAcquired = true;
+    return LIBSPDM_STATUS_SUCCESS;
+}
+
+void spdmDeviceReleaseSenderBuffer(void* /*context*/, const void* msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(sendReceiveBufferAcquired);
+    LIBSPDM_ASSERT(msg_buf_ptr == &sendReceiveBuffer);
+    sendReceiveBufferAcquired = false;
+    return;
+}
+
+libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* /*context*/,
+                                                 size_t* max_msg_size,
+                                                 void** msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
+    *max_msg_size = sendReceiveBuffer.size();
+    *msg_buf_ptr = &sendReceiveBuffer;
+    std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
+    sendReceiveBufferAcquired = true;
+    return LIBSPDM_STATUS_SUCCESS;
+}
+
+void spdmDeviceReleaseReceiverBuffer(void* /*context*/, const void* msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(sendReceiveBufferAcquired);
+    LIBSPDM_ASSERT(msg_buf_ptr == &sendReceiveBuffer);
+    sendReceiveBufferAcquired = false;
+    return;
+}
+} // namespace libspdm_external_apis
 
 } // namespace spdm_app_lib

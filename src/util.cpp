@@ -26,9 +26,7 @@ extern "C"
      */
     void libspdm_dump_hex_str(const uint8_t* buffer, size_t bufferSize)
     {
-        size_t index;
-
-        for (index = 0; index < bufferSize; index++)
+        for (size_t index = 0; index < bufferSize; index++)
         {
             printf(" %02x", buffer[index]);
         }
@@ -108,58 +106,5 @@ extern "C"
                                    size_t /*fileSize*/)
     {
         return true;
-    }
-
-    /* Codes are from spdm-emu spdm_emu_common/command.c for
-        libspdm_register_device_buffer_func(spdm_context,
-                                            spdm_device_acquire_sender_buffer,
-                                            spdm_device_release_sender_buffer,
-                                            spdm_device_acquire_receiver_buffer,
-                                            spdm_device_release_receiver_buffer);
-    */
-    bool m_send_receive_buffer_acquired = false;
-    uint8_t m_send_receive_buffer[LIBSPDM_SENDER_RECEIVE_BUFFER_SIZE];
-    size_t m_send_receive_buffer_size;
-
-    libspdm_return_t spdm_device_acquire_sender_buffer(void* /*context*/,
-                                                       size_t* max_msg_size,
-                                                       void** msg_buf_ptr)
-    {
-        LIBSPDM_ASSERT(!m_send_receive_buffer_acquired);
-        *max_msg_size = sizeof(m_send_receive_buffer);
-        *msg_buf_ptr = m_send_receive_buffer;
-        libspdm_zero_mem(m_send_receive_buffer, sizeof(m_send_receive_buffer));
-        m_send_receive_buffer_acquired = true;
-        return LIBSPDM_STATUS_SUCCESS;
-    }
-
-    void spdm_device_release_sender_buffer(void* /*context*/,
-                                           const void* msg_buf_ptr)
-    {
-        LIBSPDM_ASSERT(m_send_receive_buffer_acquired);
-        LIBSPDM_ASSERT(msg_buf_ptr == m_send_receive_buffer);
-        m_send_receive_buffer_acquired = false;
-        return;
-    }
-
-    libspdm_return_t spdm_device_acquire_receiver_buffer(void* /*context*/,
-                                                         size_t* max_msg_size,
-                                                         void** msg_buf_ptr)
-    {
-        LIBSPDM_ASSERT(!m_send_receive_buffer_acquired);
-        *max_msg_size = sizeof(m_send_receive_buffer);
-        *msg_buf_ptr = m_send_receive_buffer;
-        libspdm_zero_mem(m_send_receive_buffer, sizeof(m_send_receive_buffer));
-        m_send_receive_buffer_acquired = true;
-        return LIBSPDM_STATUS_SUCCESS;
-    }
-
-    void spdm_device_release_receiver_buffer(void* /*context*/,
-                                             const void* msg_buf_ptr)
-    {
-        LIBSPDM_ASSERT(m_send_receive_buffer_acquired);
-        LIBSPDM_ASSERT(msg_buf_ptr == m_send_receive_buffer);
-        m_send_receive_buffer_acquired = false;
-        return;
     }
 }

@@ -5,9 +5,7 @@ if [ ! -f libspdm/build/lib/libspdm.a ]; then
     cd libspdm
     git checkout -b libspdm_build 1f7c06ff0a892ca3877d833cb93ada649c3ab27e
     git submodule update --init
-    git am ../subprojects/libspdm/0001-Fix-build-issue.patch
-    git am ../subprojects/libspdm/0003-Rename-cplusplus-keywords.patch
-    git am ../subprojects/libspdm/0004-Add-spdm-emu-transport-none-lib.patch
+    git am ../subprojects/libspdm/0001-Rename-cplusplus-keywords.patch
     mkdir build
     cd build
     cmake -DARCH=x64 -DTOOLCHAIN=GCC -DTARGET=Release -DCRYPTO=openssl ..

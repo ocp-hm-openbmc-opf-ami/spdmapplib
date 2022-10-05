@@ -11,7 +11,6 @@ addlib lib/libmalloclib.a
 addlib lib/libspdm_crypt_lib.a
 addlib lib/libspdm_secured_message_lib.a
 addlib lib/libspdm_device_secret_lib_sample.a
-addlib lib/libspdm_transport_none_lib.a
 addlib lib/libcmockalib.a
 addlib lib/libplatform_lib.a
 save

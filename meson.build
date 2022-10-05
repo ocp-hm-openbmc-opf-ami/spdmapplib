@@ -1,6 +1,6 @@
 project(
     'spdmapplib',
-    'cpp',
+    ['cpp', 'c'],
     license: 'Apache-2.0',
     version: '1.0.0',
     default_options: [
@@ -70,6 +70,15 @@ deps = [
     mctpwplus
 ]
 
+subdir('spdm_transport_none_lib')
+spdm_transport_none_lib_dep = declare_dependency(include_directories : root_inc,
+                                dependencies: deps,
+                                link_with : spdm_transport_none_lib)
+lib_deps = [
+    deps,
+    spdm_transport_none_lib_dep,
+]
+
 app_deps = [
     deps,
     boost_dep,
@@ -80,7 +89,7 @@ spdmapplib = shared_library('spdmapplib',
                             src_files,
                             version: meson.project_version(),
                             install : true,
-                            dependencies : deps,
+                            dependencies : lib_deps,
                             include_directories: root_inc,
                             cpp_args : ['-Wno-write-strings', '-Wno-error=attributes'],
                             link_args: ['-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)])
