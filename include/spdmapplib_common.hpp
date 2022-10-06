@@ -187,9 +187,8 @@ bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
                  libspdm_data_parameter_t parameter)
 {
     T data;
-    size_t data_size;
+    size_t data_size = sizeof(data);
 
-    data_size = sizeof(data);
     if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext, configType,
                                          &parameter, &data, &data_size)))
     {

@@ -24,7 +24,9 @@ endif
 
 if dep_required
     libspdm = dependency('libspdm')
-    root_inc = include_directories('include')
+    root_inc = include_directories(
+                            'include',
+                            'spdm_transport_none_lib')
 else
     cc = meson.get_compiler('cpp')
     message('Compiler ID:'+cc.get_id())
@@ -37,6 +39,7 @@ else
             dirs : [meson.current_source_dir()+'/libspdm/build/lib'])
     root_inc = include_directories(
                             'include',
+                            'spdm_transport_none_lib',
                             'libspdm/include',
                             'libspdm/include/hal/x64',
                             'libspdm/os_stub/spdm_device_secret_lib_sample',
