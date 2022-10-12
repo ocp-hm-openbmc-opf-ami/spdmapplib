@@ -40,7 +40,6 @@ libspdm_return_t responderDeviceSendMessage(void* spdmContext,
     uint8_t* requestPayload =
         reinterpret_cast<uint8_t*>(const_cast<void*>(request));
     std::vector<uint8_t> data{};
-    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
     for (uint32_t j = 0; j < requestSize; j++)
     {
         data.push_back(*(requestPayload + j));
@@ -70,8 +69,8 @@ libspdm_return_t responderDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    *responseSize = rspData.size() - 1; // skip MessageType byte
-    std::copy(rspData.begin() + 1, rspData.end(),
+    *responseSize = rspData.size();
+    std::copy(rspData.begin(), rspData.end(),
               reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
@@ -271,7 +270,9 @@ void SPDMResponderImpl::processConnectionState(
 {
     bool res;
     void* data;
+    void* data1;
     size_t dataSize = 0;
+    size_t data1Size = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
@@ -316,31 +317,39 @@ void SPDMResponderImpl::processConnectionState(
             res = libspdm_read_responder_public_certificate_chain(
                 it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
                 nullptr);
+            res = libspdm_read_responder_public_certificate_chain_per_slot(1,
+                                                                       it->useHashAlgo,
+                                                                       it->useAsymAlgo,
+                                                                       &data1, &data1Size,
+                                                                       NULL, NULL);
             if (res)
             {
                 initGetSetParameter(parameter, operationSet);
-                if (!spdmSetData(
-                        *it, LIBSPDM_DATA_LOCAL_SLOT_COUNT,
-                        static_cast<uint8_t>(spdmResponderCfg.slotcount),
-                        parameter))
-                {
-                    phosphor::logging::log<phosphor::logging::level::ERR>(
-                        "SPDMResponderImpl::processConnectionState Slot Count FAILED!!");
-                    break;
-                }
                 for (uint8_t index = 0;
                      index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
                      index++)
                 {
                     parameter.additional_data[0] = index;
-                    if (!validateSpdmRc(libspdm_set_data(
-                            it->spdmContext,
-                            LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                            data, dataSize)))
-                    {
-                        phosphor::logging::log<phosphor::logging::level::ERR>(
-                            "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
-                        break;
+                    if (index == 1) {
+                        if (!validateSpdmRc(libspdm_set_data(
+                                it->spdmContext,
+                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
+                                data1, data1Size)))
+                        {
+                            phosphor::logging::log<phosphor::logging::level::ERR>(
+                                "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
+                            break;
+                        }
+                    }else{
+                        if (!validateSpdmRc(libspdm_set_data(
+                                it->spdmContext,
+                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
+                                data, dataSize)))
+                        {
+                            phosphor::logging::log<phosphor::logging::level::ERR>(
+                                "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
+                            break;
+                        }
                     }
                 }
                 /* do not free it*/

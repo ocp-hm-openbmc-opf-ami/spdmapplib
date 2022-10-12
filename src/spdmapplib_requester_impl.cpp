@@ -39,8 +39,7 @@ libspdm_return_t requesterDeviceSendMessage(void* spdmContext,
         reinterpret_cast<SPDMRequesterImpl*>(spdmAppContext);
     uint8_t* requestPayload =
         reinterpret_cast<uint8_t*>(const_cast<void*>(request));
-    std::vector<uint8_t> data;
-    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
+    std::vector<uint8_t> data{};
     for (uint32_t j = 0; j < requestSize; j++)
     {
         data.push_back(*(requestPayload + j));
@@ -70,8 +69,8 @@ libspdm_return_t requesterDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    *responseSize = rspData.size() - 1; // skip MessageType byte
-    std::copy(rspData.begin() + 1, rspData.end(),
+    *responseSize = rspData.size();
+    std::copy(rspData.begin(), rspData.end(),
               reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
