@@ -29,6 +29,7 @@ extern "C"
 #include "library/spdm_responder_lib.h"
 #include "spdm_device_secret_lib_internal.h"
 #include "library/malloclib.h"
+#include "library/spdm_transport_none_lib.h"
 }
 // clang-format on
 

@@ -1,6 +1,6 @@
 project(
     'spdmapplib',
-    'cpp',
+    ['cpp', 'c'],
     license: 'Apache-2.0',
     version: '1.0.0',
     default_options: [
@@ -26,8 +26,7 @@ if dep_required
     libspdm = dependency('libspdm')
     root_inc = include_directories(
                             'include',
-                            'src/include')
-    
+                            'spdm_transport_none_lib')
 else
     cc = meson.get_compiler('cpp')
     message('Compiler ID:'+cc.get_id())
@@ -40,7 +39,7 @@ else
             dirs : [meson.current_source_dir()+'/libspdm/build/lib'])
     root_inc = include_directories(
                             'include',
-                            'src/include',
+                            'spdm_transport_none_lib',
                             'libspdm/include',
                             'libspdm/include/hal/ia32',
                             'libspdm/os_stub/spdm_device_secret_lib_sample',
@@ -65,15 +64,22 @@ src_files = [
             'src/spdmapplib_requester_impl.cpp',
             'src/spdmapplib_responder_impl.cpp',
             'src/spdmtransport_mctp.cpp',
-            'src/util.cpp',
-            'src/library/spdm_transport_none_lib/common.cpp',
-            'src/library/spdm_transport_none_lib/none.cpp'
+            'src/util.cpp'
             ]
 
 deps = [
     libspdm,
     sdbusplus_partial_dep,
     mctpwplus
+]
+
+subdir('spdm_transport_none_lib')
+spdm_transport_none_lib_dep = declare_dependency(include_directories : root_inc,
+                                dependencies: deps,
+                                link_with : spdm_transport_none_lib)
+lib_deps = [
+    deps,
+    spdm_transport_none_lib_dep,
 ]
 
 app_deps = [
@@ -86,7 +92,7 @@ spdmapplib = shared_library('spdmapplib',
                             src_files,
                             version: meson.project_version(),
                             install : true,
-                            dependencies : deps,
+                            dependencies : lib_deps,
                             include_directories: root_inc,
                             cpp_args : ['-Wno-write-strings'],
                             link_args: ['-Wl,--version-script,@0@/@1@'.format(meson.current_source_dir(), mapfile)])
