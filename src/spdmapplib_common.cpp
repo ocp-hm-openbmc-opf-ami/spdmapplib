@@ -212,4 +212,23 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     return true;
 }
 
+std::vector<uint8_t> formSendMessage(uintn requestSize, const void* request)
+{
+    uint8_t* requestPayload =
+        reinterpret_cast<uint8_t*>(const_cast<void*>(request));
+    std::vector<uint8_t> data{};
+    for (uint32_t j = 0; j < requestSize; j++)
+    {
+        data.push_back(*(requestPayload + j));
+    }
+    return data;
+}
+
+void formRecvMessage(uintn* responseSize, void* response,
+                     const std::vector<uint8_t> payload)
+{
+    *responseSize = payload.size();
+    std::copy(payload.begin(), payload.end(),
+              reinterpret_cast<uint8_t*>(response));
+}
 } // namespace spdm_app_lib

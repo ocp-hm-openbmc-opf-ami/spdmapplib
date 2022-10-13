@@ -32,13 +32,7 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     }
     SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    uint8_t* requestPayload =
-        reinterpret_cast<uint8_t*>(const_cast<void*>(request));
-    std::vector<uint8_t> data{};
-    for (uint32_t j = 0; j < requestSize; j++)
-    {
-        data.push_back(*(requestPayload + j));
-    }
+    auto data = formSendPayload(requestSize, request);
     if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
@@ -63,9 +57,7 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    *responseSize = rspData.size();
-    std::copy(rspData.begin(), rspData.end(),
-              reinterpret_cast<uint8_t*>(response));
+    formRecvMessage(responseSize, response, rspData);
     return spdm_app_lib::error_codes::returnSuccess;
 }
 

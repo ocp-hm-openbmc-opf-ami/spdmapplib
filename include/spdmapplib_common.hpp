@@ -220,4 +220,8 @@ bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
     return true;
 }
 
+std::vector<uint8_t> formSendMessage(uintn requestSize, const void* request);
+
+void formRecvMessage(uintn* responseSize, void* response,
+                     const std::vector<uint8_t> payload);
 } // namespace spdm_app_lib
