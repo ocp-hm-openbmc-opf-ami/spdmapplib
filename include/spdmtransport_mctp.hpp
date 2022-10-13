@@ -113,11 +113,8 @@ class SPDMTransportMCTP : public SPDMTransport
     void transOnDeviceUpdate(void*, const mctpw::Event& evt,
                              boost::asio::yield_context yield);
 
-    /* Callback function pointers */
     OnDeviceCallback onDeviceUpdtCB = nullptr;
     MsgReceiveCallback msgReceiveCB = nullptr;
-
-  protected:
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     mctpw::BindingType transType; /*MCTP over PCIe, MCTP over SMBus*/

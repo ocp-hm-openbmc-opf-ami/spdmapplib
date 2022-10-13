@@ -47,21 +47,6 @@ class SPDMRequesterImpl
                       SPDMConfiguration& spdmConfig);
 
     /**
-     * @brief The authentication function
-     *
-     * @return true           If, doAuth passes.
-     * @return false          If, doAuth fails
-     **/
-    bool doAuthentication(void);
-    /**
-     * @brief The measurement function
-     *
-     * @param  sessionid      The session id pointer
-     * @return true           If, doMeas succeeds
-     * @return false          If, doMeas fails
-     **/
-    bool doMeasurement(const uint32_t* sessionid);
-    /**
      * @brief Get all measurement function
      *
      * @param measurement     vector holding the measurements
@@ -69,6 +54,7 @@ class SPDMRequesterImpl
      * @return false          If, vector is empty
      **/
     bool getMeasurements(std::vector<uint8_t>& measurement);
+
     /**
      * @brief Get certification function
      *
@@ -77,28 +63,7 @@ class SPDMRequesterImpl
      * @return false          If, vector is empty
      **/
     bool getCertificate(std::vector<uint8_t>& certificate);
-    /*APIs called by transport layer*/
-    /**
-     * @brief Set received data to assigned endpoint.
-     *
-     * @param  transEP        The Endpoint object to receive data.
-     * @param  trans          The pointer of transport instance.
-     * @return true           If, add Data is successful.
-     * @return false          If, add Data fails
-     **/
-    void addData(spdm_transport::TransportEndPoint& transEP,
-                 const std::vector<uint8_t>& data);
 
-    /**
-     * @brief Function to receive async data from transport
-     *
-     * @param  transEP    The endpoint information.
-     * @param  data       The received data buffer.
-     **/
-    void msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
-                         const std::vector<uint8_t>& data);
-
-    /*Callback functions implementation for libspdm*/
     /**
      * @brief Register to libspdm for sending SPDM payload.
      *
@@ -124,8 +89,7 @@ class SPDMRequesterImpl
     bool deviceReceiveMessage(void* spdmContext, std::vector<uint8_t>& response,
                               uint64_t timeout);
 
-    /*Internal implementation*/
-  protected:
+  private:
     /**
      * @brief initSpdmContext initiates spdm context
      *
@@ -151,7 +115,43 @@ class SPDMRequesterImpl
      */
     bool getVCA(bool onlyVersion);
 
-  private:
+    /**
+     * @brief The authentication function
+     *
+     * @return true           If, doAuth passes.
+     * @return false          If, doAuth fails
+     **/
+    bool doAuthentication(void);
+
+    /**
+     * @brief The measurement function
+     *
+     * @param  sessionid      The session id pointer
+     * @return true           If, doMeas succeeds
+     * @return false          If, doMeas fails
+     **/
+    bool doMeasurement(const uint32_t* sessionid);
+
+    /**
+     * @brief Set received data to assigned endpoint.
+     *
+     * @param  transEP        The Endpoint object to receive data.
+     * @param  trans          The pointer of transport instance.
+     * @return true           If, add Data is successful.
+     * @return false          If, add Data fails
+     **/
+    void addData(spdm_transport::TransportEndPoint& transEP,
+                 const std::vector<uint8_t>& data);
+
+    /**
+     * @brief Function to receive async data from transport
+     *
+     * @param  transEP    The endpoint information.
+     * @param  data       The received data buffer.
+     **/
+    void msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
+                         const std::vector<uint8_t>& data);
+
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     uint8_t mUseMeasurementOperation = 0;
