@@ -385,11 +385,10 @@ SPDMRequesterImpl::SPDMRequesterImpl(
     spdm_transport::TransportEndPoint& endPointDevice,
     SPDMConfiguration& spdmConfig) :
     ioc(io),
-    conn(con), spdmTrans(trans), transResponder(endPointDevice),
-    spdmRequesterCfg(spdmConfig)
+    conn(con), spdmTrans(trans), spdmRequesterCfg(spdmConfig)
 {
     setCertificatePath(spdmRequesterCfg.certPath);
-    if (!spdmInit(spdmResponder, transResponder, requesterDeviceSendMessage,
+    if (!spdmInit(spdmResponder, endPointDevice, requesterDeviceSendMessage,
                   requesterDeviceReceiveMessage,
                   spdm_transport_none_encode_message,
                   spdm_transport_none_decode_message))

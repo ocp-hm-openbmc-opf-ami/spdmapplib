@@ -157,7 +157,6 @@ class SPDMRequesterImpl
     uint8_t mUseMeasurementOperation = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder{}; // only one instance for requester.
-    spdm_transport::TransportEndPoint transResponder{};
     SPDMConfiguration spdmRequesterCfg{};
 };
 
