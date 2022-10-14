@@ -32,7 +32,7 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     }
     SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    auto data = formSendPayload(requestSize, request);
+    auto data = formSendMessage(requestSize, request);
     if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
