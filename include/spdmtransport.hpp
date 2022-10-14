@@ -118,6 +118,16 @@ class SPDMTransport
                              const std::vector<uint8_t>& request,
                              uint64_t timeout,
                              std::vector<uint8_t>& response) = 0;
+
+    /**
+     * @brief Defines the default underlying transport
+     *
+     * @return std::string default
+     */
+    virtual std::string getSPDMtransport()
+    {
+        return "default";
+    }
 };
 
 } // namespace spdm_transport

@@ -87,6 +87,12 @@ class SPDMTransportMCTP : public SPDMTransport
                            spdm_transport::Event event)>
             onEndPointChange) override;
 
+    /**
+     * @brief Defines the current underlying transport
+     *
+     * @return std::string   returns the transport as MCTP
+     */
+    std::string getSPDMtransport() override;
     /*APIs called by mctpwrapper callback function*/
   private:
     /**

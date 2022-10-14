@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #pragma once
+
 #include "spdmapplib.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -27,6 +28,7 @@ extern "C"
 #include "library/spdm_common_lib.h"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_responder_lib.h"
+#include "library/spdm_transport_mctp_lib.h"
 #include "spdm_device_secret_lib_internal.h"
 #include "library/malloclib.h"
 #include "library/spdm_transport_none_lib.h"
@@ -147,18 +149,16 @@ void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq);
  *
  * @param spdm          spdmItem having context
  * @param transEP       endPoint id
+ * @param transport     underlying transport
  * @param sendMessage   sendMessage Callback
  * @param recvMessage   recvMessage callback
- * @param encodeFunc    payload encode callback
- * @param decodeFunc    payload decode callback
  * @return true         when init is successful
  * @return false        when init fails
  */
 bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
+              const std::string transport,
               libspdm_device_send_message_func sendMessage,
-              libspdm_device_receive_message_func recvMessage,
-              libspdm_transport_encode_message_func encodeFunc,
-              libspdm_transport_decode_message_func decodeFunc);
+              libspdm_device_receive_message_func recvMessage);
 
 /**
  * @brief spdmGetData performs libspdm_get_data

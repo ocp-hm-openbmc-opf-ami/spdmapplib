@@ -130,10 +130,8 @@ bool SPDMResponderImpl::addNewDevice(
 {
     spdmItem newItem;
 
-    if (!spdmInit(newItem, transEndpoint, responderDeviceSendMessage,
-                  responderDeviceReceiveMessage,
-                  spdm_transport_none_encode_message,
-                  spdm_transport_none_decode_message))
+    if (!spdmInit(newItem, transEndpoint, spdmTrans->getSPDMtransport(),
+                  responderDeviceSendMessage, responderDeviceReceiveMessage))
     {
         return false;
     }
