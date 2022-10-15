@@ -327,8 +327,7 @@ SPDMRequesterImpl::SPDMRequesterImpl(
 {
     setCertificatePath(spdmRequesterCfg.certPath);
     if (!spdmInit(spdmResponder, endPointDevice, spdmTrans->getSPDMtransport(),
-                  requesterDeviceSendMessage, requesterDeviceReceiveMessage,
-                  spdm_transport_none_get_header_size))
+                  requesterDeviceSendMessage, requesterDeviceReceiveMessage))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl SPDM init failed!");

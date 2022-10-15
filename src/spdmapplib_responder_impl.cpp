@@ -134,8 +134,7 @@ bool SPDMResponderImpl::addNewDevice(
     spdmItem newItem;
 
     if (!spdmInit(newItem, transEndpoint, spdmTrans->getSPDMtransport(),
-                  responderDeviceSendMessage, responderDeviceReceiveMessage,
-                  spdm_transport_none_get_header_size))
+                  responderDeviceSendMessage, responderDeviceReceiveMessage))
     {
         return false;
     }

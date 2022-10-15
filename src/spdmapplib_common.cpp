@@ -194,8 +194,7 @@ void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq)
 bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
               const std::string transport,
               libspdm_device_send_message_func sendMessage,
-              libspdm_device_receive_message_func recvMessage,
-              libspdm_transport_get_header_size_func headerSizeCB)
+              libspdm_device_receive_message_func recvMessage)
 {
     spdm.spdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (spdm.spdmContext == nullptr)
@@ -238,6 +237,9 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     libspdm_transport_decode_message_func decodeCB =
         (transport == "mctp") ? libspdm_transport_mctp_decode_message
                               : spdm_transport_none_decode_message;
+    libspdm_transport_get_header_size_func headerSizeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_get_header_size
+                              : spdm_transport_none_get_header_size;
     libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
 
     libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,
