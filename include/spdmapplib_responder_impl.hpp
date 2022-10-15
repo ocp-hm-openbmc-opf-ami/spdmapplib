@@ -46,16 +46,6 @@ class SPDMResponderImpl
                       std::shared_ptr<spdm_transport::SPDMTransport> trans,
                       SPDMConfiguration& spdmConfig);
 
-    /*APIs called by transport layer*/
-    /**
-     * @brief Called when new endpoint detected.
-     *
-     * @param  transEP          The new endpoint object.
-     * @return true             If adding device is successful.
-     * @return false            If adding device failed.
-     **/
-    bool addNewDevice(spdm_transport::TransportEndPoint& transEP);
-
     /**
      * @brief Called when endpoint remove is detected.
      *
@@ -65,40 +55,6 @@ class SPDMResponderImpl
      **/
     bool updateSPDMPool(spdm_transport::TransportEndPoint& transEP);
 
-    /**
-     * @brief Called when message received.
-     *
-     * @param  transEP      The endpoint object sending data.
-     * @param  data         The vector of received data.
-     * @return true         If, adding data is successful
-     * @return false        If, adding data is failed
-     **/
-
-    bool addData(spdm_transport::TransportEndPoint& transEP,
-                 const std::vector<uint8_t>& data);
-    /**
-     * @brief Called when message received.
-     *
-     * The function is called in msgRecvCallback to process incoming received
-     *data.
-     * @param  transEP      The endpoint object sending data.
-     * @return true         If, processing SPDM msg is successful.
-     * @return false        If, processing SPDM msg failed
-     **/
-    bool processSPDMMessage(spdm_transport::TransportEndPoint& transEP);
-
-    /**
-     * @brief Register to transport layer for handling received data.
-     *
-     * @param  transEP      The endpoint object to receive data.
-     * @param  data         The vector of received data.
-     * @return true         If, msg call back invoked successfully.
-     * @return false        If, invoking msg callback fails
-     **/
-    bool msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
-                         const std::vector<uint8_t>& data);
-
-    /*Cabllback functions implementation for libspdm */
     /**
      * @brief Register to libspdm for sending SPDM payload.
      *
@@ -142,8 +98,8 @@ class SPDMResponderImpl
      **/
     void processSessionState(void* spdmContext, uint32_t sessionID,
                              libspdm_session_state_t sessionState);
-    /*Internal implementation*/
-  protected:
+
+  private:
     /**
      * @brief initSpdmContext initiates spdm context
      *
@@ -152,7 +108,48 @@ class SPDMResponderImpl
      */
     bool initSpdmContext(void);
 
-  private:
+    /**
+     * @brief Called when new endpoint detected.
+     *
+     * @param  transEP          The new endpoint object.
+     * @return true             If adding device is successful.
+     * @return false            If adding device failed.
+     **/
+    bool addNewDevice(spdm_transport::TransportEndPoint& transEP);
+
+    /**
+     * @brief Called when message received.
+     *
+     * @param  transEP      The endpoint object sending data.
+     * @param  data         The vector of received data.
+     * @return true         If, adding data is successful
+     * @return false        If, adding data is failed
+     **/
+    bool addData(spdm_transport::TransportEndPoint& transEP,
+                 const std::vector<uint8_t>& data);
+
+    /**
+     * @brief Called when message received.
+     *
+     * The function is called in msgRecvCallback to process incoming received
+     *data.
+     * @param  transEP      The endpoint object sending data.
+     * @return true         If, processing SPDM msg is successful.
+     * @return false        If, processing SPDM msg failed
+     **/
+    bool processSPDMMessage(spdm_transport::TransportEndPoint& transEP);
+
+    /**
+     * @brief Register to transport layer for handling received data.
+     *
+     * @param  transEP      The endpoint object to receive data.
+     * @param  data         The vector of received data.
+     * @return true         If, msg call back invoked successfully.
+     * @return false        If, invoking msg callback fails
+     **/
+    bool msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
+                         const std::vector<uint8_t>& data);
+
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;

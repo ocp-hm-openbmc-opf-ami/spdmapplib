@@ -14,10 +14,7 @@
  * limitation
  */
 #include "spdmapplib_requester_impl.hpp"
-extern "C"
-{
-#include "library/spdm_transport_none_lib.h"
-}
+
 #include "mctp_wrapper.hpp"
 
 namespace spdm_app_lib
@@ -198,10 +195,8 @@ bool SPDMRequesterImpl::doAuthentication(void)
 bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
 {
     uint8_t useSlotId = 0;
-    uint8_t numberOfBlock = 0;
     uint8_t numberOfBlocks = 0;
     uint32_t measurementRecordLength = 0;
-    constexpr uint8_t lastBlockIndex = 0xFE;
     std::array<uint8_t, LIBSPDM_MAX_HASH_SIZE> measurementHash{0};
     std::array<uint8_t, LIBSPDM_MAX_MEASUREMENT_RECORD_SIZE> measurement{0};
     spdmResponder.dataMeas.clear();
@@ -239,93 +234,30 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             "SPDMRequesterImpl::doMeasurement Meas CAP not Supported!");
         return false;
     }
-
-    if (mUseMeasurementOperation ==
-        SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS)
+    measurementRecordLength = measurement.size();
+    if (!validateSpdmRc(libspdm_get_measurement(
+            spdmResponder.spdmContext, session_id,
+            SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
+            mUseMeasurementOperation, useSlotId & 0xF, nullptr, &numberOfBlocks,
+            &measurementRecordLength, &measurement)))
     {
-        /* request all Meas at one time.*/
-        measurementRecordLength = measurement.size();
-        if (!validateSpdmRc(libspdm_get_measurement(
-                spdmResponder.spdmContext, session_id,
-                SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
-                SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS,
-                useSlotId & 0xF, nullptr, &numberOfBlock,
-                &measurementRecordLength, &measurement)))
-        {
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                "SPDMRequesterImpl::doMeasurement libspdm_get_measurements Failed!");
-            spdmResponder.dataMeas.clear();
-            return false;
-        }
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("SPDMRequesterImpl::doMeasurement numberOfBlock - " +
-             std::to_string(numberOfBlocks))
-                .c_str());
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("SPDMRequesterImpl::doMeasurement measurementRecordLength - " +
-             std::to_string(measurementRecordLength))
-                .c_str());
-        // Keep measurement to reserved vector.
-        spdmResponder.dataMeas.insert(
-            spdmResponder.dataMeas.end(), measurement.begin(),
-            measurement.begin() + measurementRecordLength);
+            "SPDMRequesterImpl::doMeasurement libspdm_get_measurements Failed!");
+        spdmResponder.dataMeas.clear();
+        return false;
     }
-    else
-    {
-        uint8_t requestAttribute = 0;
-        /* 1. query the total number of measurements available.*/
-        if (!validateSpdmRc(libspdm_get_measurement(
-                spdmResponder.spdmContext, session_id, requestAttribute,
-                SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS,
-                useSlotId & 0xF, nullptr, &numberOfBlocks, nullptr, nullptr)))
-        {
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                "SPDMRequesterImpl::doMeasurement libspdm_get_measurement Failed!");
-            freeSpdmContext(spdmResponder);
-            return false;
-        }
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            ("SPDMRequesterImpl::doMeasurement numberOfBlocks - " +
-             std::to_string(numberOfBlocks))
-                .c_str());
-        uint8_t receivedNumberOfBlock = 0;
-        for (uint8_t index = 1; index <= lastBlockIndex; index++)
-        {
-            if (receivedNumberOfBlock == numberOfBlocks)
-            {
-                break;
-            }
-            /* 2. query measurement one by one*/
-            /* get signature in last message only.*/
-            if (receivedNumberOfBlock == numberOfBlocks - 1)
-            {
-                requestAttribute |=
-                    SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE;
-            }
-            measurementRecordLength = measurement.size();
-            if (!validateSpdmRc(libspdm_get_measurement(
-                    spdmResponder.spdmContext, session_id, requestAttribute,
-                    index, useSlotId & 0xF, nullptr, &numberOfBlock,
-                    &measurementRecordLength, &measurement)))
-            {
-                continue;
-            }
-            receivedNumberOfBlock += 1;
-            phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                ("SPDMRequesterImpl::doMeasurement measurementRecordLength - " +
-                 std::to_string(measurementRecordLength))
-                    .c_str());
-            // Keep measurement to reserved vector.
-            spdmResponder.dataMeas.insert(
-                spdmResponder.dataMeas.end(), measurement.begin(),
-                measurement.begin() + measurementRecordLength);
-        }
-        if (receivedNumberOfBlock != numberOfBlocks)
-        {
-            spdmResponder.dataMeas.clear();
-            return false;
-        }
-    }
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("SPDMRequesterImpl::doMeasurement numberOfBlocks - " +
+         std::to_string(numberOfBlocks))
+            .c_str());
+    phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        ("SPDMRequesterImpl::doMeasurement measurementRecordLength - " +
+         std::to_string(measurementRecordLength))
+            .c_str());
+    // Keep measurement to reserved vector.
+    spdmResponder.dataMeas.insert(
+        spdmResponder.dataMeas.end(), measurement.begin(),
+        measurement.begin() + measurementRecordLength);
     return true;
 }
 
@@ -391,14 +323,11 @@ SPDMRequesterImpl::SPDMRequesterImpl(
     spdm_transport::TransportEndPoint& endPointDevice,
     SPDMConfiguration& spdmConfig) :
     ioc(io),
-    conn(con), spdmTrans(trans), transResponder(endPointDevice),
-    spdmRequesterCfg(spdmConfig)
+    conn(con), spdmTrans(trans), spdmRequesterCfg(spdmConfig)
 {
     setCertificatePath(spdmRequesterCfg.certPath);
-    if (!spdmInit(spdmResponder, transResponder, requesterDeviceSendMessage,
-                  requesterDeviceReceiveMessage,
-                  spdm_transport_none_encode_message,
-                  spdm_transport_none_decode_message,
+    if (!spdmInit(spdmResponder, endPointDevice, spdmTrans->getSPDMtransport(),
+                  requesterDeviceSendMessage, requesterDeviceReceiveMessage,
                   spdm_transport_none_get_header_size))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(

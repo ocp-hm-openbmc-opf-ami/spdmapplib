@@ -192,11 +192,11 @@ void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq)
 }
 
 bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
+              const std::string transport,
               libspdm_device_send_message_func sendMessage,
               libspdm_device_receive_message_func recvMessage,
-              libspdm_transport_encode_message_func encodeCB,
-              libspdm_transport_decode_message_func decodeCB,
-              libspdm_transport_get_header_size_func headerSizeCB)
+              libspdm_transport_get_header_size_func headerSizeCB
+                  libspdm_device_receive_message_func recvMessage)
 {
     spdm.spdmContext = allocate_zero_pool(libspdm_get_context_size());
     if (spdm.spdmContext == nullptr)
@@ -233,6 +233,12 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
         return false;
     }
 
+    libspdm_transport_encode_message_func encodeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_encode_message
+                              : spdm_transport_none_encode_message;
+    libspdm_transport_decode_message_func decodeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_decode_message
+                              : spdm_transport_none_decode_message;
     libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
 
     libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,

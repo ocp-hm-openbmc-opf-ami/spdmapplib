@@ -14,10 +14,7 @@
  * limitation
  */
 #include "spdmapplib_responder_impl.hpp"
-extern "C"
-{
-#include "library/spdm_transport_none_lib.h"
-}
+
 #include "mctp_wrapper.hpp"
 
 namespace spdm_app_lib
@@ -136,10 +133,8 @@ bool SPDMResponderImpl::addNewDevice(
 {
     spdmItem newItem;
 
-    if (!spdmInit(newItem, transEndpoint, responderDeviceSendMessage,
-                  responderDeviceReceiveMessage,
-                  spdm_transport_none_encode_message,
-                  spdm_transport_none_decode_message,
+    if (!spdmInit(newItem, transEndpoint, spdmTrans->getSPDMtransport(),
+                  responderDeviceSendMessage, responderDeviceReceiveMessage,
                   spdm_transport_none_get_header_size))
     {
         return false;
@@ -317,11 +312,9 @@ void SPDMResponderImpl::processConnectionState(
             res = libspdm_read_responder_public_certificate_chain(
                 it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
                 nullptr);
-            res = libspdm_read_responder_public_certificate_chain_per_slot(1,
-                                                                       it->useHashAlgo,
-                                                                       it->useAsymAlgo,
-                                                                       &data1, &data1Size,
-                                                                       NULL, NULL);
+            res = libspdm_read_responder_public_certificate_chain_per_slot(
+                1, it->useHashAlgo, it->useAsymAlgo, &data1, &data1Size, NULL,
+                NULL);
             if (res)
             {
                 initGetSetParameter(parameter, operationSet);
@@ -330,23 +323,28 @@ void SPDMResponderImpl::processConnectionState(
                      index++)
                 {
                     parameter.additional_data[0] = index;
-                    if (index == 1) {
+                    if (index == 1)
+                    {
                         if (!validateSpdmRc(libspdm_set_data(
                                 it->spdmContext,
-                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                                data1, data1Size)))
+                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                                &parameter, data1, data1Size)))
                         {
-                            phosphor::logging::log<phosphor::logging::level::ERR>(
+                            phosphor::logging::log<
+                                phosphor::logging::level::ERR>(
                                 "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
                             break;
                         }
-                    }else{
+                    }
+                    else
+                    {
                         if (!validateSpdmRc(libspdm_set_data(
                                 it->spdmContext,
-                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                                data, dataSize)))
+                                LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                                &parameter, data, dataSize)))
                         {
-                            phosphor::logging::log<phosphor::logging::level::ERR>(
+                            phosphor::logging::log<
+                                phosphor::logging::level::ERR>(
                                 "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
                             break;
                         }
