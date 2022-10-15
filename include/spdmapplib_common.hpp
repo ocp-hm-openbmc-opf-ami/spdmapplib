@@ -229,8 +229,6 @@ bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
     return true;
 }
 
-namespace libspdm_external_apis
-{
 /**
  * @brief  Acquires transport layer sender buffer
  *
@@ -284,5 +282,5 @@ libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* context,
  * @param  msgBufPtr  A pointer to a receiver buffer.
  **/
 void spdmDeviceReleaseReceiverBuffer(void* context, const void* msgBufPtr);
-} // namespace libspdm_external_apis
+
 } // namespace spdm_app_lib
