@@ -9,5 +9,5 @@ spdm_transport_none_lib = static_library('spdm_transport_none_lib',
                             dependencies : deps,
                             include_directories: root_inc,
                             link_language : 'c',
-                            c_args : '-Wno-error=unused-parameter')
+                            c_args : ['-Wno-error=unused-parameter', '-Wno-error=pedantic'])
 
