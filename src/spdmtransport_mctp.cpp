@@ -34,9 +34,7 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     {
         TransportEndPoint tmpEP;
         tmpEP.devIdentifier = srcEid;
-        std::vector<uint8_t> msgRcvd{};
-        msgRcvd.insert(msgRcvd.begin(), data.begin() + 1, data.end());
-        msgReceiveCB(tmpEP, msgRcvd);
+        msgReceiveCB(tmpEP, data);
     }
 }
 
@@ -87,14 +85,11 @@ int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
                                      uint64_t /*timeout*/)
 {
     mctpw::eid_t eid = transEP.devIdentifier;
-    std::vector<uint8_t> mctpPkt{};
-    mctpPkt.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
-    mctpPkt.insert(mctpPkt.end(), request.begin(), request.end());
     boost::asio::spawn(*(ioc), [this, eid,
-                                mctpPkt](boost::asio::yield_context yield) {
+                                request](boost::asio::yield_context yield) {
         mctpWrapper->sendYield(yield, eid,
                                static_cast<uint8_t>(mctpw::MessageType::spdm),
-                               false, mctpPkt);
+                               false, request);
     });
 
     return spdm_app_lib::error_codes::returnSuccess;
@@ -110,10 +105,7 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
     std::pair<boost::system::error_code, mctpw::ByteArray> reply;
     try
     {
-        std::vector<uint8_t> mctpPkt{};
-        mctpPkt.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
-        mctpPkt.insert(mctpPkt.end(), request.begin(), request.end());
-        reply = mctpWrapper->sendReceiveBlocked(eid, mctpPkt,
+        reply = mctpWrapper->sendReceiveBlocked(eid, request,
                                                 sendReceiveBlockedTimeout);
     }
     catch (const std::exception& exceptionIn)
@@ -134,8 +126,7 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
         return spdm_app_lib::error_codes::generalReturnError;
     }
     responsePacket.clear();
-    responsePacket.insert(responsePacket.begin(), reply.second.begin() + 1,
-                          reply.second.end());
+    responsePacket = reply.second;
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
@@ -161,6 +152,11 @@ void SPDMTransportMCTP::initDiscovery(
             transAddNewDevice(item.first);
         }
     });
+}
+
+std::string SPDMTransportMCTP::getSPDMtransport()
+{
+    return "mctp";
 }
 
 SPDMTransportMCTP::SPDMTransportMCTP(
