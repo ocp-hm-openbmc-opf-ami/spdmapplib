@@ -32,7 +32,7 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     }
     SPDMRequesterImpl* spdmTmp =
         reinterpret_cast<SPDMRequesterImpl*>(spdmAppContext);
-    auto data = formSendMessage(requestSize, request);
+    std::vector<uint8_t> data = formSendMessage(requestSize, request);
     if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
