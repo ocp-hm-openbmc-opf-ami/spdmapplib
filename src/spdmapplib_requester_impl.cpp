@@ -63,10 +63,7 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
 
 SPDMRequesterImpl::~SPDMRequesterImpl()
 {
-    if (spdmResponder.spdmContext)
-    {
-        freeSpdmContext(spdmResponder);
-    }
+    freeSpdmContext(spdmResponder);
 }
 
 void SPDMRequesterImpl::addData(spdm_transport::TransportEndPoint& transEP,

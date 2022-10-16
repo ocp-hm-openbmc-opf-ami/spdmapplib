@@ -32,8 +32,11 @@ void setCertificatePath(std::string& certPath)
 
 void freeSpdmContext(spdmItem& spdm)
 {
-    free_pool(spdm.spdmContext);
-    spdm.spdmContext = nullptr;
+    if (spdm.spdmContext)
+    {
+        free_pool(spdm.spdmContext);
+        spdm.spdmContext = nullptr;
+    }
     spdm.data.clear();
     spdm.dataCert.clear();
     spdm.dataMeas.clear();
