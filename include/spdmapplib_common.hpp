@@ -186,10 +186,10 @@ bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
                  libspdm_data_parameter_t parameter)
 {
     T data;
-    size_t data_size = sizeof(data);
+    size_t dataSize = sizeof(data);
 
     if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext, configType,
-                                         &parameter, &data, &data_size)))
+                                         &parameter, &data, &dataSize)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (" libspdm_get_data Failed for Config Type!- " +
