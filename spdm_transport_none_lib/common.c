@@ -5,9 +5,9 @@
  *https://github.com/DMTF/libspdm/blob/main/LICENSE.md
  **/
 
-#include "hal/library/debuglib.h"
 #include "library/spdm_secured_message_lib.h"
 #include "library/spdm_transport_none_lib.h"
+#include "hal/library/debuglib.h"
 
 /**
  * Encode a normal message or secured message to a transport message.
