@@ -262,6 +262,7 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
 void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
+    constexpr uint8_t rootCertSlotID = 1;
     void* certChain;
     void* rootCert;
     size_t certChainSize = 0;
@@ -314,7 +315,7 @@ void SPDMResponderImpl::processConnectionState(
                 break;
             }
             if (!libspdm_read_responder_public_certificate_chain_per_slot(
-                    1, it->useHashAlgo, it->useAsymAlgo, &rootCert,
+                    rootCertSlotID, it->useHashAlgo, it->useAsymAlgo, &rootCert,
                     &rootCertSize, NULL, NULL))
             {
                 break;
