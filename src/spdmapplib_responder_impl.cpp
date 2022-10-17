@@ -263,10 +263,10 @@ void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
     bool res;
-    void* data;
-    void* data1;
-    size_t dataSize = 0;
-    size_t data1Size = 0;
+    void* certChain;
+    void* rootCert;
+    size_t certChainSize = 0;
+    size_t rootCertSize = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
@@ -309,11 +309,11 @@ void SPDMResponderImpl::processConnectionState(
                 break;
             }
             res = libspdm_read_responder_public_certificate_chain(
-                it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
-                nullptr);
+                it->useHashAlgo, it->useAsymAlgo, &certChain, &certChainSize,
+                nullptr, nullptr);
             res = libspdm_read_responder_public_certificate_chain_per_slot(
-                1, it->useHashAlgo, it->useAsymAlgo, &data1, &data1Size, NULL,
-                NULL);
+                1, it->useHashAlgo, it->useAsymAlgo, &rootCert, &rootCertSize,
+                NULL, NULL);
             if (res)
             {
                 initGetSetParameter(parameter, operationSet);
@@ -327,7 +327,7 @@ void SPDMResponderImpl::processConnectionState(
                         if (!validateSpdmRc(libspdm_set_data(
                                 it->spdmContext,
                                 LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
-                                &parameter, data1, data1Size)))
+                                &parameter, rootCert, rootCertSize)))
                         {
                             phosphor::logging::log<
                                 phosphor::logging::level::ERR>(
@@ -340,7 +340,7 @@ void SPDMResponderImpl::processConnectionState(
                         if (!validateSpdmRc(libspdm_set_data(
                                 it->spdmContext,
                                 LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
-                                &parameter, data, dataSize)))
+                                &parameter, certChain, certChainSize)))
                         {
                             phosphor::logging::log<
                                 phosphor::logging::level::ERR>(
