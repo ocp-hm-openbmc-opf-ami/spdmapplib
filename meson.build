@@ -1,6 +1,6 @@
 project(
     'spdmapplib',
-    ['cpp', 'c'],
+    ['cpp'],
     license: 'Apache-2.0',
     version: '1.0.0',
     default_options: [
@@ -24,9 +24,7 @@ endif
 
 if dep_required
     libspdm = dependency('libspdm')
-    root_inc = include_directories(
-                            'include',
-                            'spdm_transport_none_lib')
+    root_inc = include_directories('include')
 else
     cc = meson.get_compiler('cpp')
     message('Compiler ID:'+cc.get_id())
@@ -39,7 +37,6 @@ else
             dirs : [meson.current_source_dir()+'/libspdm/build/lib'])
     root_inc = include_directories(
                             'include',
-                            'spdm_transport_none_lib',
                             'libspdm/include',
                             'libspdm/include/hal/x64',
                             'libspdm/os_stub/spdm_device_secret_lib_sample',
@@ -73,13 +70,8 @@ deps = [
     mctpwplus
 ]
 
-subdir('spdm_transport_none_lib')
-spdm_transport_none_lib_dep = declare_dependency(include_directories : root_inc,
-                                dependencies: deps,
-                                link_with : spdm_transport_none_lib)
 lib_deps = [
-    deps,
-    spdm_transport_none_lib_dep,
+    deps
 ]
 
 app_deps = [
