@@ -4,6 +4,7 @@ addlib lib/libdebuglib.a
 addlib lib/libspdm_requester_lib.a
 addlib lib/libspdm_responder_lib.a
 addlib lib/libspdm_common_lib.a
+addlib lib/libspdm_transport_mctp_lib.a
 addlib lib/librnglib.a
 addlib lib/libopenssllib.a
 addlib lib/libcryptlib_openssl.a

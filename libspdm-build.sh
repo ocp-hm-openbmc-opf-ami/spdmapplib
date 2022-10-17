@@ -3,9 +3,8 @@ if [ ! -f libspdm/build/lib/libspdm.a ]; then
     echo "libspdm.a not found!!, building..."
     git clone https://github.com/DMTF/libspdm.git
     cd libspdm
-    git checkout -b libspdm_build 1f7c06ff0a892ca3877d833cb93ada649c3ab27e
+    git checkout -b libspdm_build d3f5c697319b5dfeee387eeabb1f644221ff0e7d
     git submodule update --init
-    git am ../subprojects/libspdm/0001-Rename-cplusplus-keywords.patch
     mkdir build
     cd build
     cmake -DARCH=x64 -DTOOLCHAIN=GCC -DTARGET=Release -DCRYPTO=openssl ..
