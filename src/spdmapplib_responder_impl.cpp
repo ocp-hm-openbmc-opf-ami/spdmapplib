@@ -326,7 +326,7 @@ void SPDMResponderImpl::processConnectionState(
                  index++)
             {
                 parameter.additional_data[0] = index;
-                if (index == 1)
+                if (index == rootCertSlotID)
                 {
                     if (!validateSpdmRc(libspdm_set_data(
                             it->spdmContext,
