@@ -21,8 +21,10 @@ namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
 
-return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
-                                         const void* request, uint64_t timeout)
+libspdm_return_t responderDeviceSendMessage(void* spdmContext,
+                                            size_t requestSize,
+                                            const void* request,
+                                            uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -46,9 +48,10 @@ return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
-return_status responderDeviceReceiveMessage(void* spdmContext,
-                                            uintn* responseSize, void* response,
-                                            uint64_t timeout)
+libspdm_return_t responderDeviceReceiveMessage(void* spdmContext,
+                                               size_t* responseSize,
+                                               void** response,
+                                               uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -65,7 +68,7 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     }
     *responseSize = rspData.size();
     std::copy(rspData.begin(), rspData.end(),
-              reinterpret_cast<uint8_t*>(response));
+              reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
@@ -259,9 +262,11 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
 void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
-    bool res;
-    void* data;
-    uint32_t dataSize = 0;
+    constexpr uint8_t rootCertSlotID = 1;
+    void* certChain;
+    void* rootCert;
+    size_t certChainSize = 0;
+    size_t rootCertSize = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
@@ -303,38 +308,50 @@ void SPDMResponderImpl::processConnectionState(
             {
                 break;
             }
-            res = read_responder_public_certificate_chain(
-                it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
-                nullptr);
-            if (res)
+            if (!libspdm_read_responder_public_certificate_chain(
+                    it->useHashAlgo, it->useAsymAlgo, &certChain,
+                    &certChainSize, nullptr, nullptr))
             {
-                initGetSetParameter(parameter, operationSet);
-                if (!spdmSetData(
-                        *it, LIBSPDM_DATA_LOCAL_SLOT_COUNT,
-                        static_cast<uint8_t>(spdmResponderCfg.slotcount),
-                        parameter))
+                break;
+            }
+            if (!libspdm_read_responder_public_certificate_chain_per_slot(
+                    rootCertSlotID, it->useHashAlgo, it->useAsymAlgo, &rootCert,
+                    &rootCertSize, NULL, NULL))
+            {
+                break;
+            }
+            initGetSetParameter(parameter, operationSet);
+            for (uint8_t index = 0;
+                 index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
+                 index++)
+            {
+                parameter.additional_data[0] = index;
+                if (index == rootCertSlotID)
                 {
-                    phosphor::logging::log<phosphor::logging::level::ERR>(
-                        "SPDMResponderImpl::processConnectionState Slot Count FAILED!!");
-                    break;
-                }
-                for (uint8_t index = 0;
-                     index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
-                     index++)
-                {
-                    parameter.additional_data[0] = index;
                     if (!validateSpdmRc(libspdm_set_data(
                             it->spdmContext,
                             LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                            data, dataSize)))
+                            rootCert, rootCertSize)))
+                    {
+                        phosphor::logging::log<phosphor::logging::level::ERR>(
+                            "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
+                        break;
+                    }
+                }
+                else
+                {
+                    if (!validateSpdmRc(libspdm_set_data(
+                            it->spdmContext,
+                            LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
+                            certChain, certChainSize)))
                     {
                         phosphor::logging::log<phosphor::logging::level::ERR>(
                             "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
                         break;
                     }
                 }
-                /* do not free it*/
             }
+            /* do not free it*/
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
             // TODO
@@ -351,7 +368,6 @@ void SPDMResponderImpl::processConnectionState(
         default:
             break;
     }
-    return;
 }
 
 void SPDMResponderImpl::processSessionState(

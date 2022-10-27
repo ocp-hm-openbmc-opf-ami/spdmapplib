@@ -20,6 +20,11 @@ namespace spdm_app_lib
 /* stores the certificate path */
 std::string setCertPath{};
 
+/* Required by libspdm for send/recv payload*/
+bool sendReceiveBufferAcquired = false;
+size_t sendReceiveBufferSize(0);
+std::array<uint8_t, LIBSPDM_SENDER_RECEIVE_BUFFER_SIZE> sendReceiveBuffer;
+
 char* getCertificatePath()
 {
     return const_cast<char*>(setCertPath.c_str());
@@ -30,8 +35,18 @@ void setCertificatePath(std::string& certPath)
     setCertPath = certPath;
 }
 
+void libspdmRegisterDeviceBuffer(void* spdmContext)
+{
+    libspdm_register_device_buffer_func(
+        spdmContext, spdmDeviceAcquireSenderBuffer,
+        spdmDeviceReleaseSenderBuffer, spdmDeviceAcquireReceiverBuffer,
+        spdmDeviceReleaseReceiverBuffer);
+}
+
 void freeSpdmContext(spdmItem& spdm)
 {
+    free_pool(spdm.scratchBuffer);
+    spdm.scratchBuffer = nullptr;
     free_pool(spdm.spdmContext);
     spdm.spdmContext = nullptr;
     spdm.data.clear();
@@ -39,9 +54,9 @@ void freeSpdmContext(spdmItem& spdm)
     spdm.dataMeas.clear();
 }
 
-bool validateSpdmRc(return_status status)
+bool validateSpdmRc(libspdm_return_t status)
 {
-    if (RETURN_ERROR(status))
+    if (LIBSPDM_STATUS_IS_ERROR(status))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (" libspdm return status Error!- " + std::to_string(status))
@@ -53,7 +68,7 @@ bool validateSpdmRc(return_status status)
 
 bool getSPDMAppContext(void* spdmContext, void*& spdmAppContext)
 {
-    uint32_t dataSize = 0;
+    size_t dataSize = 0;
     libspdm_data_parameter_t parameter;
     initGetSetParameter(parameter, spdm_app_lib::operationGet);
     dataSize = sizeof(dataSize);
@@ -169,7 +184,7 @@ bool spdmGetAlgo(spdmItem& spdm, uint32_t& measHash, uint32_t& baseAsym,
 
 void initGetSetParameter(libspdm_data_parameter_t& parameter, uint8_t opReq)
 {
-    zero_mem(&parameter, sizeof(parameter));
+    libspdm_zero_mem(&parameter, sizeof(parameter));
     static constexpr std::array<libspdm_data_location_t, 4> locationMap{
         LIBSPDM_DATA_LOCATION_CONNECTION, LIBSPDM_DATA_LOCATION_LOCAL,
         LIBSPDM_DATA_LOCATION_SESSION, LIBSPDM_DATA_LOCATION_MAX};
@@ -205,16 +220,76 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
             "spdmInit libspdm_init_context Failed!");
         return false;
     }
-    auto encodeCB = (transport == "mctp")
-                        ? libspdm_transport_mctp_encode_message
-                        : spdm_transport_none_encode_message;
-    auto decodeCB = (transport == "mctp")
-                        ? libspdm_transport_mctp_decode_message
-                        : spdm_transport_none_decode_message;
+
+    size_t scratchBufferSize =
+        libspdm_get_sizeof_required_scratch_buffer(spdm.spdmContext);
+    spdm.scratchBuffer = allocate_zero_pool(scratchBufferSize);
+    if (spdm.scratchBuffer == nullptr)
+    {
+        free_pool(spdm.spdmContext);
+        spdm.spdmContext = nullptr;
+        return false;
+    }
+
+    libspdm_transport_encode_message_func encodeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_encode_message
+                              : spdm_transport_none_encode_message;
+    libspdm_transport_decode_message_func decodeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_decode_message
+                              : spdm_transport_none_decode_message;
+    libspdm_transport_get_header_size_func headerSizeCB =
+        (transport == "mctp") ? libspdm_transport_mctp_get_header_size
+                              : spdm_transport_none_get_header_size;
     libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
 
-    libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB);
+    libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,
+                                          headerSizeCB);
+
+    libspdmRegisterDeviceBuffer(spdm.spdmContext);
+    libspdm_set_scratch_buffer(spdm.spdmContext, spdm.scratchBuffer,
+                               scratchBufferSize);
+
     return true;
+}
+
+libspdm_return_t spdmDeviceAcquireSenderBuffer(void* /*context*/,
+                                               size_t* max_msg_size,
+                                               void** msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
+    *max_msg_size = sendReceiveBuffer.size();
+    *msg_buf_ptr = &sendReceiveBuffer;
+    std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
+    sendReceiveBufferAcquired = true;
+    return LIBSPDM_STATUS_SUCCESS;
+}
+
+void spdmDeviceReleaseSenderBuffer(void* /*context*/, const void* msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(sendReceiveBufferAcquired);
+    LIBSPDM_ASSERT(msg_buf_ptr == &sendReceiveBuffer);
+    sendReceiveBufferAcquired = false;
+    return;
+}
+
+libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* /*context*/,
+                                                 size_t* max_msg_size,
+                                                 void** msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
+    *max_msg_size = sendReceiveBuffer.size();
+    *msg_buf_ptr = &sendReceiveBuffer;
+    std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
+    sendReceiveBufferAcquired = true;
+    return LIBSPDM_STATUS_SUCCESS;
+}
+
+void spdmDeviceReleaseReceiverBuffer(void* /*context*/, const void* msg_buf_ptr)
+{
+    LIBSPDM_ASSERT(sendReceiveBufferAcquired);
+    LIBSPDM_ASSERT(msg_buf_ptr == &sendReceiveBuffer);
+    sendReceiveBufferAcquired = false;
+    return;
 }
 
 } // namespace spdm_app_lib

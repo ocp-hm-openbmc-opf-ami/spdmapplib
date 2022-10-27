@@ -21,8 +21,10 @@ namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
 
-return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
-                                         const void* request, uint64_t timeout)
+libspdm_return_t requesterDeviceSendMessage(void* spdmContext,
+                                            size_t requestSize,
+                                            const void* request,
+                                            uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -46,9 +48,10 @@ return_status requesterDeviceSendMessage(void* spdmContext, uintn requestSize,
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
-return_status requesterDeviceReceiveMessage(void* spdmContext,
-                                            uintn* responseSize, void* response,
-                                            uint64_t timeout)
+libspdm_return_t requesterDeviceReceiveMessage(void* spdmContext,
+                                               size_t* responseSize,
+                                               void** response,
+                                               uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -65,7 +68,7 @@ return_status requesterDeviceReceiveMessage(void* spdmContext,
     }
     *responseSize = rspData.size();
     std::copy(rspData.begin(), rspData.end(),
-              reinterpret_cast<uint8_t*>(response));
+              reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
@@ -140,7 +143,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         totalDigestBuffer{0};
 
     spdmResponder.dataCert.clear();
-    uint32_t certChainSize = certChain.size();
+    size_t certChainSize = certChain.size();
 
     if (!getVCA(false))
     {

@@ -19,6 +19,7 @@
 
 #include <phosphor-logging/log.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -50,7 +51,6 @@ inline constexpr uint32_t exeConnectionMeas = 0x10;
 inline constexpr uint32_t exeConnection =
     (exeConnectionDigest | exeConnectionCert | exeConnectionChal |
      exeConnectionMeas);
-
 /**
  * @brief SPDM device context structure
  *
@@ -58,6 +58,7 @@ inline constexpr uint32_t exeConnection =
 typedef struct
 {
     void* spdmContext;
+    void* scratchBuffer;
     spdm_transport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
@@ -87,6 +88,15 @@ char* getCertificatePath();
 void setCertificatePath(std::string& certPath);
 
 /**
+ * @brief Register SPDM device buffer management functions.
+ * This function must be called after libspdm_init_context,
+ * and before any SPDM communication.
+ *
+ * @param  spdmContext   A pointer to the SPDM context.
+ **/
+void libspdmRegisterDeviceBuffer(void* spdmContext);
+
+/**
  * @brief freeSpdmContext deallocates spdm context
  *
  * @param spdm      spdmItem having context
@@ -100,7 +110,7 @@ void freeSpdmContext(spdmItem& spdm);
  * @return true     if return status is Success
  * @return false    if return status is failure
  */
-bool validateSpdmRc(return_status status);
+bool validateSpdmRc(libspdm_return_t status);
 
 /**
  * @brief getSPDMAppContext get spdm app context
@@ -176,11 +186,10 @@ bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
                  libspdm_data_parameter_t parameter)
 {
     T data;
-    uint32_t data_size;
+    size_t dataSize = sizeof(data);
 
-    data_size = sizeof(data);
     if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext, configType,
-                                         &parameter, &data, &data_size)))
+                                         &parameter, &data, &dataSize)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (" libspdm_get_data Failed for Config Type!- " +
@@ -219,5 +228,59 @@ bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
     }
     return true;
 }
+
+/**
+ * @brief  Acquires transport layer sender buffer
+ *
+ * @param  context     Pointer to the SPDM context.
+ * @param  maxMsgSize  Maximum size of sender buffer.
+ * @param  msgBufPtr   Pointer to a sender buffer.
+ * @retval RETURN_SUCCESS  The sender buffer is acquired.
+ * @retval RETURN_DEVICE_ERROR       A device error occurs when the SPDM message
+ *is received from the device.
+ * @retval RETURN_INVALID_PARAMETER  The message is NULL, message_size is NULL
+ *or the *message_size is zero.
+ * @retval RETURN_TIMEOUT            A timeout occurred while waiting for the
+ *SPDM message to execute.
+ **/
+libspdm_return_t spdmDeviceAcquireSenderBuffer(void* context,
+                                               size_t* maxMsgSize,
+                                               void** msgBufPtr);
+
+/**
+ * @brief Release transport layer sender buffer
+ *
+ * @param  context     A pointer to the SPDM context.
+ * @param  msgBufPtr   A pointer to a sender buffer.
+ **/
+void spdmDeviceReleaseSenderBuffer(void* context, const void* msgBufPtr);
+
+/**
+ * @brief Acquires transport layer receiver buffer
+ *
+ * @param  spdmContext    A pointer to the SPDM context.
+ * @param  messageSize    size in bytes of the message data buffer.
+ * @param  message        A pointer to a destination buffer to store the
+ *message.
+ *
+ * @retval RETURN_SUCCESS            The SPDM message is received successfully.
+ * @retval RETURN_DEVICE_ERROR       A device error occurs when the SPDM message
+ *is received from the device.
+ * @retval RETURN_INVALID_PARAMETER  The message is NULL, message_size is NULL
+ *or the *message_size is zero.
+ * @retval RETURN_TIMEOUT            A timeout occurred while waiting for the
+ *SPDM message to execute.
+ **/
+libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* context,
+                                                 size_t* maxMsgSize,
+                                                 void** msgBufPtr);
+
+/**
+ * Release transport layer receiver buffer
+ *
+ * @param  context    A pointer to the SPDM context.
+ * @param  msgBufPtr  A pointer to a receiver buffer.
+ **/
+void spdmDeviceReleaseReceiverBuffer(void* context, const void* msgBufPtr);
 
 } // namespace spdm_app_lib
