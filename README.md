@@ -147,57 +147,70 @@ Defined required APIs for SPDMResponder listed below, detail information is in t
 Defined required APIs for SPDMTransport listed below, detail information is in the file [spdmtransport.hpp](./include/spdmtransport.hpp).
 
 ```c++
+    /* APIs for requester and responder */
     /**
-     * @brief SPDMTransportMCTP constructor
-     * @param  ioc       shared_ptr to boost io_context object.
-     * @param  conn      shared_ptr to already existing boost
-     * @param  id        Transport layer interface id.
+     * @brief The function is responsible for doing discovery of the endPoints
+     * @param  callback
      **/
-    SPDMTransportMCTP(std::shared_ptr<boost::asio::io_service> io,
-                      std::shared_ptr<sdbusplus::asio::connection> conn,
-                      mctpw::BindingType tranType);
+    virtual void initDiscovery(std::function<void(TransportEndPoint endPoint,
+                                                  spdm_transport::Event event)>
+                                   onEndPointChange) = 0;
 
-    /**
-     * @brief Initial function of transport instance
-     * @param  msgRcvCB  The callback function for messages received.
-     **/
-    void setListener(MsgReceiveCallback msgRcvCB) override;
-
+    /****************************************************
+        APIs to responder and interface that implementation should override
+    these pure virtual functions
+    ******************************************************/
     /**
      * @brief The async send data function for responder
      *  nonblocking function to send message to remote endpoint.
+     *
      * @param  transEP           The destination endpoint.
-     * @param  request           The buffer vector of data.
+     * @param  request           The vector of payload.
      * @param  timeout           The timeout time.
      * @return 0                 Send is successful
      * @return other values      Send failed
+     *
      **/
-    int asyncSendData(TransportEndPoint& transEP,
-                      const std::vector<uint8_t>& request,
-                      uint64_t timeout) override;
+    virtual int asyncSendData(TransportEndPoint& transEP,
+                              const std::vector<uint8_t>& request,
+                              uint64_t timeout) = 0;
 
+    /**
+     * @brief set Listener for the messages received
+     *
+     * @param  msgRcvCB          Listener for async messages
+     **/
+    virtual void
+        setListener(MsgReceiveCallback msgRcvCB) = 0; // override this function
+                                                      // in implementation
+    /****************************************************
+        APIs for requester
+    ******************************************************/
     /**
      * @brief The sync send and receive data function for requester
      *  blocking function to send SPDM payload and get response data.
-     * @param transEP     The destination endpoint.
-     * @param request     The vector of data payload.
-     * @param timeout     The timeout time.
-     * @param rspRcvCB    The resRcvCB to be called when response data received.
+     *
+     * @param  transEP           The destination endpoint.
+     * @param  request           The vector of data payload.
+     * @param  timeout           The timeout time.
+     * @param  rspRcvCB          The resRcvCB when response data received.
      * @return 0                 Send is successful
      * @return other values      Send failed
      **/
-    int sendRecvData(TransportEndPoint& transEP,
-                     const std::vector<uint8_t>& request, uint64_t timeout,
-                     std::vector<uint8_t>& response) override;
+    virtual int sendRecvData(TransportEndPoint& transEP,
+                             const std::vector<uint8_t>& request,
+                             uint64_t timeout,
+                             std::vector<uint8_t>& response) = 0;
 
     /**
-     * @brief The function is responsible for doing discovery of the endPoints.
-     * @param  callback
-     **/
-    void initDiscovery(
-        std::function<void(spdm_transport::TransportEndPoint endPoint,
-                           spdm_transport::Event event)>
-            onEndPointChange) override;
+     * @brief Defines the default underlying transport
+     *
+     * @return std::string default
+     */
+    virtual std::string getSPDMtransport()
+    {
+        return "default";
+    }
 ```
 
 ## Entity Manager Configuration
@@ -306,20 +319,20 @@ Example configurations.
               │
 --------------│---------[spdmapplib]------------------------
               │
-┌─────────────▼────────────┐
-│                          │
-│    SPDMResponderImpl     │
-│    SPDMRequesterImpl     │
-│                          │
-└─────────────┬────────────┘
-         <inherits>
-              │
 ┌─────────────▼─────────────┐
 │                           │
 │ spdmapplib::SPDMResponder │
 │ spdmapplib::SPDMRequester │
 │                           │
-└───────────────────────────┘
+└─────────────┬─────────────┘
+         <instantiates>
+              │
+┌─────────────▼────────────┐
+│                          │
+│    SPDMResponderImpl     │
+│    SPDMRequesterImpl     │
+│                          │
+└──────────────────────────┘
 ```
 
 ## Requester Application Example
