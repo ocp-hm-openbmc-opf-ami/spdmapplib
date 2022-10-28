@@ -85,7 +85,6 @@ int SPDMTransportMCTP::asyncSendData(TransportEndPoint& transEP,
                                      uint64_t /*timeout*/)
 {
     mctpw::eid_t eid = transEP.devIdentifier;
-
     boost::asio::spawn(*(ioc), [this, eid,
                                 request](boost::asio::yield_context yield) {
         mctpWrapper->sendYield(yield, eid,
@@ -119,13 +118,16 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
     }
     if (reply.first)
     {
-        return reply.first.value();
+        return spdm_app_lib::error_codes::generalReturnError;
     }
-    else
+
+    if (reply.second.at(0) != static_cast<uint8_t>(mctpw::MessageType::spdm))
     {
-        responsePacket = reply.second;
-        return spdm_app_lib::error_codes::returnSuccess;
+        return spdm_app_lib::error_codes::generalReturnError;
     }
+    responsePacket.clear();
+    responsePacket = reply.second;
+    return spdm_app_lib::error_codes::returnSuccess;
 }
 
 void SPDMTransportMCTP::initDiscovery(
@@ -150,6 +152,11 @@ void SPDMTransportMCTP::initDiscovery(
             transAddNewDevice(item.first);
         }
     });
+}
+
+std::string SPDMTransportMCTP::getSPDMtransport()
+{
+    return "mctp";
 }
 
 SPDMTransportMCTP::SPDMTransportMCTP(

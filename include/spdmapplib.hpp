@@ -55,8 +55,8 @@ enum class SPDMConfigIdentifier
     basicMutualSupport,
     mutualAuthValue
 };
-std::map<std::string, uint32_t>
-    getSPDMConfigMap(SPDMConfigIdentifier configIdentifier);
+std::map<std::string, uint32_t> __attribute__((visibility("default")))
+getSPDMConfigMap(SPDMConfigIdentifier configIdentifier);
 
 /**
  * @brief The responder base class

@@ -15,42 +15,15 @@
  */
 #include "spdmapplib_responder_impl.hpp"
 
-#include "library/spdm_transport_none_lib.h"
-
 #include "mctp_wrapper.hpp"
 
 namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
 
-return_status responderDeviceSendMessage(void* spdmContext, uintn requestSize,
-                                         const void* request, uint64_t timeout)
-{
-    void* spdmAppContext = nullptr;
-
-    if (!getSPDMAppContext(spdmContext, spdmAppContext))
-    {
-        return spdm_app_lib::error_codes::generalReturnError;
-    }
-    SPDMResponderImpl* pspdmTmp =
-        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    uint8_t* requestPayload =
-        reinterpret_cast<uint8_t*>(const_cast<void*>(request));
-    std::vector<uint8_t> data{};
-    data.push_back(static_cast<uint8_t>(mctpw::MessageType::spdm));
-    for (uint32_t j = 0; j < requestSize; j++)
-    {
-        data.push_back(*(requestPayload + j));
-    }
-    if (!pspdmTmp->deviceSendMessage(spdmContext, data, timeout))
-    {
-        return spdm_app_lib::error_codes::generalReturnError;
-    }
-    return spdm_app_lib::error_codes::returnSuccess;
-}
-
-return_status responderDeviceReceiveMessage(void* spdmContext,
-                                            uintn* responseSize, void* response,
+libspdm_return_t responderDeviceSendMessage(void* spdmContext,
+                                            size_t requestSize,
+                                            const void* request,
                                             uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
@@ -59,16 +32,43 @@ return_status responderDeviceReceiveMessage(void* spdmContext,
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    std::vector<uint8_t> rspData{};
-    if (!pspdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    uint8_t* requestPayload =
+        reinterpret_cast<uint8_t*>(const_cast<void*>(request));
+    std::vector<uint8_t> data{};
+    for (uint32_t j = 0; j < requestSize; j++)
+    {
+        data.push_back(*(requestPayload + j));
+    }
+    if (!spdmTmp->deviceSendMessage(spdmContext, data, timeout))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
-    *responseSize = rspData.size() - 1; // skip MessageType byte
-    std::copy(rspData.begin() + 1, rspData.end(),
-              reinterpret_cast<uint8_t*>(response));
+    return spdm_app_lib::error_codes::returnSuccess;
+}
+
+libspdm_return_t responderDeviceReceiveMessage(void* spdmContext,
+                                               size_t* responseSize,
+                                               void** response,
+                                               uint64_t timeout)
+{
+    void* spdmAppContext = nullptr;
+
+    if (!getSPDMAppContext(spdmContext, spdmAppContext))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
+    SPDMResponderImpl* spdmTmp =
+        reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
+    std::vector<uint8_t> rspData{};
+    if (!spdmTmp->deviceReceiveMessage(spdmContext, rspData, timeout))
+    {
+        return spdm_app_lib::error_codes::generalReturnError;
+    }
+    *responseSize = rspData.size();
+    std::copy(rspData.begin(), rspData.end(),
+              reinterpret_cast<uint8_t*>(*response));
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
@@ -80,9 +80,9 @@ void spdmServerConnectionStateCallback(
     {
         return;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    pspdmTmp->processConnectionState(spdmContext, connectionState);
+    spdmTmp->processConnectionState(spdmContext, connectionState);
 }
 
 void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
@@ -94,16 +94,16 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
     {
         return;
     }
-    SPDMResponderImpl* pspdmTmp =
+    SPDMResponderImpl* spdmTmp =
         reinterpret_cast<SPDMResponderImpl*>(spdmAppContext);
-    return pspdmTmp->processSessionState(spdmContext, sessionID, sessionState);
+    return spdmTmp->processSessionState(spdmContext, sessionID, sessionState);
 }
 
 SPDMResponderImpl::~SPDMResponderImpl()
 {
     for (auto& item : spdmPool)
     {
-        if (item.pspdmContext)
+        if (item.spdmContext)
         {
             freeSpdmContext(item);
         }
@@ -120,7 +120,7 @@ bool SPDMResponderImpl::updateSPDMPool(
     {
         return false;
     }
-    if (it->pspdmContext != nullptr)
+    if (it->spdmContext != nullptr)
     {
         freeSpdmContext(*it);
     }
@@ -133,22 +133,20 @@ bool SPDMResponderImpl::addNewDevice(
 {
     spdmItem newItem;
 
-    if (!spdmInit(newItem, transEndpoint, responderDeviceSendMessage,
-                  responderDeviceReceiveMessage,
-                  spdm_transport_none_encode_message,
-                  spdm_transport_none_decode_message))
+    if (!spdmInit(newItem, transEndpoint, spdmTrans->getSPDMtransport(),
+                  responderDeviceSendMessage, responderDeviceReceiveMessage))
     {
         return false;
     }
 
     if (!validateSpdmRc(libspdm_register_session_state_callback_func(
-            newItem.pspdmContext, spdmServerSessionStateCallback)))
+            newItem.spdmContext, spdmServerSessionStateCallback)))
     {
         return false;
     }
 
     if (!validateSpdmRc(libspdm_register_connection_state_callback_func(
-            newItem.pspdmContext, spdmServerConnectionStateCallback)))
+            newItem.spdmContext, spdmServerConnectionStateCallback)))
     {
         return false;
     }
@@ -163,7 +161,7 @@ bool SPDMResponderImpl::initSpdmContext()
 
     initGetSetParameter(parameter, operationSet);
     return validateSpdmRc(libspdm_set_data(
-        spdmPool.back().pspdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
+        spdmPool.back().spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
         &tmpThis, sizeof(void*)));
 }
 
@@ -196,7 +194,7 @@ bool SPDMResponderImpl::processSPDMMessage(
     {
         return false;
     }
-    return validateSpdmRc(libspdm_responder_dispatch_message(it->pspdmContext));
+    return validateSpdmRc(libspdm_responder_dispatch_message(it->spdmContext));
 }
 
 bool SPDMResponderImpl::msgRecvCallback(
@@ -232,7 +230,7 @@ bool SPDMResponderImpl::deviceReceiveMessage(void* spdmContext,
                                              uint64_t /*timeout*/)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -247,7 +245,7 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
                                           uint64_t timeout)
 {
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -264,14 +262,16 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
 void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
-    bool res;
-    void* data;
-    uint32_t dataSize = 0;
+    constexpr uint8_t rootCertSlotID = 1;
+    void* certChain;
+    void* rootCert;
+    size_t certChainSize = 0;
+    size_t rootCertSize = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -308,38 +308,50 @@ void SPDMResponderImpl::processConnectionState(
             {
                 break;
             }
-            res = read_responder_public_certificate_chain(
-                it->useHashAlgo, it->useAsymAlgo, &data, &dataSize, nullptr,
-                nullptr);
-            if (res)
+            if (!libspdm_read_responder_public_certificate_chain(
+                    it->useHashAlgo, it->useAsymAlgo, &certChain,
+                    &certChainSize, nullptr, nullptr))
             {
-                initGetSetParameter(parameter, operationSet);
-                if (!spdmSetData(
-                        *it, LIBSPDM_DATA_LOCAL_SLOT_COUNT,
-                        static_cast<uint8_t>(spdmResponderCfg.slotcount),
-                        parameter))
+                break;
+            }
+            if (!libspdm_read_responder_public_certificate_chain_per_slot(
+                    rootCertSlotID, it->useHashAlgo, it->useAsymAlgo, &rootCert,
+                    &rootCertSize, NULL, NULL))
+            {
+                break;
+            }
+            initGetSetParameter(parameter, operationSet);
+            for (uint8_t index = 0;
+                 index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
+                 index++)
+            {
+                parameter.additional_data[0] = index;
+                if (index == rootCertSlotID)
                 {
-                    phosphor::logging::log<phosphor::logging::level::ERR>(
-                        "SPDMResponderImpl::processConnectionState Slot Count FAILED!!");
-                    break;
-                }
-                for (uint8_t index = 0;
-                     index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
-                     index++)
-                {
-                    parameter.additional_data[0] = index;
                     if (!validateSpdmRc(libspdm_set_data(
-                            it->pspdmContext,
+                            it->spdmContext,
                             LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                            data, dataSize)))
+                            rootCert, rootCertSize)))
+                    {
+                        phosphor::logging::log<phosphor::logging::level::ERR>(
+                            "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
+                        break;
+                    }
+                }
+                else
+                {
+                    if (!validateSpdmRc(libspdm_set_data(
+                            it->spdmContext,
+                            LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
+                            certChain, certChainSize)))
                     {
                         phosphor::logging::log<phosphor::logging::level::ERR>(
                             "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
                         break;
                     }
                 }
-                /* do not free it*/
             }
+            /* do not free it*/
             break;
         case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
             // TODO
@@ -356,7 +368,6 @@ void SPDMResponderImpl::processConnectionState(
         default:
             break;
     }
-    return;
 }
 
 void SPDMResponderImpl::processSessionState(
@@ -366,7 +377,7 @@ void SPDMResponderImpl::processSessionState(
     libspdm_data_parameter_t parameter;
 
     auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.pspdmContext == spdmContext);
+        return (item.spdmContext == spdmContext);
     });
     if (it == spdmPool.end())
     {
