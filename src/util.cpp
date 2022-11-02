@@ -24,11 +24,9 @@ extern "C"
      * @param buffer : dump data
      * @param buffer_size: size of dump data
      */
-    void dump_hex_str(const uint8_t* buffer, uint32_t bufferSize)
+    void libspdm_dump_hex_str(const uint8_t* buffer, size_t bufferSize)
     {
-        uint32_t index;
-
-        for (index = 0; index < bufferSize; index++)
+        for (size_t index = 0; index < bufferSize; index++)
         {
             printf(" %02x", buffer[index]);
         }
@@ -37,16 +35,16 @@ extern "C"
     /**
      * @brief read cert file (called by libspdm)
      *
-     * @param file_name : cert file
-     * @param file_data (output): file content
-     * @param file_size (output): size of file content
+     * @param fileName : cert file
+     * @param fileData (output): file content
+     * @param fileSize (output): size of file content
      * @return  true: success, false: not able to read file.
      */
-    bool read_input_file(const char* fileName, void** fileData,
-                         uint32_t* fileSize)
+    bool libspdm_read_input_file(const char* fileName, void** fileData,
+                                 size_t* fileSize)
     {
         FILE* fp;
-        uint32_t tempResult;
+        size_t tempResult;
         char* setCerPath = nullptr;
         char newFileName[256];
         char* pfmLoc = "/dev/mtd/pfm";
@@ -93,6 +91,20 @@ extern "C"
 
         fclose(fp);
 
+        return true;
+    }
+    /**
+     * @brief dummy write file function(called by libspdm)
+     *
+     * @param fileName : cert file
+     * @param fileData (output): file content
+     * @param fileSize (output): size of file content
+     * @return  true: success, false: not able to read file.
+     */
+    bool libspdm_write_output_file(const char* /*fileName*/,
+                                   const void* /*fileData*/,
+                                   size_t /*fileSize*/)
+    {
         return true;
     }
 }
