@@ -252,6 +252,26 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     return true;
 }
 
+std::vector<uint8_t> formSendMessage(size_t requestSize, const void* request)
+{
+    uint8_t* requestPayload =
+        reinterpret_cast<uint8_t*>(const_cast<void*>(request));
+    std::vector<uint8_t> data{};
+    for (size_t j = 0; j < requestSize; j++)
+    {
+        data.push_back(*(requestPayload + j));
+    }
+    return data;
+}
+
+void formRecvMessage(size_t* responseSize, void** response,
+                     const std::vector<uint8_t> payload)
+{
+    *responseSize = payload.size();
+    std::copy(payload.begin(), payload.end(),
+              reinterpret_cast<uint8_t*>(*response));
+}
+
 libspdm_return_t spdmDeviceAcquireSenderBuffer(void* /*context*/,
                                                size_t* max_msg_size,
                                                void** msg_buf_ptr)

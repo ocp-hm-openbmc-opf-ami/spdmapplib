@@ -229,6 +229,10 @@ bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
     return true;
 }
 
+std::vector<uint8_t> formSendMessage(size_t requestSize, const void* request);
+
+void formRecvMessage(size_t* responseSize, void** response,
+                     const std::vector<uint8_t> payload);
 /**
  * @brief  Acquires transport layer sender buffer
  *
