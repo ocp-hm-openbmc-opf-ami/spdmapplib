@@ -59,6 +59,8 @@ typedef struct
 {
     void* spdmContext;
     void* scratchBuffer;
+    void* certChain;
+    void* rootCert;
     spdm_transport::TransportEndPoint transEP;
     uint8_t useSlotId;
     uint32_t sessionId;
@@ -102,6 +104,13 @@ void libspdmRegisterDeviceBuffer(void* spdmContext);
  * @param spdm      spdmItem having context
  */
 void freeSpdmContext(spdmItem& spdm);
+
+/**
+ * @brief freeAllocatedMemory deallocates allocated memory
+ *
+ * @param memory    pointer to allocated memory
+ */
+void freeAllocatedMemory(void* memory);
 
 /**
  * @brief validateSpdmRc checks the return status from libspdm
