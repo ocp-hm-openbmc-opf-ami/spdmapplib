@@ -273,14 +273,7 @@ void SPDMResponderImpl::processConnectionState(
         case LIBSPDM_CONNECTION_STATE_NOT_STARTED:
             /* clear preserved state*/
             break;
-        case LIBSPDM_CONNECTION_STATE_AFTER_VERSION:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
-            break;
-        case LIBSPDM_CONNECTION_STATE_AFTER_CAPABILITIES:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
-            break;
+
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
             freeAllocatedMemory(it->certChain);
             freeAllocatedMemory(it->rootCert);
@@ -343,20 +336,8 @@ void SPDMResponderImpl::processConnectionState(
                     }
                 }
             }
-            /* do not free it*/
             break;
-        case LIBSPDM_CONNECTION_STATE_AFTER_DIGESTS:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
-            break;
-        case LIBSPDM_CONNECTION_STATE_AFTER_CERTIFICATE:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
-            break;
-        case LIBSPDM_CONNECTION_STATE_AUTHENTICATED:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
-            break;
+
         default:
             break;
     }
@@ -379,8 +360,7 @@ void SPDMResponderImpl::processSessionState(
     switch (sessionState)
     {
         case LIBSPDM_SESSION_STATE_NOT_STARTED:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
+            /* TODO: End the Session*/
             break;
         case LIBSPDM_SESSION_STATE_HANDSHAKING:
             /* collect session policy*/
@@ -398,8 +378,7 @@ void SPDMResponderImpl::processSessionState(
             }
             break;
         case LIBSPDM_SESSION_STATE_ESTABLISHED:
-            // TODO
-            // Pre created for some actions needed in this state in the future.
+            /* no action*/
             break;
         default:
             phosphor::logging::log<phosphor::logging::level::ERR>(
