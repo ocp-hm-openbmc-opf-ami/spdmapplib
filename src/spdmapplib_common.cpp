@@ -45,10 +45,8 @@ void libspdmRegisterDeviceBuffer(void* spdmContext)
 
 void freeSpdmContext(spdmItem& spdm)
 {
-    free_pool(spdm.scratchBuffer);
-    spdm.scratchBuffer = nullptr;
-    free_pool(spdm.spdmContext);
-    spdm.spdmContext = nullptr;
+    freeAllocatedMemory(spdm.scratchBuffer);
+    freeAllocatedMemory(spdm.spdmContext);
     freeAllocatedMemory(spdm.certChain);
     freeAllocatedMemory(spdm.rootCert);
     spdm.data.clear();

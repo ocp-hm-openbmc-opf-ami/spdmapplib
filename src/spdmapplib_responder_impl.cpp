@@ -95,10 +95,7 @@ SPDMResponderImpl::~SPDMResponderImpl()
 {
     for (auto& item : spdmPool)
     {
-        if (item.spdmContext)
-        {
-            freeSpdmContext(item);
-        }
+        freeSpdmContext(item);
     }
 }
 
