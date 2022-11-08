@@ -80,7 +80,7 @@ typedef struct
  *
  * @return pointer to certPath
  */
-char* getCertificatePath();
+std::string getCertificatePath(const char* fileName);
 
 /**
  * @brief set cert file Path

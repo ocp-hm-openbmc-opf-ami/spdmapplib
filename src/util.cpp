@@ -43,54 +43,37 @@ extern "C"
     bool libspdm_read_input_file(const char* fileName, void** fileData,
                                  size_t* fileSize)
     {
-        FILE* fp;
-        size_t tempResult;
-        char* setCerPath = nullptr;
-        char newFileName[256];
-        char* pfmLoc = "/dev/mtd/pfm";
-
-        if (!strcmp(pfmLoc, fileName))
+        std::string certPath = spdm_app_lib::getCertificatePath(fileName);
+        FILE* fp = std::fopen(certPath.c_str(), "rb");
+        if (!fp)
         {
-            sprintf(newFileName, "%s", fileName);
-        }
-        else
-        {
-            setCerPath = spdm_app_lib::getCertificatePath();
-            if (setCerPath != nullptr)
-                sprintf(newFileName, "%s/%s", setCerPath, fileName);
-            else
-                sprintf(newFileName, "%s", fileName);
-        }
-        if ((fp = fopen(newFileName, "rb")) == nullptr)
-        {
-            printf("Unable to open file %s\n", newFileName);
+            std::cerr << "Unable to open file" << certPath << "\n";
             *fileData = nullptr;
             return false;
         }
+        std::fseek(fp, 0, SEEK_END);
+        *fileSize = std::ftell(fp);
 
-        fseek(fp, 0, SEEK_END);
-        *fileSize = ftell(fp);
-
-        *fileData = (void*)malloc(*fileSize);
+        *fileData = reinterpret_cast<void*>(malloc(*fileSize));
         if (nullptr == *fileData)
         {
-            printf("No sufficient memory to allocate %s\n", fileName);
-            fclose(fp);
+            std::cerr << "No sufficient memory to allocate " << certPath
+                      << "\n";
+            std::fclose(fp);
             return false;
         }
 
-        fseek(fp, 0, SEEK_SET);
-        tempResult = fread(*fileData, 1, *fileSize, fp);
+        std::fseek(fp, 0, SEEK_SET);
+        size_t tempResult = std::fread(*fileData, 1, *fileSize, fp);
         if (tempResult != *fileSize)
         {
-            printf("Read input file error %s", fileName);
-            free((void*)*fileData);
-            fclose(fp);
+            std::cerr << "Read input file error\n";
+            free(reinterpret_cast<void*>(*fileData));
+            std::fclose(fp);
             return false;
         }
 
-        fclose(fp);
-
+        std::fclose(fp);
         return true;
     }
     /**
