@@ -49,9 +49,20 @@ void freeSpdmContext(spdmItem& spdm)
     spdm.scratchBuffer = nullptr;
     free_pool(spdm.spdmContext);
     spdm.spdmContext = nullptr;
+    freeAllocatedMemory(spdm.certChain);
+    freeAllocatedMemory(spdm.rootCert);
     spdm.data.clear();
     spdm.dataCert.clear();
     spdm.dataMeas.clear();
+}
+
+void freeAllocatedMemory(void* memory)
+{
+    if (memory)
+    {
+        free(memory);
+    }
+    memory = nullptr;
 }
 
 bool validateSpdmRc(libspdm_return_t status)
@@ -209,6 +220,8 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     spdm.useAsymAlgo = 0;
     spdm.useHashAlgo = 0;
     spdm.transEP = transEP;
+    spdm.certChain = nullptr;
+    spdm.rootCert = nullptr;
     spdm.connectStatus = LIBSPDM_CONNECTION_STATE_NOT_STARTED;
     spdm.data.clear();
     spdm.dataCert.clear();
