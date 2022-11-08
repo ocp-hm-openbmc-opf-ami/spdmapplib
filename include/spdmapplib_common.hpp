@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <memory>
 // clang-format off
 extern "C"
 {
@@ -51,29 +52,33 @@ inline constexpr uint32_t exeConnectionMeas = 0x10;
 inline constexpr uint32_t exeConnection =
     (exeConnectionDigest | exeConnectionCert | exeConnectionChal |
      exeConnectionMeas);
+
+using spdmMemDestroyer = std::function<void(void*)>;
+using spdmMemAllocator = std::unique_ptr<void, spdmMemDestroyer>;
+
 /**
  * @brief SPDM device context structure
  *
  */
-typedef struct
+struct spdmItem
 {
-    void* spdmContext;
-    void* scratchBuffer;
-    void* certChain;
-    void* rootCert;
-    spdm_transport::TransportEndPoint transEP;
-    uint8_t useSlotId;
-    uint32_t sessionId;
-    uint32_t useVersion;
-    uint16_t useReqAsymAlgo;
-    uint32_t useMeasurementHashAlgo;
-    uint32_t useAsymAlgo;
-    uint32_t useHashAlgo;
+    spdmMemAllocator spdmContext;
+    spdmMemAllocator scratchBuffer;
+    void* certChain = nullptr;
+    void* rootCert = nullptr;
+    spdm_transport::TransportEndPoint transEP{0};
+    uint8_t useSlotId{0};
+    uint32_t sessionId{0};
+    uint32_t useVersion{0};
+    uint16_t useReqAsymAlgo{0};
+    uint32_t useMeasurementHashAlgo{0};
+    uint32_t useAsymAlgo{0};
+    uint32_t useHashAlgo{0};
     libspdm_connection_state_t connectStatus;
-    std::vector<uint8_t> data;
-    std::vector<uint8_t> dataCert;
-    std::vector<uint8_t> dataMeas;
-} spdmItem;
+    std::vector<uint8_t> data{};
+    std::vector<uint8_t> dataCert{};
+    std::vector<uint8_t> dataMeas{};
+};
 
 /**
  * @brief get cert file Path
@@ -111,6 +116,14 @@ void freeSpdmContext(spdmItem& spdm);
  * @param memory    pointer to allocated memory
  */
 void freeAllocatedMemory(void* memory);
+
+/**
+ * @brief allocateMemory allocates specified bytes of memory
+ *
+ * @param size      required size to be allocated
+ * @return void*    pointer to allocated memory
+ */
+void* allocateMemory(size_t size);
 
 /**
  * @brief validateSpdmRc checks the return status from libspdm
@@ -197,7 +210,7 @@ bool spdmGetData(spdmItem& spdm, libspdm_data_type_t configType, T& configData,
     T data;
     size_t dataSize = sizeof(data);
 
-    if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext, configType,
+    if (!validateSpdmRc(libspdm_get_data(spdm.spdmContext.get(), configType,
                                          &parameter, &data, &dataSize)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -225,7 +238,7 @@ template <typename T>
 bool spdmSetData(spdmItem& spdm, libspdm_data_type_t configType, T configData,
                  libspdm_data_parameter_t parameter)
 {
-    if (!validateSpdmRc(libspdm_set_data(spdm.spdmContext, configType,
+    if (!validateSpdmRc(libspdm_set_data(spdm.spdmContext.get(), configType,
                                          &parameter, &configData,
                                          sizeof(configData))))
     {

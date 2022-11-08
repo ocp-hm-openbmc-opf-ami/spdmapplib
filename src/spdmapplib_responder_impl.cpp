@@ -105,7 +105,7 @@ SPDMResponderImpl::~SPDMResponderImpl()
 bool SPDMResponderImpl::updateSPDMPool(
     spdm_transport::TransportEndPoint& transEndpoint)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
         return (item.transEP == transEndpoint);
     });
     if (it == spdmPool.end())
@@ -132,17 +132,17 @@ bool SPDMResponderImpl::addNewDevice(
     }
 
     if (!validateSpdmRc(libspdm_register_session_state_callback_func(
-            newItem.spdmContext, spdmServerSessionStateCallback)))
+            newItem.spdmContext.get(), spdmServerSessionStateCallback)))
     {
         return false;
     }
 
     if (!validateSpdmRc(libspdm_register_connection_state_callback_func(
-            newItem.spdmContext, spdmServerConnectionStateCallback)))
+            newItem.spdmContext.get(), spdmServerConnectionStateCallback)))
     {
         return false;
     }
-    spdmPool.push_back(newItem);
+    spdmPool.emplace_back(std::move(newItem));
     return true;
 }
 
@@ -153,15 +153,15 @@ bool SPDMResponderImpl::initSpdmContext()
 
     initGetSetParameter(parameter, operationSet);
     return validateSpdmRc(libspdm_set_data(
-        spdmPool.back().spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
-        &tmpThis, sizeof(void*)));
+        spdmPool.back().spdmContext.get(), LIBSPDM_DATA_APP_CONTEXT_DATA,
+        &parameter, &tmpThis, sizeof(void*)));
 }
 
 bool SPDMResponderImpl::addData(
     spdm_transport::TransportEndPoint& transEndpoint,
     const std::vector<uint8_t>& data)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
         return (item.transEP == transEndpoint);
     });
     if (it == spdmPool.end())
@@ -175,7 +175,7 @@ bool SPDMResponderImpl::addData(
 bool SPDMResponderImpl::processSPDMMessage(
     spdm_transport::TransportEndPoint& transEndpoint)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
         return (item.transEP == transEndpoint);
     });
     if (it == spdmPool.end())
@@ -186,15 +186,17 @@ bool SPDMResponderImpl::processSPDMMessage(
     {
         return false;
     }
-    return validateSpdmRc(libspdm_responder_dispatch_message(it->spdmContext));
+    return validateSpdmRc(
+        libspdm_responder_dispatch_message(it->spdmContext.get()));
 }
 
 bool SPDMResponderImpl::msgRecvCallback(
     spdm_transport::TransportEndPoint& transEP,
     const std::vector<uint8_t>& data)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(),
-                      [&](spdmItem item) { return (item.transEP == transEP); });
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
+        return (item.transEP == transEP);
+    });
     if (it == spdmPool.end())
     {
         if (!addNewDevice(transEP))
@@ -221,8 +223,8 @@ bool SPDMResponderImpl::deviceReceiveMessage(void* spdmContext,
                                              std::vector<uint8_t>& response,
                                              uint64_t /*timeout*/)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.spdmContext == spdmContext);
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
+        return (item.spdmContext.get() == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -236,8 +238,8 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
                                           const std::vector<uint8_t>& request,
                                           uint64_t timeout)
 {
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.spdmContext == spdmContext);
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
+        return (item.spdmContext.get() == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -260,8 +262,8 @@ void SPDMResponderImpl::processConnectionState(
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.spdmContext == spdmContext);
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
+        return (item.spdmContext.get() == spdmContext);
     });
     if (it == spdmPool.end())
     {
@@ -314,7 +316,7 @@ void SPDMResponderImpl::processConnectionState(
                 if (index == rootCertSlotID)
                 {
                     if (!validateSpdmRc(libspdm_set_data(
-                            it->spdmContext,
+                            it->spdmContext.get(),
                             LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
                             it->rootCert, rootCertSize)))
                     {
@@ -326,7 +328,7 @@ void SPDMResponderImpl::processConnectionState(
                 else
                 {
                     if (!validateSpdmRc(libspdm_set_data(
-                            it->spdmContext,
+                            it->spdmContext.get(),
                             LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
                             it->certChain, certChainSize)))
                     {
@@ -349,8 +351,8 @@ void SPDMResponderImpl::processSessionState(
     uint8_t u8Value = 0;
     libspdm_data_parameter_t parameter;
 
-    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem item) {
-        return (item.spdmContext == spdmContext);
+    auto it = find_if(spdmPool.begin(), spdmPool.end(), [&](spdmItem& item) {
+        return (item.spdmContext.get() == spdmContext);
     });
     if (it == spdmPool.end())
     {

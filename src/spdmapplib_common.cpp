@@ -45,9 +45,9 @@ void libspdmRegisterDeviceBuffer(void* spdmContext)
 
 void freeSpdmContext(spdmItem& spdm)
 {
-    free_pool(spdm.scratchBuffer);
+    free_pool(spdm.scratchBuffer.get());
     spdm.scratchBuffer = nullptr;
-    free_pool(spdm.spdmContext);
+    free_pool(spdm.spdmContext.get());
     spdm.spdmContext = nullptr;
     freeAllocatedMemory(spdm.certChain);
     freeAllocatedMemory(spdm.rootCert);
@@ -63,6 +63,11 @@ void freeAllocatedMemory(void* memory)
         free(memory);
     }
     memory = nullptr;
+}
+
+void* allocateMemory(size_t size)
+{
+    return allocate_zero_pool(size);
 }
 
 bool validateSpdmRc(libspdm_return_t status)
@@ -207,27 +212,20 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
               libspdm_device_send_message_func sendMessage,
               libspdm_device_receive_message_func recvMessage)
 {
-    spdm.spdmContext = allocate_zero_pool(libspdm_get_context_size());
+    size_t size = libspdm_get_context_size();
+    spdmMemAllocator spdmMemoryObj(allocateMemory(size), freeAllocatedMemory);
+    spdm.spdmContext = std::move(spdmMemoryObj);
     if (spdm.spdmContext == nullptr)
     {
         return false;
     }
-    spdm.useSlotId = 0;
-    spdm.sessionId = 0;
-    spdm.useVersion = 0;
-    spdm.useReqAsymAlgo = 0;
-    spdm.useMeasurementHashAlgo = 0;
-    spdm.useAsymAlgo = 0;
-    spdm.useHashAlgo = 0;
     spdm.transEP = transEP;
-    spdm.certChain = nullptr;
-    spdm.rootCert = nullptr;
     spdm.connectStatus = LIBSPDM_CONNECTION_STATE_NOT_STARTED;
     spdm.data.clear();
     spdm.dataCert.clear();
     spdm.dataMeas.clear();
 
-    if (!validateSpdmRc(libspdm_init_context(spdm.spdmContext)))
+    if (!validateSpdmRc(libspdm_init_context(spdm.spdmContext.get())))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "spdmInit libspdm_init_context Failed!");
@@ -235,11 +233,13 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     }
 
     size_t scratchBufferSize =
-        libspdm_get_sizeof_required_scratch_buffer(spdm.spdmContext);
-    spdm.scratchBuffer = allocate_zero_pool(scratchBufferSize);
+        libspdm_get_sizeof_required_scratch_buffer(spdm.spdmContext.get());
+    spdmMemAllocator scratchBuffMemoryObj(allocateMemory(scratchBufferSize),
+                                          freeAllocatedMemory);
+    spdm.scratchBuffer = std::move(scratchBuffMemoryObj);
     if (spdm.scratchBuffer == nullptr)
     {
-        free_pool(spdm.spdmContext);
+        free_pool(spdm.spdmContext.get());
         spdm.spdmContext = nullptr;
         return false;
     }
@@ -253,13 +253,14 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     libspdm_transport_get_header_size_func headerSizeCB =
         (transport == "mctp") ? libspdm_transport_mctp_get_header_size
                               : spdm_transport_none_get_header_size;
-    libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
+    libspdm_register_device_io_func(spdm.spdmContext.get(), sendMessage,
+                                    recvMessage);
 
-    libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,
-                                          headerSizeCB);
+    libspdm_register_transport_layer_func(spdm.spdmContext.get(), encodeCB,
+                                          decodeCB, headerSizeCB);
 
-    libspdmRegisterDeviceBuffer(spdm.spdmContext);
-    libspdm_set_scratch_buffer(spdm.spdmContext, spdm.scratchBuffer,
+    libspdmRegisterDeviceBuffer(spdm.spdmContext.get());
+    libspdm_set_scratch_buffer(spdm.spdmContext.get(), spdm.scratchBuffer.get(),
                                scratchBufferSize);
 
     return true;

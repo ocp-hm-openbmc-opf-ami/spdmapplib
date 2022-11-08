@@ -122,8 +122,8 @@ bool SPDMRequesterImpl::initSpdmContext()
 
     initGetSetParameter(parameter, operationSet);
     return validateSpdmRc(libspdm_set_data(
-        spdmResponder.spdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA, &parameter,
-        &tmpThis, sizeof(void*)));
+        spdmResponder.spdmContext.get(), LIBSPDM_DATA_APP_CONTEXT_DATA,
+        &parameter, &tmpThis, sizeof(void*)));
 }
 
 bool SPDMRequesterImpl::doAuthentication(void)
@@ -152,7 +152,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
     **/
     if ((exeConnection & exeConnectionDigest))
     {
-        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext,
+        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext.get(),
                                                &slotMask, &totalDigestBuffer)))
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -169,8 +169,9 @@ bool SPDMRequesterImpl::doAuthentication(void)
         return false;
     }
 
-    if (!validateSpdmRc(libspdm_get_certificate(
-            spdmResponder.spdmContext, useSlotId, &certChainSize, &certChain)))
+    if (!validateSpdmRc(libspdm_get_certificate(spdmResponder.spdmContext.get(),
+                                                useSlotId, &certChainSize,
+                                                &certChain)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doAuthentication libspdm_get_certificate Failed");
@@ -195,7 +196,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
-    if (spdmResponder.spdmContext == nullptr)
+    if (spdmResponder.spdmContext.get() == nullptr)
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doMeasurement Error!");
@@ -211,7 +212,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     if ((exeConnection & exeConnectionChal))
     {
         if (!validateSpdmRc(
-                libspdm_challenge(spdmResponder.spdmContext, useSlotId,
+                libspdm_challenge(spdmResponder.spdmContext.get(), useSlotId,
                                   SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH,
                                   &measurementHash, nullptr)))
         {
@@ -229,13 +230,13 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         return false;
     }
 
-    libspdm_init_msg_log(spdmResponder.spdmContext, &measurementTranscript,
-                         measurementTranscript.size());
-    libspdm_set_msg_log_mode(spdmResponder.spdmContext,
+    libspdm_init_msg_log(spdmResponder.spdmContext.get(),
+                         &measurementTranscript, measurementTranscript.size());
+    libspdm_set_msg_log_mode(spdmResponder.spdmContext.get(),
                              LIBSPDM_MSG_LOG_MODE_ENABLE);
     measurementRecordLength = measurement.size();
     if (!validateSpdmRc(libspdm_get_measurement(
-            spdmResponder.spdmContext, session_id,
+            spdmResponder.spdmContext.get(), session_id,
             SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
             mUseMeasurementOperation, useSlotId & 0xF, nullptr, &numberOfBlocks,
             &measurementRecordLength, &measurement)))
@@ -247,7 +248,8 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     }
 
     // Keep measurement to reserved vector.
-    size_t transcriptSize = libspdm_get_msg_log_size(spdmResponder.spdmContext);
+    size_t transcriptSize =
+        libspdm_get_msg_log_size(spdmResponder.spdmContext.get());
     spdmResponder.dataMeas.insert(
         spdmResponder.dataMeas.end(), measurementTranscript.begin(),
         measurementTranscript.begin() + transcriptSize);
@@ -278,8 +280,8 @@ bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
 
 bool SPDMRequesterImpl::getVCA(bool onlyVersion)
 {
-    if (!validateSpdmRc(
-            libspdm_init_connection(spdmResponder.spdmContext, onlyVersion)))
+    if (!validateSpdmRc(libspdm_init_connection(spdmResponder.spdmContext.get(),
+                                                onlyVersion)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::getVCA Failed!");
