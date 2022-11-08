@@ -189,8 +189,10 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     uint8_t useSlotId = 0;
     uint8_t numberOfBlocks = 0;
     uint32_t measurementRecordLength = 0;
+    constexpr size_t measurementTranscriptSize = 0x4096;
     std::array<uint8_t, LIBSPDM_MAX_HASH_SIZE> measurementHash{0};
     std::array<uint8_t, LIBSPDM_MAX_MEASUREMENT_RECORD_SIZE> measurement{0};
+    std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
     if (spdmResponder.spdmContext == nullptr)
@@ -226,6 +228,11 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             "SPDMRequesterImpl::doMeasurement Meas CAP not Supported!");
         return false;
     }
+
+    libspdm_init_msg_log(spdmResponder.spdmContext, &measurementTranscript,
+                         measurementTranscript.size());
+    libspdm_set_msg_log_mode(spdmResponder.spdmContext,
+                             LIBSPDM_MSG_LOG_MODE_ENABLE);
     measurementRecordLength = measurement.size();
     if (!validateSpdmRc(libspdm_get_measurement(
             spdmResponder.spdmContext, session_id,
@@ -238,18 +245,12 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         spdmResponder.dataMeas.clear();
         return false;
     }
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("SPDMRequesterImpl::doMeasurement numberOfBlocks - " +
-         std::to_string(numberOfBlocks))
-            .c_str());
-    phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("SPDMRequesterImpl::doMeasurement measurementRecordLength - " +
-         std::to_string(measurementRecordLength))
-            .c_str());
+
     // Keep measurement to reserved vector.
+    size_t transcriptSize = libspdm_get_msg_log_size(spdmResponder.spdmContext);
     spdmResponder.dataMeas.insert(
-        spdmResponder.dataMeas.end(), measurement.begin(),
-        measurement.begin() + measurementRecordLength);
+        spdmResponder.dataMeas.end(), measurementTranscript.begin(),
+        measurementTranscript.begin() + transcriptSize);
     return true;
 }
 
