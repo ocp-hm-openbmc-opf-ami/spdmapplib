@@ -111,8 +111,8 @@ class SPDMRequester
      * @param  ioc               The shared_ptr to boost io_context object.
      * @param  conn              The shared_ptr of sdbusplus conn.
      * @param  trans             The pointer of transport instance.
-     * @param  ptransResponder   The pointer to assigned responder EndPoint.
-     * @param  pSpdmConfig       Configuration read from entity-manager.
+     * @param  endPoint          The pointer to assigned responder EndPoint.
+     * @param  spdmConfig        Configuration read from entity-manager.
      *
      **/
     SPDMRequester(std::shared_ptr<boost::asio::io_context> ioc,
@@ -129,21 +129,21 @@ class SPDMRequester
     /**
      * @brief Get all measurement function
      *
-     * @param   measurements     The certificate returned for specific endPoint
+     * @param   measurements     The measurements returned for specific endPoint
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      **/
-    bool getMeasurements(std::vector<uint8_t>& certificate);
+    bool getMeasurements(std::vector<uint8_t>& measurements);
 
     /**
      * @brief Get certificate function
      *
-     * @param   measurements     The certificate returned for specific endPoint.
+     * @param   certificate      The certificate returned for specific endPoint.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      *
      **/
-    bool getCertificate(std::vector<uint8_t>& measurements);
+    bool getCertificate(std::vector<uint8_t>& certificate);
 
   private:
     std::shared_ptr<SPDMRequesterImpl> pReqImpl;
