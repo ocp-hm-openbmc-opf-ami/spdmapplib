@@ -43,7 +43,7 @@ extern "C"
     bool libspdm_read_input_file(const char* fileName, void** fileData,
                                  size_t* fileSize)
     {
-        std::string certPath = spdm_app_lib::getCertificatePath(fileName);
+        std::string certPath = spdm_app_lib::getFilePath(fileName);
         FILE* fp = std::fopen(certPath.c_str(), "rb");
         if (!fp)
         {

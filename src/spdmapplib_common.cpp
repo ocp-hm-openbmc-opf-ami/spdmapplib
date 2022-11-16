@@ -25,7 +25,7 @@ bool sendReceiveBufferAcquired = false;
 size_t sendReceiveBufferSize(0);
 std::array<uint8_t, LIBSPDM_SENDER_RECEIVE_BUFFER_SIZE> sendReceiveBuffer;
 
-std::string getCertificatePath(const char* fileName)
+std::string getFilePath(const char* fileName)
 {
     static constexpr char* pfmLocation = "/dev/mtd/pfm";
     if (!strcmp(fileName, pfmLocation))
