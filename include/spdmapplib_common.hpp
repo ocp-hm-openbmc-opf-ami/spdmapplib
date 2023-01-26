@@ -110,7 +110,7 @@ void freeSpdmContext(spdmItem& spdm);
  *
  * @param memory    pointer to allocated memory
  */
-void freeAllocatedMemory(void* memory);
+void freeAllocatedMemory(void*& memory);
 
 /**
  * @brief validateSpdmRc checks the return status from libspdm

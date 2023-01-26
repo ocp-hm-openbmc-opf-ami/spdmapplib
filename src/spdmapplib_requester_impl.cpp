@@ -123,6 +123,39 @@ bool SPDMRequesterImpl::initSpdmContext()
         &tmpThis, sizeof(void*)));
 }
 
+bool SPDMRequesterImpl::getVCA(bool onlyVersion)
+{
+    if (!validateSpdmRc(
+            libspdm_init_connection(spdmResponder.spdmContext, onlyVersion)))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getVCA Failed!");
+        freeSpdmContext(spdmResponder);
+        return false;
+    }
+    return true;
+}
+
+bool SPDMRequesterImpl::isConnStateNegotiated()
+{
+    uint32_t connState = 0;
+    libspdm_data_parameter_t parameter;
+
+    initGetSetParameter(parameter, operationGet);
+    if (!spdmGetData(spdmResponder, LIBSPDM_DATA_CONNECTION_STATE, connState,
+                     parameter))
+    {
+        return false;
+    }
+    if (connState != LIBSPDM_CONNECTION_STATE_NEGOTIATED)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::isConnStateNegotiated state Not Negotiated!");
+        return false;
+    }
+    return true;
+}
+
 bool SPDMRequesterImpl::doAuthentication(void)
 {
     uint8_t slotMask = 0;
@@ -192,19 +225,6 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
-    if (spdmResponder.spdmContext == nullptr)
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::doMeasurement Error!");
-        return false;
-    }
-    if (spdmResponder.dataCert.empty())
-    {
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
-            "SPDMRequesterImpl::doMeasurement doAuthentication()");
-        doAuthentication();
-    }
-
     if ((exeConnection & exeConnectionChal))
     {
         if (!validateSpdmRc(
@@ -253,54 +273,95 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
 
 bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements)
 {
-    if (doMeasurement(NULL) && !spdmResponder.dataMeas.empty())
+    if (!setupSpdmRequester())
     {
-        measurements = spdmResponder.dataMeas;
-        spdmResponder.dataMeas.clear();
-        spdmResponder.dataCert.clear();
-        return true;
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getMeasurements setupSpdmRequester failed!");
+        return false;
     }
-    return false;
+    if (!doAuthentication())
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::getMeasurements doAuthentication failed!");
+        return false;
+    }
+
+    if (spdmResponder.dataCert.empty())
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::getMeasurements Certificate is Empty failed!");
+        return false;
+    }
+
+    if (!doMeasurement(NULL))
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::getMeasurements doMeasurement failed!");
+        return false;
+    }
+
+    if (spdmResponder.dataMeas.empty())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getMeasurements Measurements is Empty!");
+        return false;
+    }
+
+    measurements = spdmResponder.dataMeas;
+    freeSpdmContext(spdmResponder);
+    return true;
 }
 
 bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
 {
-    if (doAuthentication() && !spdmResponder.dataCert.empty())
-    {
-        certificate = spdmResponder.dataCert;
-        return true;
-    }
-    return false;
-}
-
-bool SPDMRequesterImpl::getVCA(bool onlyVersion)
-{
-    if (!validateSpdmRc(
-            libspdm_init_connection(spdmResponder.spdmContext, onlyVersion)))
+    if (!setupSpdmRequester())
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::getVCA Failed!");
-        freeSpdmContext(spdmResponder);
+            "SPDMRequesterImpl::getCertificate setupSpdmRequester failed!");
         return false;
     }
+
+    if (!doAuthentication())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getCertificate doAuthentication failed!");
+        return false;
+    }
+
+    if (spdmResponder.dataCert.empty())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getCertificate certificate is Empty!");
+        return false;
+    }
+
+    certificate = spdmResponder.dataCert;
+    freeSpdmContext(spdmResponder);
     return true;
 }
 
-bool SPDMRequesterImpl::isConnStateNegotiated()
+bool SPDMRequesterImpl::setupSpdmRequester()
 {
-    uint32_t connState = 0;
-    libspdm_data_parameter_t parameter;
-
-    initGetSetParameter(parameter, operationGet);
-    if (!spdmGetData(spdmResponder, LIBSPDM_DATA_CONNECTION_STATE, connState,
-                     parameter))
-    {
-        return false;
-    }
-    if (connState != LIBSPDM_CONNECTION_STATE_NEGOTIATED)
+    if (!spdmInit(spdmResponder, responderEndpoint,
+                  spdmTrans->getSPDMtransport(), requesterDeviceSendMessage,
+                  requesterDeviceReceiveMessage))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::isConnStateNegotiated state Not Negotiated!");
+            "SPDMRequesterImpl::setupSpdmRequester SPDM init failed!");
+        return false;
+    }
+
+    if (!initSpdmContext())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::setupSpdmRequester init SPDM Context failed!");
+        return false;
+    }
+
+    if (!spdmSetConfigData(spdmResponder, spdmRequesterCfg))
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::setupSpdmRequester spdmSetConfigData failed!");
         return false;
     }
     return true;
@@ -313,27 +374,12 @@ SPDMRequesterImpl::SPDMRequesterImpl(
     spdm_transport::TransportEndPoint& endPointDevice,
     SPDMConfiguration& spdmConfig) :
     ioc(io),
-    conn(con), spdmTrans(trans), spdmRequesterCfg(spdmConfig)
+    conn(con), spdmTrans(trans), responderEndpoint(endPointDevice),
+    spdmRequesterCfg(spdmConfig)
 {
     setCertificatePath(spdmRequesterCfg.certPath);
-    if (!spdmInit(spdmResponder, endPointDevice, spdmTrans->getSPDMtransport(),
-                  requesterDeviceSendMessage, requesterDeviceReceiveMessage))
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl SPDM init failed!");
-    }
     mUseMeasurementOperation =
         SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
-    if (!initSpdmContext())
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl init SPDM Context failed!");
-    }
-    if (!spdmSetConfigData(spdmResponder, spdmRequesterCfg))
-    {
-        phosphor::logging::log<phosphor::logging::level::INFO>(
-            "SPDMRequesterImpl spdmSetConfigData failed!");
-    }
 }
 
 } // namespace spdm_app_lib

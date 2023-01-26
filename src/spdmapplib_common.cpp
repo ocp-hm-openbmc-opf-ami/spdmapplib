@@ -54,11 +54,11 @@ void freeSpdmContext(spdmItem& spdm)
     spdm.dataMeas.clear();
 }
 
-void freeAllocatedMemory(void* memory)
+void freeAllocatedMemory(void*& memory)
 {
     if (memory)
     {
-        free(memory);
+        free_pool(memory);
     }
     memory = nullptr;
 }

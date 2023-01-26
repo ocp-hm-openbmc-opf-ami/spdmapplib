@@ -133,6 +133,14 @@ class SPDMRequesterImpl
     bool doMeasurement(const uint32_t* sessionid);
 
     /**
+     * @brief sets up the SPDM Requester
+     *
+     * @return true           success
+     * @return false          failure
+     */
+    bool setupSpdmRequester();
+
+    /**
      * @brief Set received data to assigned endpoint.
      *
      * @param  transEP        The Endpoint object to receive data.
@@ -157,6 +165,7 @@ class SPDMRequesterImpl
     uint8_t mUseMeasurementOperation = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder{}; // only one instance for requester.
+    spdm_transport::TransportEndPoint responderEndpoint{};
     SPDMConfiguration spdmRequesterCfg{};
 };
 
