@@ -2,3 +2,7 @@ option(
     'yocto_dep', type: 'feature',  description: 'Use yocto dependencies'
 )
 
+option(
+    'has_optee', type: 'feature', description: 'Use OP-TEE dependencies'
+)
+
