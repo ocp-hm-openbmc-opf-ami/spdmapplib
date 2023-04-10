@@ -41,7 +41,8 @@ else
                             'include',
                             'spdm_transport_none_lib',
                             'libspdm/include',
-                            'libspdm/include/hal/x64',
+                            'libspdm/include/hal',
+                            'libspdm/os_stub',
                             'libspdm/os_stub/spdm_device_secret_lib_sample',
                             'libspdm/os_stub/include')
 endif
