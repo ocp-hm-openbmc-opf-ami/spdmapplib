@@ -210,16 +210,7 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
     {
         return false;
     }
-    spdm.useSlotId = 0;
-    spdm.sessionId = 0;
-    spdm.useVersion = 0;
-    spdm.useReqAsymAlgo = 0;
-    spdm.useMeasurementHashAlgo = 0;
-    spdm.useAsymAlgo = 0;
-    spdm.useHashAlgo = 0;
     spdm.transEP = transEP;
-    spdm.certChain = nullptr;
-    spdm.rootCert = nullptr;
     spdm.connectStatus = LIBSPDM_CONNECTION_STATE_NOT_STARTED;
     spdm.data.clear();
     spdm.dataCert.clear();

@@ -57,18 +57,18 @@ inline constexpr uint32_t exeConnection =
  */
 typedef struct
 {
-    void* spdmContext;
-    void* scratchBuffer;
-    void* certChain;
-    void* rootCert;
+    void* spdmContext = nullptr;
+    void* scratchBuffer = nullptr;
+    void* certChain = nullptr;
+    void* rootCert = nullptr;
     spdm_transport::TransportEndPoint transEP;
-    uint8_t useSlotId;
-    uint32_t sessionId;
-    uint32_t useVersion;
-    uint16_t useReqAsymAlgo;
-    uint32_t useMeasurementHashAlgo;
-    uint32_t useAsymAlgo;
-    uint32_t useHashAlgo;
+    uint8_t useSlotId = 0;
+    uint32_t sessionId = 0;
+    uint32_t useVersion = 0;
+    uint16_t useReqAsymAlgo = 0;
+    uint32_t useMeasurementHashAlgo = 0;
+    uint32_t useAsymAlgo = 0;
+    uint32_t useHashAlgo = 0;
     libspdm_connection_state_t connectStatus;
     std::vector<uint8_t> data;
     std::vector<uint8_t> dataCert;
