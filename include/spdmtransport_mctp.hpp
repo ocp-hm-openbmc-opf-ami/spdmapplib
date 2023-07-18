@@ -123,6 +123,7 @@ class SPDMTransportMCTP : public SPDMTransport
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     mctpw::BindingType transType; /*MCTP over PCIe, MCTP over SMBus*/
-    std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper;
+    std::shared_ptr<mctpw::MCTPWrapper> mctpWrapper; /* SPDM channel over MCTP */
+    std::shared_ptr<mctpw::MCTPWrapper> securedOverMctpWrapper; /* Secured channel over MCTP */
 };
 } // namespace spdm_transport

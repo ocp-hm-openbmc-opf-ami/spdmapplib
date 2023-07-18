@@ -29,12 +29,26 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
                                              const std::vector<uint8_t>& data,
                                              int /*status*/)
 {
-    if (!data.empty() &&
-        data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
+    if (data.empty())
     {
-        TransportEndPoint tmpEP;
-        tmpEP.devIdentifier = srcEid;
+        return;
+    }
+
+    TransportEndPoint tmpEP;
+    tmpEP.devIdentifier = srcEid;
+
+    if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
+    {
         msgReceiveCB(tmpEP, data);
+    }
+    else if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::securedMsg))
+    {
+        if (asyncSendData(tmpEP, data, 2000) !=
+            spdm_app_lib::error_codes::returnSuccess)
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "Failed to send secured messages back.");
+        }
     }
 }
 
@@ -121,7 +135,9 @@ int SPDMTransportMCTP::sendRecvData(TransportEndPoint& transEP,
         return spdm_app_lib::error_codes::generalReturnError;
     }
 
-    if (reply.second.at(0) != static_cast<uint8_t>(mctpw::MessageType::spdm))
+    if (reply.second.at(0) != static_cast<uint8_t>(mctpw::MessageType::spdm) &&
+        reply.second.at(0) !=
+            static_cast<uint8_t>(mctpw::MessageType::securedMsg))
     {
         return spdm_app_lib::error_codes::generalReturnError;
     }
@@ -170,6 +186,13 @@ SPDMTransportMCTP::SPDMTransportMCTP(
     mctpw::MCTPConfiguration config(mctpw::MessageType::spdm, transType);
     mctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
         conn, config,
+        std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
+        std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
+                  _4, _5, _6));
+    mctpw::MCTPConfiguration securedConfig(mctpw::MessageType::securedMsg,
+                                           transType);
+    securedOverMctpWrapper = std::make_shared<mctpw::MCTPWrapper>(
+        conn, securedConfig,
         std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
         std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
                   _4, _5, _6));
