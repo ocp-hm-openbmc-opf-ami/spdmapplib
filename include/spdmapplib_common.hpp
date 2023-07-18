@@ -76,11 +76,11 @@ typedef struct
 } spdmItem;
 
 /**
- * @brief get cert file Path
+ * @brief get file Path
  *
  * @return pointer to certPath
  */
-char* getCertificatePath();
+std::string getFilePath(const char* fileName);
 
 /**
  * @brief set cert file Path
