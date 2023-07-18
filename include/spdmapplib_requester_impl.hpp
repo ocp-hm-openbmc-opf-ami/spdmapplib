@@ -91,6 +91,12 @@ class SPDMRequesterImpl
 
   private:
     /**
+     * @brief Function to get capabilities from SPDM responder
+     *
+     **/
+    bool getCapabilities();
+
+    /**
      * @brief initSpdmContext initiates spdm context
      *
      * @return true
@@ -163,6 +169,7 @@ class SPDMRequesterImpl
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     uint8_t mUseMeasurementOperation = 0;
+    uint32_t capability = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder{}; // only one instance for requester.
     spdm_transport::TransportEndPoint responderEndpoint{};

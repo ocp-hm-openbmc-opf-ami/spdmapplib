@@ -133,6 +133,14 @@ bool SPDMRequesterImpl::getVCA(bool onlyVersion)
         freeSpdmContext(spdmResponder);
         return false;
     }
+
+    if (!getCapabilities())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getCapabilities Failed!");
+        freeSpdmContext(spdmResponder);
+        return false;
+    }
     return true;
 }
 
@@ -151,6 +159,18 @@ bool SPDMRequesterImpl::isConnStateNegotiated()
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::isConnStateNegotiated state Not Negotiated!");
+        return false;
+    }
+    return true;
+}
+
+bool SPDMRequesterImpl::getCapabilities()
+{
+    libspdm_data_parameter_t parameter;
+    initGetSetParameter(parameter, operationGet);
+    if (!spdmGetData(spdmResponder, LIBSPDM_DATA_CAPABILITY_FLAGS, capability,
+                     parameter))
+    {
         return false;
     }
     return true;
@@ -180,7 +200,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         get_digest
         get_certificate
     **/
-    if ((exeConnection & exeConnectionDigest))
+    if ((capability & exeConnectionDigest))
     {
         if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext,
                                                &slotMask, &totalDigestBuffer)))
@@ -192,7 +212,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         }
     }
 
-    if (!(exeConnection & exeConnectionCert))
+    if (!(capability & exeConnectionCert))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doAuthentication Certificate CAPS Not Supported!");
@@ -225,7 +245,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
-    if ((exeConnection & exeConnectionChal))
+    if ((capability & exeConnectionChal))
     {
         if (!validateSpdmRc(
                 libspdm_challenge(spdmResponder.spdmContext, useSlotId,
@@ -239,7 +259,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         }
     }
 
-    if (!(exeConnection & exeConnectionMeas))
+    if (!(capability & exeConnectionMeas))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doMeasurement Meas CAP not Supported!");
@@ -257,7 +277,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
             mUseMeasurementOperation, useSlotId & 0xF, nullptr, &numberOfBlocks,
             &measurementRecordLength, &measurement)))
     {
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(
+        phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doMeasurement libspdm_get_measurements Failed!");
         spdmResponder.dataMeas.clear();
         return false;
