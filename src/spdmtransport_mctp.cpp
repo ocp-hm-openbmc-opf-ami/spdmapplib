@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <sstream>
 
 namespace spdm_transport
 {
@@ -27,7 +28,7 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
                                              bool /*tagOwner*/,
                                              uint8_t /* msgTag*/,
                                              const std::vector<uint8_t>& data,
-                                             int /*status*/)
+                                             int status)
 {
     if (data.empty())
     {
@@ -43,6 +44,15 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     }
     else if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::securedMsg))
     {
+        std::stringstream ss;
+        ss << "onMCTPReceive EID " << static_cast<int>(srcEid) << std::endl
+           << "onMCTPReceive Status " << status << std::endl
+           << "onMCTPReceive Response ";
+        for (uint8_t n : data)
+        {
+            ss << n << ' ';
+        }
+        phosphor::logging::log<phosphor::logging::level::DEBUG>(ss.str().c_str());
         if (asyncSendData(tmpEP, data, 2000) !=
             spdm_app_lib::error_codes::returnSuccess)
         {
@@ -166,6 +176,17 @@ void SPDMTransportMCTP::initDiscovery(
         for (auto& item : eidMap)
         {
             transAddNewDevice(item.first);
+        }
+    });
+
+    boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
+        securedOverMctpWrapper->detectMctpEndpoints(yield);
+        mctpw::VersionFields specVersion = {0xF1, 0xF0, 0xF1, 0x00};
+        auto rcvStatus = securedOverMctpWrapper->registerResponder(specVersion);
+        if (rcvStatus != boost::system::errc::success)
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "Failed to register secured MCTP responder.");
         }
     });
 }
