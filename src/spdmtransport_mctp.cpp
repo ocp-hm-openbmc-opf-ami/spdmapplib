@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 
 namespace spdm_transport
@@ -38,21 +39,22 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     TransportEndPoint tmpEP;
     tmpEP.devIdentifier = srcEid;
 
+    std::ostringstream oss;
+    oss << "Payloads: ";
+    for (const auto& byte : data)
+    {
+         oss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << ' ';
+    }
+    phosphor::logging::log<phosphor::logging::level::INFO>(("EID: " + std::to_string(srcEid)).c_str());
+    phosphor::logging::log<phosphor::logging::level::INFO>(("Status: " + std::to_string(status)).c_str());
+    phosphor::logging::log<phosphor::logging::level::INFO>(oss.str().c_str());
+
     if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
     {
         msgReceiveCB(tmpEP, data);
     }
     else if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::securedMsg))
     {
-        std::stringstream ss;
-        ss << "onMCTPReceive EID " << static_cast<int>(srcEid) << std::endl
-           << "onMCTPReceive Status " << status << std::endl
-           << "onMCTPReceive Response ";
-        for (uint8_t n : data)
-        {
-            ss << n << ' ';
-        }
-        phosphor::logging::log<phosphor::logging::level::DEBUG>(ss.str().c_str());
         if (asyncSendData(tmpEP, data, 2000) !=
             spdm_app_lib::error_codes::returnSuccess)
         {
