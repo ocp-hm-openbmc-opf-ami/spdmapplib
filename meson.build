@@ -26,7 +26,8 @@ if dep_required
     libspdm = dependency('libspdm')
     root_inc = include_directories(
                             'include',
-                            'spdm_transport_none_lib')
+                            'spdm_transport_none_lib',
+                            'spdm_bmc_secret_lib')
 else
     cc = meson.get_compiler('cpp')
     message('Compiler ID:'+cc.get_id())
@@ -40,6 +41,7 @@ else
     root_inc = include_directories(
                             'include',
                             'spdm_transport_none_lib',
+                            'spdm_bmc_secret_lib',
                             'libspdm/include',
                             'libspdm/include/hal',
                             'libspdm/os_stub',
@@ -78,9 +80,15 @@ subdir('spdm_transport_none_lib')
 spdm_transport_none_lib_dep = declare_dependency(include_directories : root_inc,
                                 dependencies: deps,
                                 link_with : spdm_transport_none_lib)
+
+subdir('spdm_bmc_secret_lib')
+spdm_bmc_secret_lib_dep = declare_dependency(include_directories : root_inc,
+                                dependencies: deps,
+                                link_with : spdm_bmc_secret_lib)
 lib_deps = [
     deps,
     spdm_transport_none_lib_dep,
+    spdm_bmc_secret_lib_dep
 ]
 
 app_deps = [
