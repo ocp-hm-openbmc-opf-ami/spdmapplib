@@ -65,6 +65,61 @@ class SPDMRequesterImpl
     bool getCertificate(std::vector<uint8_t>& certificate);
 
     /**
+     * @brief  To start secure session.
+     * @param  usePsk            Use pre shared key.
+     * @param  sessionId         Id created for this session
+     * @param  heartbeatPeriod   Heartbeat period for this session
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     *
+     **/
+    bool startSecureSession(bool usePsk, uint32_t& sessionId,
+                            uint8_t& heartbeatPeriod);
+
+    /**
+     * @brief  To terminate secure session.
+     * @param  sessionId         Session id to terminate
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     *
+     **/
+    bool endSecureSession(uint32_t sessionId);
+
+    /**
+     *
+     * @brief  To send HEARTBEAT to an SPDM Session.
+     * @param  sessionId         The session ID of the session.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     *
+     **/
+    bool sendHeartbeat(uint32_t sessionId);
+
+    /**
+     *
+     * @brief  To update keys for an SPDM Session and then verify new key.
+     * @param  sessionId         The session ID of the session.
+     * @param  singleDirection   Update only the single-direction key
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     **/
+    bool updateKey(uint32_t sessionId, bool singleDirection);
+
+    /**
+     *
+     * @brief  To send a secured application message in SPDM session.
+     * @param  sessionId      Indicates a running SPDM session ID.
+     * @param  request        The request data to send.
+     * @param  response       The received response data.
+     * @return  true          Indicates Success.
+     * @return  false         Indicates Failure.
+     *
+     **/
+    bool sendSecuredMessage(uint32_t sessionId,
+                            const std::vector<uint8_t>& request,
+                            std::vector<uint8_t>& response);
+
+    /**
      * @brief Register to libspdm for sending SPDM payload.
      *
      * @param  spdmContext      The pointer of the spdmcontext.
@@ -145,6 +200,14 @@ class SPDMRequesterImpl
      * @return false          failure
      */
     bool setupSpdmRequester();
+
+    /**
+     * @brief set certificate chain for mutual authentication
+     *
+     * @return true           If, setCertificateChain succeeds
+     * @return false          If, setCertificateChain fails
+     **/
+    bool setCertificateChain();
 
     /**
      * @brief Set received data to assigned endpoint.

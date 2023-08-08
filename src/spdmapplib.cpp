@@ -178,6 +178,35 @@ bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements)
     return pReqImpl->getMeasurements(measurements);
 }
 
+
+bool SPDMRequester::startSecureSession(bool usePsk, uint32_t& sessionId,
+                                       uint8_t& heartbeatPeriod)
+{
+    return pReqImpl->startSecureSession(usePsk, sessionId, heartbeatPeriod);
+}
+
+bool SPDMRequester::endSecureSession(uint32_t sessionId)
+{
+    return pReqImpl->endSecureSession(sessionId);
+}
+
+bool SPDMRequester::sendHeartbeat(uint32_t sessionId)
+{
+    return pReqImpl->sendHeartbeat(sessionId);
+}
+
+bool SPDMRequester::updateKey(uint32_t sessionId, bool singleDirection)
+{
+    return pReqImpl->updateKey(sessionId, singleDirection);
+}
+
+bool SPDMRequester::sendSecuredMessage(uint32_t sessionId,
+                                       const std::vector<uint8_t>& request,
+                                       std::vector<uint8_t>& response)
+{
+    return pReqImpl->sendSecuredMessage(sessionId, request, response);
+}
+
 SPDMRequester::~SPDMRequester() noexcept = default;
 
 SPDMResponder::SPDMResponder(

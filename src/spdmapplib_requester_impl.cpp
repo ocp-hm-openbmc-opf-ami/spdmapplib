@@ -245,6 +245,13 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
+    if (!setCertificateChain())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::doMeasurement cannot set up certificate chain for mutual authentication.");
+        return false;
+    }
+
     if ((capability & exeConnectionChal))
     {
         if (!validateSpdmRc(
@@ -382,6 +389,116 @@ bool SPDMRequesterImpl::setupSpdmRequester()
     {
         phosphor::logging::log<phosphor::logging::level::INFO>(
             "SPDMRequesterImpl::setupSpdmRequester spdmSetConfigData failed!");
+        return false;
+    }
+    return true;
+}
+
+bool SPDMRequesterImpl::startSecureSession(bool usePsk, uint32_t& sessionId,
+                                           uint8_t& heartbeatPeriod)
+{
+    uint8_t useMeasurementSummaryHashType =
+        SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH;
+    uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
+    uint8_t sessionPolicy =
+        SPDM_KEY_EXCHANGE_REQUEST_SESSION_POLICY_TERMINATION_POLICY_RUNTIME_UPDATE;
+    uint8_t useSlotId = 0;
+
+    if (!setCertificateChain())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::startSecureSession cannot set up certificate chain for mutual authentication.");
+        return false;
+    }
+
+    return validateSpdmRc(libspdm_start_session(
+        spdmResponder.spdmContext, usePsk, useMeasurementSummaryHashType,
+        useSlotId, sessionPolicy, &sessionId, &heartbeatPeriod,
+        measurementHash));
+}
+
+bool SPDMRequesterImpl::endSecureSession(uint32_t sessionId)
+{
+    uint8_t endSessionAttributes =
+        0x00000001; // preservce responder negotiated state
+    return validateSpdmRc(libspdm_stop_session(
+        spdmResponder.spdmContext, sessionId, endSessionAttributes));
+}
+
+bool SPDMRequesterImpl::sendHeartbeat(uint32_t sessionId)
+{
+    return validateSpdmRc(
+        libspdm_heartbeat(spdmResponder.spdmContext, sessionId));
+}
+
+bool SPDMRequesterImpl::updateKey(uint32_t sessionId, bool singleDirection)
+{
+    return validateSpdmRc(libspdm_key_update(spdmResponder.spdmContext,
+                                             sessionId, singleDirection));
+}
+
+bool SPDMRequesterImpl::sendSecuredMessage(uint32_t sessionId,
+                                           const std::vector<uint8_t>& request,
+                                           std::vector<uint8_t>& response)
+{
+    const bool IS_APP_MESSAGE = true;
+    size_t requestSize = request.size();
+    size_t responseSize = LIBSPDM_MAX_MESSAGE_BUFFER_SIZE;
+    uint8_t responseArray[LIBSPDM_MAX_MESSAGE_BUFFER_SIZE];
+    const uint8_t *requestArray = request.data();
+    if (!validateSpdmRc(libspdm_send_receive_data(
+            spdmResponder.spdmContext, &sessionId, IS_APP_MESSAGE, requestArray,
+            requestSize, responseArray, &responseSize)))
+    {
+        return false;
+    }
+    std::vector<uint8_t> buffer(responseArray, responseArray + responseSize);
+    response = buffer;
+    return true;
+}
+
+bool SPDMRequesterImpl::setCertificateChain()
+{
+    uint32_t baseHashAlgo;
+    uint32_t baseAsymAlgo;
+    uint32_t measurementHashAlgo;
+    uint16_t reqAsymAlgo;
+    size_t certChainSize = 0;
+    void* certChain;
+    libspdm_data_parameter_t parameter;
+
+    if (!(spdmRequesterCfg.capability &
+          SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MUT_AUTH_CAP))
+    {
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            "SPDMRequesterImpl::setCerticateChain Ignore to set certificate due to unsupported mutual authentication.");
+        return true;
+    }
+
+    if (!spdmGetAlgo(spdmResponder, measurementHashAlgo, baseAsymAlgo,
+                     baseHashAlgo, reqAsymAlgo))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::setCerticateChain failed to get negotiated algorithms for mutual authentication.");
+        return false;
+    }
+
+    if (!libspdm_read_requester_public_certificate_chain(
+            baseHashAlgo, reqAsymAlgo, &certChain, &certChainSize, nullptr,
+            nullptr))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::setCerticateChain failed to read public certificate chain for mutual authentication.");
+        return false;
+    }
+
+    initGetSetParameter(parameter, operationSet);
+    if (!validateSpdmRc(libspdm_set_data(spdmResponder.spdmContext,
+                                         LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                                         &parameter, certChain, certChainSize)))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::setCerticateChain failed to set certificate chain for mutual authentication.");
         return false;
     }
     return true;
