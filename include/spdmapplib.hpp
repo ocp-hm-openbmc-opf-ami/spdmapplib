@@ -153,12 +153,13 @@ class SPDMRequester
      * @param  usePsk            Use pre shared key.
      * @param  sessionId         Id created for this session
      * @param  heartbeatPeriod   Heartbeat period for this session
+     * @param  useSlotId         The number of slot for the certificate chain.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      *
      **/
     bool startSecureSession(bool usePsk, uint32_t& sessionId,
-                            uint8_t& heartbeatPeriod);
+                            uint8_t& heartbeatPeriod, uint8_t useSlotId = 0);
 
     /**
      * @brief  To terminate secure session.

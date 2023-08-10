@@ -181,9 +181,11 @@ bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements,
 }
 
 bool SPDMRequester::startSecureSession(bool usePsk, uint32_t& sessionId,
-                                       uint8_t& heartbeatPeriod)
+                                       uint8_t& heartbeatPeriod,
+                                       uint8_t useSlotId)
 {
-    return pReqImpl->startSecureSession(usePsk, sessionId, heartbeatPeriod);
+    return pReqImpl->startSecureSession(usePsk, sessionId, heartbeatPeriod,
+                                        useSlotId);
 }
 
 bool SPDMRequester::endSecureSession(uint32_t sessionId)

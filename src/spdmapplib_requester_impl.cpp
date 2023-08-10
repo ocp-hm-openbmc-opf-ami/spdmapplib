@@ -396,14 +396,14 @@ bool SPDMRequesterImpl::setupSpdmRequester()
 }
 
 bool SPDMRequesterImpl::startSecureSession(bool usePsk, uint32_t& sessionId,
-                                           uint8_t& heartbeatPeriod)
+                                           uint8_t& heartbeatPeriod,
+                                           uint8_t useSlotId)
 {
     uint8_t useMeasurementSummaryHashType =
         SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH;
     uint8_t measurementHash[LIBSPDM_MAX_HASH_SIZE];
     uint8_t sessionPolicy =
         SPDM_KEY_EXCHANGE_REQUEST_SESSION_POLICY_TERMINATION_POLICY_RUNTIME_UPDATE;
-    uint8_t useSlotId = 0;
 
     if (!setCertificateChain())
     {
