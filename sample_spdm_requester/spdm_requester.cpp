@@ -108,26 +108,189 @@ static void startSPDMRequester()
             auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
                 ioc, conn, trans, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
-            if (spdmRequester->getCertificate(data))
+            const uint8_t SLOT_0 = 0;
+            const uint8_t SLOT_1 = 1;
+
+            /** Test case 1 get certificate from slot 0 */
+            if (spdmRequester->getCertificate(data, SLOT_0))
             {
+                std::cout << "Dump certificate raw data from slot 0."
+                          << std::endl;
                 dumpVector(data);
             }
             else
             {
-                std::cerr << "Failed getting Certificate for EID: "
-                          << std::to_string(eidPoint.devIdentifier) << "\n";
+                std::cerr << "Failed to get certificate from slot 0 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
             }
             data.clear();
-            if (spdmRequester->getMeasurements(data))
+
+            /** Test case 2 get certificate from slot 1 */
+            if (spdmRequester->getCertificate(data, SLOT_1))
             {
+                std::cout << "Dump certificate raw data from slot 1."
+                          << std::endl;
                 dumpVector(data);
             }
             else
             {
-                std::cerr << "Failed getting Measurements for EID: "
-                          << std::to_string(eidPoint.devIdentifier) << "\n";
+                std::cerr << "Failed to get certificate from slot 1 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
             }
             data.clear();
+
+            /** Test case 3 get measurement with certificate in slot 0 */
+            if (spdmRequester->getMeasurements(data, SLOT_0))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 0."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 0 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+            }
+            data.clear();
+
+            /** Test case 3 get measurement with certificate in slot 1 */
+            if (spdmRequester->getMeasurements(data, SLOT_1))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 1."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 1 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+            }
+            data.clear();
+
+            /** Test case 4 start secure session by using certificate in slot 0
+             * and no pre-shared key */
+            uint32_t sessionId = 0;
+            uint8_t heartbeatPeriod = 0;
+            const bool NOT_USE_PSK = false;
+            if (spdmRequester->startSecureSession(NOT_USE_PSK, sessionId,
+                                                  heartbeatPeriod, SLOT_0))
+            {
+                std::cout
+                    << "Started secure session with slot-0 certificate successfully."
+                    << std::endl
+                    << "Session ID: " << sessionId << std::endl
+                    << "Heartbeat period: " << heartbeatPeriod << " seconds."
+                    << std::endl;
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to start secure session with slot-0 certificate."
+                    << std::endl;
+            }
+
+            /** Test case 5 send heartbeat */
+            if (spdmRequester->sendHeartbeat(sessionId))
+            {
+                std::cout << "Heartbeat sent successfully." << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to send heartbeat" << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
+
+            /** Test case 6 update key in single direction */
+            if (spdmRequester->updateKey(sessionId, false))
+            {
+                std::cout << "Update key in single direction successfully."
+                          << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to update key in single direction"
+                          << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
+
+            /** Test case 7 update key */
+            if (spdmRequester->updateKey(sessionId, true))
+            {
+                std::cout << "Update key successfully." << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to update key" << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
+
+            /** Test case 8 send application message over secure channel */
+            std::vector<uint8_t> request = {0x05, 0x11, 0xe8, 0x00, 0x00};
+            std::vector<uint8_t> response;
+
+            if (spdmRequester->sendSecuredMessage(sessionId, request, response))
+            {
+                std::cout << "Secured application message sent successfully."
+                          << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to send secured messages." << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
+
+            /** Test case 9 terminate the secure session */
+            if (spdmRequester->endSecureSession(sessionId))
+            {
+                std::cout << "Terminate the secure session successfully."
+                          << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to terminate the secure session."
+                          << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
+
+            /** Test case 10 start secure session by using certificate in slot 1
+             * and pre-shared key */
+            const bool USE_PSK = true;
+            sessionId = 0;
+            if (spdmRequester->startSecureSession(USE_PSK, sessionId,
+                                                  heartbeatPeriod, SLOT_1))
+            {
+                std::cout
+                    << "Started secure session with slot-1 certificate successfully."
+                    << std::endl
+                    << "Session ID: " << sessionId << std::endl
+                    << "Heartbeat period: " << heartbeatPeriod << " seconds."
+                    << std::endl;
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to start secure session with slot-0 certificate."
+                    << std::endl;
+            }
+
+            /** Test case 11 terminate the secure session */
+            if (spdmRequester->endSecureSession(sessionId))
+            {
+                std::cout << "Terminate the secure session successfully."
+                          << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to terminate the secure session."
+                          << std::endl
+                          << "Session ID: " << sessionId << std::endl;
+            }
         }
         else if (event == spdm_transport::Event::removed)
         {
