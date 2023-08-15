@@ -90,6 +90,51 @@ static void dumpVector(std::vector<unsigned char> vec)
     std::cerr << std::dec << std::endl;
 }
 
+static void printBinary(uint32_t value)
+{
+    for (int i = 31; i >= 0; i--)
+    {
+        std::cout << ((value >> i) & 1);
+    }
+}
+
+static void printCurrentConfiguration()
+{
+    std::cout << "Version: ";
+    printBinary(spdmRequesterCfg.version);
+    std::cout << std::endl;
+
+    std::cout << "Capability: ";
+    printBinary(spdmRequesterCfg.capability);
+    std::cout << std::endl;
+
+    std::cout << "ASYM Algorithm: ";
+    printBinary(spdmRequesterCfg.asym);
+    std::cout << std::endl;
+
+    std::cout << "Hash Algorithm: ";
+    printBinary(spdmRequesterCfg.hash);
+    std::cout << std::endl;
+
+    std::cout << "Certificate: " << spdmRequesterCfg.certPath << std::endl;
+
+    std::cout << "DHE Algorithm: ";
+    printBinary(spdmRequesterCfg.dhe);
+    std::cout << std::endl;
+
+    std::cout << "AEAD Algorithm: ";
+    printBinary(spdmRequesterCfg.aead);
+    std::cout << std::endl;
+
+    std::cout << "reqasym Algorithm: ";
+    printBinary(spdmRequesterCfg.reqasym);
+    std::cout << std::endl;
+
+    std::cout << "measHash Algorithm: ";
+    printBinary(spdmRequesterCfg.measHash);
+    std::cout << std::endl;
+}
+
 /**
  * @brief Main function of SPDM requester unit test.
  *
@@ -98,6 +143,8 @@ static void startSPDMRequester()
 {
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Staring SPDM requester!!");
+
+    printCurrentConfiguration();
 
     trans->initDiscovery([&](spdm_transport::TransportEndPoint eidPoint,
                              spdm_transport::Event event) {
@@ -123,6 +170,7 @@ static void startSPDMRequester()
                 std::cerr << "Failed to get certificate from slot 0 for EID: "
                           << std::to_string(eidPoint.devIdentifier)
                           << std::endl;
+                return;
             }
             data.clear();
 
@@ -138,6 +186,7 @@ static void startSPDMRequester()
                 std::cerr << "Failed to get certificate from slot 1 for EID: "
                           << std::to_string(eidPoint.devIdentifier)
                           << std::endl;
+                return;
             }
             data.clear();
 
@@ -154,6 +203,7 @@ static void startSPDMRequester()
                 std::cerr
                     << "Failed to get measurement raw data with certificate in slot 0 for EID: "
                     << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
             }
             data.clear();
 
@@ -170,6 +220,7 @@ static void startSPDMRequester()
                 std::cerr
                     << "Failed to get measurement raw data with certificate in slot 1 for EID: "
                     << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
             }
             data.clear();
 
@@ -193,6 +244,7 @@ static void startSPDMRequester()
                 std::cerr
                     << "Failed to start secure session with slot-0 certificate."
                     << std::endl;
+                return;
             }
 
             /** Test case 5 send heartbeat */
@@ -204,6 +256,7 @@ static void startSPDMRequester()
             {
                 std::cerr << "Failed to send heartbeat" << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
 
             /** Test case 6 update key in single direction */
@@ -217,6 +270,7 @@ static void startSPDMRequester()
                 std::cerr << "Failed to update key in single direction"
                           << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
 
             /** Test case 7 update key */
@@ -228,6 +282,7 @@ static void startSPDMRequester()
             {
                 std::cerr << "Failed to update key" << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
 
             /** Test case 8 send application message over secure channel */
@@ -243,6 +298,7 @@ static void startSPDMRequester()
             {
                 std::cerr << "Failed to send secured messages." << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
 
             /** Test case 9 terminate the secure session */
@@ -256,6 +312,7 @@ static void startSPDMRequester()
                 std::cerr << "Failed to terminate the secure session."
                           << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
 
             /** Test case 10 start secure session by using certificate in slot 1
@@ -277,6 +334,7 @@ static void startSPDMRequester()
                 std::cerr
                     << "Failed to start secure session with slot-0 certificate."
                     << std::endl;
+                return;
             }
 
             /** Test case 11 terminate the secure session */
@@ -290,6 +348,7 @@ static void startSPDMRequester()
                 std::cerr << "Failed to terminate the secure session."
                           << std::endl
                           << "Session ID: " << sessionId << std::endl;
+                return;
             }
         }
         else if (event == spdm_transport::Event::removed)

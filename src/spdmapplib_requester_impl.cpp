@@ -405,6 +405,20 @@ bool SPDMRequesterImpl::startSecureSession(bool usePsk, uint32_t& sessionId,
     uint8_t sessionPolicy =
         SPDM_KEY_EXCHANGE_REQUEST_SESSION_POLICY_TERMINATION_POLICY_RUNTIME_UPDATE;
 
+    if (!setupSpdmRequester())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::startSecureSession setupSpdmRequester failed!");
+        return false;
+    }
+
+    if (!doAuthentication(useSlotId))
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::startSecureSession doAuthentication failed!");
+        return false;
+    }
+
     if (!setCertificateChain())
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -422,8 +436,11 @@ bool SPDMRequesterImpl::endSecureSession(uint32_t sessionId)
 {
     uint8_t endSessionAttributes =
         0x00000001; // preservce responder negotiated state
-    return validateSpdmRc(libspdm_stop_session(
+
+    bool result = validateSpdmRc(libspdm_stop_session(
         spdmResponder.spdmContext, sessionId, endSessionAttributes));
+    freeSpdmContext(spdmResponder);
+    return result;
 }
 
 bool SPDMRequesterImpl::sendHeartbeat(uint32_t sessionId)
