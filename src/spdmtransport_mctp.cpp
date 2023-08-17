@@ -20,8 +20,6 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
-#include <iomanip>
-#include <sstream>
 
 namespace spdm_transport
 {
@@ -29,7 +27,7 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
                                              bool /*tagOwner*/,
                                              uint8_t /* msgTag*/,
                                              const std::vector<uint8_t>& data,
-                                             int status)
+                                             int /*status*/)
 {
     if (data.empty())
     {
@@ -39,28 +37,10 @@ void SPDMTransportMCTP::transMsgRecvCallback(void*, mctpw::eid_t srcEid,
     TransportEndPoint tmpEP;
     tmpEP.devIdentifier = srcEid;
 
-    std::ostringstream oss;
-    oss << "Payloads: ";
-    for (const auto& byte : data)
-    {
-         oss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << ' ';
-    }
-    phosphor::logging::log<phosphor::logging::level::INFO>(("EID: " + std::to_string(srcEid)).c_str());
-    phosphor::logging::log<phosphor::logging::level::INFO>(("Status: " + std::to_string(status)).c_str());
-    phosphor::logging::log<phosphor::logging::level::INFO>(oss.str().c_str());
-
-    if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm))
+    if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::spdm) ||
+        data.at(0) == static_cast<uint8_t>(mctpw::MessageType::securedMsg))
     {
         msgReceiveCB(tmpEP, data);
-    }
-    else if (data.at(0) == static_cast<uint8_t>(mctpw::MessageType::securedMsg))
-    {
-        if (asyncSendData(tmpEP, data, 2000) !=
-            spdm_app_lib::error_codes::returnSuccess)
-        {
-            phosphor::logging::log<phosphor::logging::level::ERR>(
-                "Failed to send secured messages back.");
-        }
     }
 }
 

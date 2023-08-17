@@ -205,9 +205,11 @@ bool SPDMRequester::updateKey(uint32_t sessionId, bool singleDirection)
 
 bool SPDMRequester::sendSecuredMessage(uint32_t sessionId,
                                        const std::vector<uint8_t>& request,
-                                       std::vector<uint8_t>& response)
+                                       std::vector<uint8_t>& response,
+                                       bool isAppMessage)
 {
-    return pReqImpl->sendSecuredMessage(sessionId, request, response);
+    return pReqImpl->sendSecuredMessage(sessionId, request, response,
+                                        isAppMessage);
 }
 
 SPDMRequester::~SPDMRequester() noexcept = default;

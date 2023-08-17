@@ -457,15 +457,15 @@ bool SPDMRequesterImpl::updateKey(uint32_t sessionId, bool singleDirection)
 
 bool SPDMRequesterImpl::sendSecuredMessage(uint32_t sessionId,
                                            const std::vector<uint8_t>& request,
-                                           std::vector<uint8_t>& response)
+                                           std::vector<uint8_t>& response,
+                                           bool isAppMessage)
 {
-    const bool IS_APP_MESSAGE = true;
     size_t requestSize = request.size();
     size_t responseSize = LIBSPDM_MAX_MESSAGE_BUFFER_SIZE;
     uint8_t responseArray[LIBSPDM_MAX_MESSAGE_BUFFER_SIZE];
-    const uint8_t *requestArray = request.data();
+    const uint8_t* requestArray = request.data();
     if (!validateSpdmRc(libspdm_send_receive_data(
-            spdmResponder.spdmContext, &sessionId, IS_APP_MESSAGE, requestArray,
+            spdmResponder.spdmContext, &sessionId, isAppMessage, requestArray,
             requestSize, responseArray, &responseSize)))
     {
         return false;

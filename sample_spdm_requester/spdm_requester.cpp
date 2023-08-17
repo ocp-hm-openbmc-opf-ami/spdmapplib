@@ -24,6 +24,9 @@
 
 #include <iostream>
 #include <unordered_set>
+#include <iomanip>
+#include <sstream>
+
 #ifndef UNUSED
 #define UNUSED(x) (void)(x)
 #endif
@@ -236,8 +239,8 @@ static void startSPDMRequester()
                     << "Started secure session with slot-0 certificate successfully."
                     << std::endl
                     << "Session ID: " << sessionId << std::endl
-                    << "Heartbeat period: " << heartbeatPeriod << " seconds."
-                    << std::endl;
+                    << "Heartbeat period: " << static_cast<int>(heartbeatPeriod)
+                    << " seconds." << std::endl;
             }
             else
             {
@@ -286,13 +289,50 @@ static void startSPDMRequester()
             }
 
             /** Test case 8 send application message over secure channel */
-            std::vector<uint8_t> request = {0x05, 0x11, 0xe8, 0x00, 0x00};
+            const uint8_t MCTP_MESSAGE_TYPE_PLDM = 0x01;
+            const uint8_t INSTANCE_ID = 0;
+            const uint8_t PLDM_HEADER_REQUEST_MASK = 0x80;
+            const uint8_t PLDM_MESSAGE_TYPE_CONTROL_DISCOVERY = 0x00;
+            const uint8_t PLDM_CONTROL_DISCOVERY_COMMAND_GET_TID = 0x02;
+            std::vector<uint8_t> request = {
+                MCTP_MESSAGE_TYPE_PLDM, INSTANCE_ID | PLDM_HEADER_REQUEST_MASK,
+                PLDM_MESSAGE_TYPE_CONTROL_DISCOVERY,
+                PLDM_CONTROL_DISCOVERY_COMMAND_GET_TID};
             std::vector<uint8_t> response;
-
-            if (spdmRequester->sendSecuredMessage(sessionId, request, response))
+            /**
+             * The sample uses PLDM content as plain data which is encapsulated
+             * with MCTP and encypted within secured channel. If you want to
+             * send MCTP application message. Please ensure
+             *  1. Pass true as isAppMessage argument into sendSecuredMessage
+             * method.
+             *  2. Ensure SPDM responder side recognized this special format and
+             * then sent back something.
+             *  Note: SPDM or secured-message payload which starts with
+             * 0x05 or 0x06 cannot be considered as an APP message. Pass false
+             * as isAppMessage argument instead.
+             */
+            const bool IS_APP_MESSAGE = true;
+            if (spdmRequester->sendSecuredMessage(sessionId, request, response,
+                                                  IS_APP_MESSAGE))
             {
                 std::cout << "Secured application message sent successfully."
                           << std::endl;
+                std::ostringstream oss;
+                oss << "Request: ";
+                for (const auto& byte : request)
+                {
+                    oss << "0x" << std::hex << std::setw(2) << std::setfill('0')
+                        << static_cast<int>(byte) << ' ';
+                }
+                oss << std::endl;
+                oss << "Response: ";
+                for (const auto& byte : response)
+                {
+                    oss << "0x" << std::hex << std::setw(2) << std::setfill('0')
+                        << static_cast<int>(byte) << ' ';
+                }
+                oss << std::endl;
+                std::cout << oss.str() << std::endl;
             }
             else
             {
@@ -326,8 +366,8 @@ static void startSPDMRequester()
                     << "Started secure session with slot-1 certificate successfully."
                     << std::endl
                     << "Session ID: " << sessionId << std::endl
-                    << "Heartbeat period: " << heartbeatPeriod << " seconds."
-                    << std::endl;
+                    << "Heartbeat period: " << static_cast<int>(heartbeatPeriod)
+                    << " seconds." << std::endl;
             }
             else
             {

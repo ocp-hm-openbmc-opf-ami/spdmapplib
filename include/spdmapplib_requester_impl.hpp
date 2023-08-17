@@ -116,13 +116,15 @@ class SPDMRequesterImpl
      * @param  sessionId      Indicates a running SPDM session ID.
      * @param  request        The request data to send.
      * @param  response       The received response data.
+     * @param  isAppMessage   Indicates if it is an APP message or SPDM message.
      * @return  true          Indicates Success.
      * @return  false         Indicates Failure.
      *
      **/
     bool sendSecuredMessage(uint32_t sessionId,
                             const std::vector<uint8_t>& request,
-                            std::vector<uint8_t>& response);
+                            std::vector<uint8_t>& response,
+                            bool isAppMessage = true);
 
     /**
      * @brief Register to libspdm for sending SPDM payload.
