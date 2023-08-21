@@ -518,8 +518,8 @@ bool libspdm_requester_data_sign(
     const uint8_t *message, size_t message_size,
     uint8_t *signature, size_t *sig_size)
 {
-    void *context;
-    bool result;
+    void *context = NULL;
+    bool result = false;
 
 #if !LIBSPDM_PRIVATE_KEY_MODE_RAW_KEY_ONLY
     if (g_private_key_mode) {
@@ -566,8 +566,8 @@ bool libspdm_responder_data_sign(
     const uint8_t *message, size_t message_size,
     uint8_t *signature, size_t *sig_size)
 {
-    void *context;
-    bool result;
+    void *context = NULL;
+    bool result = false;
 #if !LIBSPDM_PRIVATE_KEY_MODE_RAW_KEY_ONLY
     if (g_private_key_mode) {
         void *private_pem;
