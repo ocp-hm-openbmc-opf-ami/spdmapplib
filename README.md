@@ -8,7 +8,7 @@ by library user.
 
 “SPDM Application Library”  is designed for applications that requires SPDM 
 responder and requester functions.
-The `spdmapplib` wrap libspdm(DMTP DSP0274 1.0.0) in easy-to-use way for users.  
+The `spdmapplib` wrap libspdm(DMTP DSP0274 1.1.0) in easy-to-use way for users.
 
 In the package, it also include transport layer example based on 
 `MCTP over SMBus` for SPDM devices.
@@ -77,7 +77,10 @@ requester applications.
 
 ## Background and References
 
-- DMTF DSP0274 1.0.0, Security Protocol and Data Model (SPDM) Specification.
+- DMTF DSP0274 1.1.0, Security Protocol and Data Model (SPDM) Specification.
+- DMTF DSP0275 1.0.0, Security Protocol and Data Model (SPDM) over MCTP Binding Specification
+- DMTF DSP0276 1.0.0, Secured Messages using SPDM over MCTP Binding Specification
+- DMTF DSP0277 1.0.0, Secured Messages using SPDM Specification
 
 ## SPDM Requester Interface
 
@@ -104,20 +107,82 @@ Defined required APIs for SPDMRequester listed below, detail information is in t
      * @brief Get all measurement function
      *
      * @param   measurements     The measurements returned for specific endPoint
+     * @param   useSlotId        The number of slot for the certificate chain.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      **/
-    bool getMeasurements(std::vector<uint8_t>& measurements);
+    bool getMeasurements(std::vector<uint8_t>& measurements,
+                         uint8_t useSlotId = 0);
 
     /**
      * @brief Get certificate function
      *
      * @param   certificate      The certificate returned for specific endPoint.
+     * @param   useSlotId        The number of slot for the certificate chain.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      *
      **/
-    bool getCertificate(std::vector<uint8_t>& certificate);
+    bool getCertificate(std::vector<uint8_t>& certificate,
+                        uint8_t useSlotId = 0);
+
+    /**
+     * @brief  To start secure session.
+     * @param  usePsk            Use pre shared key.
+     * @param  sessionId         Id created for this session
+     * @param  heartbeatPeriod   Heartbeat period for this session
+     * @param  useSlotId         The number of slot for the certificate chain.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     *
+     **/
+    bool startSecureSession(bool usePsk, uint32_t& sessionId,
+                            uint8_t& heartbeatPeriod, uint8_t useSlotId = 0);
+
+    /**
+     * @brief  To terminate secure session.
+     * @param  sessionId         Session id to terminate
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure
+     *
+     **/
+    bool endSecureSession(uint32_t sessionId);
+
+    /**
+     *
+     * @brief  To send HEARTBEAT to an SPDM Session.
+     * @param  sessionId         The session ID of the session.
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     *
+     **/
+    bool sendHeartbeat(uint32_t sessionId);
+
+    /**
+     *
+     * @brief  To update keys for an SPDM Session and then verify new key.
+     * @param  sessionId         The session ID of the session.
+     * @param  singleDirection   Update only the single-direction key
+     * @return  true             Indicates Success.
+     * @return  false            Indicates Failure.
+     **/
+    bool updateKey(uint32_t sessionId, bool singleDirection);
+
+    /**
+     *
+     * @brief  To send a secured application message in SPDM session.
+     * @param  sessionId      Indicates a running SPDM session ID.
+     * @param  request        The request data to send.
+     * @param  response       The received response data.
+     * @param  isAppMessage   Indicates if it is an APP message or SPDM message.
+     * @return  true          Indicates Success.
+     * @return  false         Indicates Failure.
+     *
+     **/
+    bool sendSecuredMessage(uint32_t sessionId,
+                            const std::vector<uint8_t>& request,
+                            std::vector<uint8_t>& response,
+                            bool isAppMessage = true);
 ```
 
 ## SPDM Responder Interface
@@ -260,11 +325,19 @@ Example configurations.
     },
     {
         "Role": "requester",
-        "Version": "1.0",
+        "Version": "1.1",
         "CertPath": "/usr/bin",
         "Capability": [
             "CERT",
-            "CHAL"
+            "CHAL",
+            "KEY_EX",
+            "HBEAT",
+            "ENCRYPT",
+            "MAC",
+            "PSK",
+            "KEY_UPD",
+            "MUT_AUTH",
+            "ENCAP"
         ],
         "Hash": [
             "SHA_384"
