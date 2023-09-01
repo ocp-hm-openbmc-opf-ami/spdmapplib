@@ -17,6 +17,8 @@
 
 #include "mctp_wrapper.hpp"
 
+constexpr uint16_t certificateBufferLength = 1000;
+
 namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
@@ -219,11 +221,12 @@ bool SPDMRequesterImpl::doAuthentication(void)
         return false;
     }
 
-    if (!validateSpdmRc(libspdm_get_certificate(
-            spdmResponder.spdmContext, useSlotId, &certChainSize, &certChain)))
+    if (!validateSpdmRc(libspdm_get_certificate_choose_length(
+            spdmResponder.spdmContext, useSlotId, certificateBufferLength,
+            &certChainSize, &certChain)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::doAuthentication libspdm_get_certificate Failed");
+            "SPDMRequesterImpl::doAuthentication libspdm_get_certificate_choose_length Failed");
         freeSpdmContext(spdmResponder);
         return false;
     }
