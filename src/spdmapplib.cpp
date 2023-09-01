@@ -173,9 +173,10 @@ bool SPDMRequester::getCertificate(std::vector<uint8_t>& certificate)
     return pReqImpl->getCertificate(certificate);
 }
 
-bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements)
+bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements,
+                                    uint8_t measurementIndex)
 {
-    return pReqImpl->getMeasurements(measurements);
+    return pReqImpl->getMeasurements(measurements, measurementIndex);
 }
 
 SPDMRequester::~SPDMRequester() noexcept = default;

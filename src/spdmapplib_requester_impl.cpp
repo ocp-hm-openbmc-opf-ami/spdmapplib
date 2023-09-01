@@ -294,8 +294,11 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     return true;
 }
 
-bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements)
+bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
+                                        uint8_t measurementIndex)
 {
+    mUseMeasurementOperation = measurementIndex;
+
     if (!setupSpdmRequester())
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(

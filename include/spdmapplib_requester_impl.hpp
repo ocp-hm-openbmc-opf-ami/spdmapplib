@@ -53,7 +53,8 @@ class SPDMRequesterImpl
      * @return true           If, vector contains measurements.
      * @return false          If, vector is empty
      **/
-    bool getMeasurements(std::vector<uint8_t>& measurement);
+    bool getMeasurements(std::vector<uint8_t>& measurement,
+                         uint8_t measurementIndex = 0xff);
 
     /**
      * @brief Get certification function
@@ -168,7 +169,7 @@ class SPDMRequesterImpl
 
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
-    uint8_t mUseMeasurementOperation = 0;
+    uint8_t mUseMeasurementOperation = 0xff;
     uint32_t capability = 0;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     spdmItem spdmResponder{}; // only one instance for requester.

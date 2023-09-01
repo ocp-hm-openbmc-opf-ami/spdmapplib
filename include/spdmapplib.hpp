@@ -132,7 +132,8 @@ class SPDMRequester
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      **/
-    bool getMeasurements(std::vector<uint8_t>& measurements);
+    bool getMeasurements(std::vector<uint8_t>& measurements,
+                         uint8_t measurementIndex = 0xff);
 
     /**
      * @brief Get certificate function
