@@ -43,14 +43,12 @@ inline constexpr int operationGet = 0;
 inline constexpr int operationSet = 1;
 inline constexpr int operationSession = 2;
 
-inline constexpr uint32_t exeConnectionVersionOnly = 0x1;
-inline constexpr uint32_t exeConnectionDigest = 0x2;
-inline constexpr uint32_t exeConnectionCert = 0x4;
-inline constexpr uint32_t exeConnectionChal = 0x8;
-inline constexpr uint32_t exeConnectionMeas = 0x10;
-inline constexpr uint32_t exeConnection =
-    (exeConnectionDigest | exeConnectionCert | exeConnectionChal |
-     exeConnectionMeas);
+inline constexpr uint32_t capabilityCache = 0x1;
+inline constexpr uint32_t capabilityDigestCert = 0x2;
+inline constexpr uint32_t capabilityChallenge = 0x4;
+inline constexpr uint32_t capabilityMeas = 0x8;
+inline constexpr uint32_t capabilityMeasSign = 0x10;
+
 /**
  * @brief SPDM device context structure
  *

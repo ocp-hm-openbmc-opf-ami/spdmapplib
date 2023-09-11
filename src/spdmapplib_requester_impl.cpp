@@ -202,7 +202,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         get_digest
         get_certificate
     **/
-    if ((capability & exeConnectionDigest))
+    if (capability & capabilityDigestCert)
     {
         if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext,
                                                &slotMask, &totalDigestBuffer)))
@@ -214,7 +214,7 @@ bool SPDMRequesterImpl::doAuthentication(void)
         }
     }
 
-    if (!(capability & exeConnectionCert))
+    if (!(capability & capabilityDigestCert))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doAuthentication Certificate CAPS Not Supported!");
@@ -248,7 +248,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
     std::array<uint8_t, measurementTranscriptSize> measurementTranscript{0};
     spdmResponder.dataMeas.clear();
 
-    if ((capability & exeConnectionChal))
+    if (capability & capabilityChallenge)
     {
         if (!validateSpdmRc(
                 libspdm_challenge(spdmResponder.spdmContext, useSlotId,
@@ -262,36 +262,36 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
         }
     }
 
-    if (!(capability & exeConnectionMeas))
+    if ((capability & capabilityMeas) || (capability & capabilityMeasSign))
     {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::doMeasurement Meas CAP not Supported!");
-        return false;
-    }
+        libspdm_init_msg_log(spdmResponder.spdmContext, &measurementTranscript,
+                             measurementTranscript.size());
+        libspdm_set_msg_log_mode(spdmResponder.spdmContext,
+                                 LIBSPDM_MSG_LOG_MODE_ENABLE);
+        measurementRecordLength = measurement.size();
+        if (!validateSpdmRc(libspdm_get_measurement(
+                spdmResponder.spdmContext, session_id,
+                SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
+                mUseMeasurementOperation, useSlotId & 0xF, nullptr,
+                &numberOfBlocks, &measurementRecordLength, &measurement)))
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "SPDMRequesterImpl::doMeasurement libspdm_get_measurements Failed!");
+            spdmResponder.dataMeas.clear();
+            return false;
+        }
 
-    libspdm_init_msg_log(spdmResponder.spdmContext, &measurementTranscript,
-                         measurementTranscript.size());
-    libspdm_set_msg_log_mode(spdmResponder.spdmContext,
-                             LIBSPDM_MSG_LOG_MODE_ENABLE);
-    measurementRecordLength = measurement.size();
-    if (!validateSpdmRc(libspdm_get_measurement(
-            spdmResponder.spdmContext, session_id,
-            SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_GENERATE_SIGNATURE,
-            mUseMeasurementOperation, useSlotId & 0xF, nullptr, &numberOfBlocks,
-            &measurementRecordLength, &measurement)))
-    {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SPDMRequesterImpl::doMeasurement libspdm_get_measurements Failed!");
-        spdmResponder.dataMeas.clear();
-        return false;
+        // Keep measurement to reserved vector.
+        size_t transcriptSize =
+            libspdm_get_msg_log_size(spdmResponder.spdmContext);
+        spdmResponder.dataMeas.insert(
+            spdmResponder.dataMeas.end(), measurementTranscript.begin(),
+            measurementTranscript.begin() + transcriptSize);
+        return true;
     }
-
-    // Keep measurement to reserved vector.
-    size_t transcriptSize = libspdm_get_msg_log_size(spdmResponder.spdmContext);
-    spdmResponder.dataMeas.insert(
-        spdmResponder.dataMeas.end(), measurementTranscript.begin(),
-        measurementTranscript.begin() + transcriptSize);
-    return true;
+    phosphor::logging::log<phosphor::logging::level::ERR>(
+        "SPDMRequesterImpl::doMeasurement Meas CAP not Supported!");
+    return false;
 }
 
 bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
@@ -404,8 +404,6 @@ SPDMRequesterImpl::SPDMRequesterImpl(
     spdmRequesterCfg(spdmConfig)
 {
     setCertificatePath(spdmRequesterCfg.certPath);
-    mUseMeasurementOperation =
-        SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS;
 }
 
 } // namespace spdm_app_lib
