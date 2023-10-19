@@ -49,21 +49,26 @@ class SPDMRequesterImpl
     /**
      * @brief Get all measurement function
      *
-     * @param measurement     vector holding the measurements
-     * @return true           If, vector contains measurements.
-     * @return false          If, vector is empty
+     * @param measurement      vector holding the measurements
+     * @param measurementIndex The measurement operation
+     * @param useSlotId        The number of slot for the certificate chain.
+     * @return true            If, vector contains measurements.
+     * @return false           If, vector is empty
      **/
     bool getMeasurements(std::vector<uint8_t>& measurement,
-                         uint8_t measurementIndex = 0xff);
+                         uint8_t measurementIndex = 0xff,
+                         uint8_t useSlotId = 0);
 
     /**
      * @brief Get certification function
      *
      * @param certificate     vector holding the certificate
+     * @param useSlotId       The number of slot for the certificate chain.
      * @return true           If, vector contains certificate.
      * @return false          If, vector is empty
      **/
-    bool getCertificate(std::vector<uint8_t>& certificate);
+    bool getCertificate(std::vector<uint8_t>& certificate,
+                        uint8_t useSlotId = 0);
 
     /**
      * @brief Register to libspdm for sending SPDM payload.
@@ -125,19 +130,21 @@ class SPDMRequesterImpl
     /**
      * @brief The authentication function
      *
+     * @param useSlotId       The number of slot for the certificate chain.
      * @return true           If, doAuth passes.
      * @return false          If, doAuth fails
      **/
-    bool doAuthentication(void);
+    bool doAuthentication(uint8_t useSlotId = 0);
 
     /**
      * @brief The measurement function
      *
      * @param  sessionid      The session id pointer
+     * @param useSlotId       The number of slot for the certificate chain.
      * @return true           If, doMeas succeeds
      * @return false          If, doMeas fails
      **/
-    bool doMeasurement(const uint32_t* sessionid);
+    bool doMeasurement(const uint32_t* sessionid, uint8_t useSlotId = 0);
 
     /**
      * @brief sets up the SPDM Requester

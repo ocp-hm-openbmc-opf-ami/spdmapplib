@@ -178,10 +178,9 @@ bool SPDMRequesterImpl::getCapabilities()
     return true;
 }
 
-bool SPDMRequesterImpl::doAuthentication(void)
+bool SPDMRequesterImpl::doAuthentication(uint8_t useSlotId)
 {
     uint8_t slotMask = 0;
-    uint8_t useSlotId = 0;
     std::array<uint8_t, LIBSPDM_MAX_CERT_CHAIN_SIZE> certChain{0};
     std::array<uint8_t, LIBSPDM_MAX_HASH_SIZE * SPDM_MAX_SLOT_COUNT>
         totalDigestBuffer{0};
@@ -237,9 +236,9 @@ bool SPDMRequesterImpl::doAuthentication(void)
     return true;
 }
 
-bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
+bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id,
+                                      uint8_t useSlotId)
 {
-    uint8_t useSlotId = 0;
     uint8_t numberOfBlocks = 0;
     uint32_t measurementRecordLength = 0;
     constexpr size_t measurementTranscriptSize = 0x4096;
@@ -295,7 +294,8 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id)
 }
 
 bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
-                                        uint8_t measurementIndex)
+                                        uint8_t measurementIndex,
+                                        uint8_t useSlotId)
 {
     mUseMeasurementOperation = measurementIndex;
 
@@ -305,7 +305,7 @@ bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
             "SPDMRequesterImpl::getMeasurements setupSpdmRequester failed!");
         return false;
     }
-    if (!doAuthentication())
+    if (!doAuthentication(useSlotId))
     {
         phosphor::logging::log<phosphor::logging::level::INFO>(
             "SPDMRequesterImpl::getMeasurements doAuthentication failed!");
@@ -319,7 +319,7 @@ bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
         return false;
     }
 
-    if (!doMeasurement(NULL))
+    if (!doMeasurement(NULL, useSlotId))
     {
         phosphor::logging::log<phosphor::logging::level::INFO>(
             "SPDMRequesterImpl::getMeasurements doMeasurement failed!");
@@ -338,7 +338,8 @@ bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
     return true;
 }
 
-bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
+bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate,
+                                       uint8_t useSlotId)
 {
     if (!setupSpdmRequester())
     {
@@ -347,7 +348,7 @@ bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate)
         return false;
     }
 
-    if (!doAuthentication())
+    if (!doAuthentication(useSlotId))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::getCertificate doAuthentication failed!");

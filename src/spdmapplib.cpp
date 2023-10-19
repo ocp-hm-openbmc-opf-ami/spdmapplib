@@ -168,15 +168,16 @@ SPDMRequester::SPDMRequester(
                                                  transResponder, pSpdmConfig))
 {}
 
-bool SPDMRequester::getCertificate(std::vector<uint8_t>& certificate)
+bool SPDMRequester::getCertificate(std::vector<uint8_t>& certificate,
+                                   uint8_t useSlotId)
 {
-    return pReqImpl->getCertificate(certificate);
+    return pReqImpl->getCertificate(certificate, useSlotId);
 }
 
 bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements,
-                                    uint8_t measurementIndex)
+                                    uint8_t measurementIndex, uint8_t useSlotId)
 {
-    return pReqImpl->getMeasurements(measurements, measurementIndex);
+    return pReqImpl->getMeasurements(measurements, measurementIndex, useSlotId);
 }
 
 SPDMRequester::~SPDMRequester() noexcept = default;

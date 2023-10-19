@@ -108,24 +108,76 @@ static void startSPDMRequester()
             auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
                 ioc, conn, trans, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
-            if (spdmRequester->getCertificate(data))
+
+            constexpr uint8_t slot0 = 0;
+            constexpr uint8_t slot1 = 1;
+            constexpr uint8_t allMeasurementsOperation = 0xff;
+
+            /** Test case 1 get certificate from slot 0 */
+            if (spdmRequester->getCertificate(data, slot0))
             {
+                std::cout << "Dump certificate raw data from slot 0."
+                          << std::endl;
                 dumpVector(data);
             }
             else
             {
-                std::cerr << "Failed getting Certificate for EID: "
-                          << std::to_string(eidPoint.devIdentifier) << "\n";
+                std::cerr << "Failed to get certificate from slot 0 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
+                return;
             }
             data.clear();
-            if (spdmRequester->getMeasurements(data))
+
+            /** Test case 2 get certificate from slot 1 */
+            if (spdmRequester->getCertificate(data, slot1))
             {
+                std::cout << "Dump certificate raw data from slot 1."
+                          << std::endl;
                 dumpVector(data);
             }
             else
             {
-                std::cerr << "Failed getting Measurements for EID: "
-                          << std::to_string(eidPoint.devIdentifier) << "\n";
+                std::cerr << "Failed to get certificate from slot 1 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
+                return;
+            }
+            data.clear();
+
+            /** Test case 3 get measurement with certificate in slot 0 */
+            if (spdmRequester->getMeasurements(data, allMeasurementsOperation,
+                                               slot0))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 0."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 0 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
+            }
+            data.clear();
+
+            /** Test case 4 get measurement with certificate in slot 1 */
+            if (spdmRequester->getMeasurements(data, allMeasurementsOperation,
+                                               slot1))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 1."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 1 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
             }
             data.clear();
         }

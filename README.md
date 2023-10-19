@@ -104,20 +104,26 @@ Defined required APIs for SPDMRequester listed below, detail information is in t
      * @brief Get all measurement function
      *
      * @param   measurements     The measurements returned for specific endPoint
+     * @param   measurementIndex The measurement operation
+     * @param   useSlotId        The number of slot for the certificate chain.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      **/
-    bool getMeasurements(std::vector<uint8_t>& measurements);
+    bool getMeasurements(std::vector<uint8_t>& measurements,
+                         uint8_t measurementIndex = 0xff,
+                         uint8_t useSlotId = 0);
 
     /**
      * @brief Get certificate function
      *
      * @param   certificate      The certificate returned for specific endPoint.
+     * @param   useSlotId        The number of slot for the certificate chain.
      * @return  true             Indicates Success.
      * @return  false            Indicates Failure
      *
      **/
-    bool getCertificate(std::vector<uint8_t>& certificate);
+    bool getCertificate(std::vector<uint8_t>& certificate,
+                        uint8_t useSlotId = 0);
 ```
 
 ## SPDM Responder Interface
