@@ -158,11 +158,11 @@ static void startSPDMRequester()
             auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
                 ioc, conn, trans, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
-            const uint8_t SLOT_0 = 0;
-            const uint8_t SLOT_1 = 1;
+            constexpr uint8_t slot0 = 0;
+            constexpr uint8_t slot1 = 1;
 
             /** Test case 1 get certificate from slot 0 */
-            if (spdmRequester->getCertificate(data, SLOT_0))
+            if (spdmRequester->getCertificate(data, slot0))
             {
                 std::cout << "Dump certificate raw data from slot 0."
                           << std::endl;
@@ -178,7 +178,7 @@ static void startSPDMRequester()
             data.clear();
 
             /** Test case 2 get certificate from slot 1 */
-            if (spdmRequester->getCertificate(data, SLOT_1))
+            if (spdmRequester->getCertificate(data, slot1))
             {
                 std::cout << "Dump certificate raw data from slot 1."
                           << std::endl;
@@ -194,7 +194,7 @@ static void startSPDMRequester()
             data.clear();
 
             /** Test case 3 get measurement with certificate in slot 0 */
-            if (spdmRequester->getMeasurements(data, SLOT_0))
+            if (spdmRequester->getMeasurements(data, slot0))
             {
                 std::cout
                     << "Dump measurement raw data with certificate in slot 0."
@@ -210,8 +210,8 @@ static void startSPDMRequester()
             }
             data.clear();
 
-            /** Test case 3 get measurement with certificate in slot 1 */
-            if (spdmRequester->getMeasurements(data, SLOT_1))
+            /** Test case 4 get measurement with certificate in slot 1 */
+            if (spdmRequester->getMeasurements(data, slot1))
             {
                 std::cout
                     << "Dump measurement raw data with certificate in slot 1."
@@ -227,13 +227,13 @@ static void startSPDMRequester()
             }
             data.clear();
 
-            /** Test case 4 start secure session by using certificate in slot 0
+            /** Test case 5 start secure session by using certificate in slot 0
              * and no pre-shared key */
             uint32_t sessionId = 0;
             uint8_t heartbeatPeriod = 0;
-            const bool NOT_USE_PSK = false;
-            if (spdmRequester->startSecureSession(NOT_USE_PSK, sessionId,
-                                                  heartbeatPeriod, SLOT_0))
+            constexpr bool notUsePsk = false;
+            if (spdmRequester->startSecureSession(notUsePsk, sessionId,
+                                                  heartbeatPeriod, slot0))
             {
                 std::cout
                     << "Started secure session with slot-0 certificate successfully."
@@ -250,7 +250,7 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 5 send heartbeat */
+            /** Test case 6 send heartbeat */
             if (spdmRequester->sendHeartbeat(sessionId))
             {
                 std::cout << "Heartbeat sent successfully." << std::endl;
@@ -262,7 +262,7 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 6 update key in single direction */
+            /** Test case 7 update key in single direction */
             if (spdmRequester->updateKey(sessionId, false))
             {
                 std::cout << "Update key in single direction successfully."
@@ -276,7 +276,7 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 7 update key */
+            /** Test case 8 update key */
             if (spdmRequester->updateKey(sessionId, true))
             {
                 std::cout << "Update key successfully." << std::endl;
@@ -288,16 +288,16 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 8 send application message over secure channel */
-            const uint8_t MCTP_MESSAGE_TYPE_PLDM = 0x01;
-            const uint8_t INSTANCE_ID = 0;
-            const uint8_t PLDM_HEADER_REQUEST_MASK = 0x80;
-            const uint8_t PLDM_MESSAGE_TYPE_CONTROL_DISCOVERY = 0x00;
-            const uint8_t PLDM_CONTROL_DISCOVERY_COMMAND_GET_TID = 0x02;
+            /** Test case 9 send application message over secure channel */
+            constexpr uint8_t mctpMessageTypePldm = 0x01;
+            constexpr uint8_t instanceId = 0;
+            constexpr uint8_t pldmHeaderRequestMask = 0x80;
+            constexpr uint8_t pldmMessageTypeControlDiscovery = 0x00;
+            constexpr uint8_t pldmControlDiscoveryCommandGetTid = 0x02;
             std::vector<uint8_t> request = {
-                MCTP_MESSAGE_TYPE_PLDM, INSTANCE_ID | PLDM_HEADER_REQUEST_MASK,
-                PLDM_MESSAGE_TYPE_CONTROL_DISCOVERY,
-                PLDM_CONTROL_DISCOVERY_COMMAND_GET_TID};
+                mctpMessageTypePldm, instanceId | pldmHeaderRequestMask,
+                pldmMessageTypeControlDiscovery,
+                pldmControlDiscoveryCommandGetTid};
             std::vector<uint8_t> response;
             /**
              * The sample uses PLDM content as plain data which is encapsulated
@@ -311,9 +311,9 @@ static void startSPDMRequester()
              * 0x05 or 0x06 cannot be considered as an APP message. Pass false
              * as isAppMessage argument instead.
              */
-            const bool IS_APP_MESSAGE = true;
+            constexpr bool isAppMessage = true;
             if (spdmRequester->sendSecuredMessage(sessionId, request, response,
-                                                  IS_APP_MESSAGE))
+                                                  isAppMessage))
             {
                 std::cout << "Secured application message sent successfully."
                           << std::endl;
@@ -341,7 +341,7 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 9 terminate the secure session */
+            /** Test case 10 terminate the secure session */
             if (spdmRequester->endSecureSession(sessionId))
             {
                 std::cout << "Terminate the secure session successfully."
@@ -355,15 +355,15 @@ static void startSPDMRequester()
                 return;
             }
 
-            /** Test case 10 start secure session by using certificate in slot 1
+            /** Test case 11 start secure session by using certificate in slot 1
              * and pre-shared key */
-            const bool USE_PSK = true;
+            constexpr bool usePsk = true;
             sessionId = 0;
-            if (spdmRequester->startSecureSession(USE_PSK, sessionId,
-                                                  heartbeatPeriod, SLOT_1))
+            if (spdmRequester->startSecureSession(usePsk, sessionId,
+                                                  heartbeatPeriod, slot1))
             {
                 std::cout
-                    << "Started secure session with slot-1 certificate successfully."
+                    << "Started secure session with pre-shared key successfully."
                     << std::endl
                     << "Session ID: " << sessionId << std::endl
                     << "Heartbeat period: " << static_cast<int>(heartbeatPeriod)
@@ -372,12 +372,12 @@ static void startSPDMRequester()
             else
             {
                 std::cerr
-                    << "Failed to start secure session with slot-0 certificate."
+                    << "Failed to start secure session with pre-shared key."
                     << std::endl;
                 return;
             }
 
-            /** Test case 11 terminate the secure session */
+            /** Test case 12 terminate the secure session */
             if (spdmRequester->endSecureSession(sessionId))
             {
                 std::cout << "Terminate the secure session successfully."
