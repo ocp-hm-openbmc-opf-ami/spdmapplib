@@ -604,6 +604,15 @@ bool libspdm_responder_data_sign(
 }
 
 #if LIBSPDM_ENABLE_CAPABILITY_PSK_EX_CAP
+uint8_t m_libspdm_my_zero_filled_buffer[64];
+uint8_t m_libspdm_bin_str0[0x11] = {
+    0x00, 0x00, /* length - to be filled*/
+    /* SPDM_VERSION_1_1_BIN_CONCAT_LABEL */
+    0x73, 0x70, 0x64, 0x6d, 0x31, 0x2e, 0x31, 0x20,
+    /* SPDM_BIN_STR_0_LABEL */
+    0x64, 0x65, 0x72, 0x69, 0x76, 0x65, 0x64,
+};
+
 bool libspdm_psk_handshake_secret_hkdf_expand(
     spdm_version_number_t spdm_version,
     uint32_t base_hash_algo,
@@ -613,7 +622,40 @@ bool libspdm_psk_handshake_secret_hkdf_expand(
     size_t info_size,
     uint8_t *out, size_t out_size)
 {
-    return false;
+    void *psk;
+    size_t psk_size;
+    size_t hash_size;
+    bool result;
+    uint8_t handshake_secret[64];
+
+    if (psk_hint_size == 0) {
+        psk = LIBSPDM_TEST_PSK_DATA_STRING;
+        psk_size = sizeof(LIBSPDM_TEST_PSK_DATA_STRING);
+    } else if ((strcmp((const char *)psk_hint, LIBSPDM_TEST_PSK_HINT_STRING) ==
+                0) &&
+               (psk_hint_size == sizeof(LIBSPDM_TEST_PSK_HINT_STRING))) {
+        psk = LIBSPDM_TEST_PSK_DATA_STRING;
+        psk_size = sizeof(LIBSPDM_TEST_PSK_DATA_STRING);
+    } else {
+        return false;
+    }
+    printf("[PSK]: ");
+    libspdm_dump_hex_str(psk, psk_size);
+    printf("\n");
+
+    hash_size = libspdm_get_hash_size(base_hash_algo);
+
+    result = libspdm_hkdf_extract(base_hash_algo, psk, psk_size, m_libspdm_my_zero_filled_buffer,
+                                  hash_size, handshake_secret, hash_size);
+    if (!result) {
+        return result;
+    }
+
+    result = libspdm_hkdf_expand(base_hash_algo, handshake_secret, hash_size,
+                                 info, info_size, out, out_size);
+    libspdm_zero_mem(handshake_secret, hash_size);
+
+    return result;
 }
 
 bool libspdm_psk_master_secret_hkdf_expand(
@@ -625,7 +667,58 @@ bool libspdm_psk_master_secret_hkdf_expand(
     size_t info_size, uint8_t *out,
     size_t out_size)
 {
-    return false;
+    void *psk;
+    size_t psk_size;
+    size_t hash_size;
+    bool result;
+    uint8_t handshake_secret[64];
+    uint8_t salt1[64];
+    uint8_t master_secret[64];
+
+    if (psk_hint_size == 0) {
+        psk = LIBSPDM_TEST_PSK_DATA_STRING;
+        psk_size = sizeof(LIBSPDM_TEST_PSK_DATA_STRING);
+    } else if ((strcmp((const char *)psk_hint, LIBSPDM_TEST_PSK_HINT_STRING) ==
+                0) &&
+               (psk_hint_size == sizeof(LIBSPDM_TEST_PSK_HINT_STRING))) {
+        psk = LIBSPDM_TEST_PSK_DATA_STRING;
+        psk_size = sizeof(LIBSPDM_TEST_PSK_DATA_STRING);
+    } else {
+        return false;
+    }
+
+    hash_size = libspdm_get_hash_size(base_hash_algo);
+
+    result = libspdm_hkdf_extract(base_hash_algo, psk, psk_size, m_libspdm_my_zero_filled_buffer,
+                                  hash_size, handshake_secret, hash_size);
+    if (!result) {
+        return result;
+    }
+
+    *(uint16_t *)m_libspdm_bin_str0 = (uint16_t)hash_size;
+    /* patch the version*/
+    m_libspdm_bin_str0[6] = (char)('0' + ((spdm_version >> 12) & 0xF));
+    m_libspdm_bin_str0[8] = (char)('0' + ((spdm_version >> 8) & 0xF));
+    result = libspdm_hkdf_expand(base_hash_algo, handshake_secret, hash_size,
+                                 m_libspdm_bin_str0, sizeof(m_libspdm_bin_str0), salt1,
+                                 hash_size);
+    libspdm_zero_mem(handshake_secret, hash_size);
+    if (!result) {
+        return result;
+    }
+
+    result = libspdm_hkdf_extract(base_hash_algo, m_libspdm_my_zero_filled_buffer,
+                                  hash_size, salt1, hash_size, master_secret, hash_size);
+    libspdm_zero_mem(salt1, hash_size);
+    if (!result) {
+        return result;
+    }
+
+    result = libspdm_hkdf_expand(base_hash_algo, master_secret, hash_size,
+                                 info, info_size, out, out_size);
+    libspdm_zero_mem(master_secret, hash_size);
+
+    return result;
 }
 #endif /* LIBSPDM_ENABLE_CAPABILITY_PSK_EX_CAP */
 
