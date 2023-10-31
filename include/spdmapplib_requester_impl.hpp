@@ -58,6 +58,18 @@ class SPDMRequesterImpl
                          uint8_t useSlotId = 0);
 
     /**
+     * @brief Get signed measurement function for Redfish(DSP0268)
+     *
+     * @param[in]   request      The request
+     * @param[out]  response     The response
+     * @return      true         Indicates Success.
+     * @return      false        Indicates Failure
+     **/
+    bool getSignedMeasurements(
+        const RedfishGetSignedMeasurementsRequest& request,
+        RedfishGetSignedMeasurementsResponse& response);
+
+    /**
      * @brief Get certification function
      *
      * @param certificate     vector holding the certificate

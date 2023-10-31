@@ -180,6 +180,13 @@ bool SPDMRequester::getMeasurements(std::vector<uint8_t>& measurements,
     return pReqImpl->getMeasurements(measurements, useSlotId);
 }
 
+bool SPDMRequester::getSignedMeasurements(
+    const RedfishGetSignedMeasurementsRequest& request,
+    RedfishGetSignedMeasurementsResponse& response)
+{
+    return pReqImpl->getSignedMeasurements(request, response);
+}
+
 bool SPDMRequester::startSecureSession(bool usePsk, uint32_t& sessionId,
                                        uint8_t& heartbeatPeriod,
                                        uint8_t useSlotId)

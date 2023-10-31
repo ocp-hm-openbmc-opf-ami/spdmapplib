@@ -339,6 +339,52 @@ bool SPDMRequesterImpl::getMeasurements(std::vector<uint8_t>& measurements,
     return true;
 }
 
+bool SPDMRequesterImpl::getSignedMeasurements(
+    const RedfishGetSignedMeasurementsRequest& request,
+    RedfishGetSignedMeasurementsResponse& response)
+{
+    const std::string& nounce = request.nonce;
+    if (nounce.size() != 32)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getSignedMeasurements invalid nounce length.");
+        return false;
+    }
+
+    if (request.slotId < 0 || request.slotId > 7)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getSignedMeasurements invalid slot id.");
+        return false;
+    }
+
+    const std::set<uint8_t>& measurementIndices = request.measurementIndices;
+    if (measurementIndices.empty())
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getSignedMeasurements invalid empty indice.");
+        return false;
+    }
+
+    if (measurementIndices.find(0) != measurementIndices.end() &&
+        measurementIndices.size() > 1)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getSignedMeasurements invalid operation by given 0 and other indice.");
+        return false;
+    }
+
+    if (measurementIndices.find(0xff) != measurementIndices.end() &&
+        measurementIndices.size() > 1)
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "SPDMRequesterImpl::getSignedMeasurements invalid operation by given 0xff and other indice.");
+        return false;
+    }
+
+    return true;
+}
+
 bool SPDMRequesterImpl::getCertificate(std::vector<uint8_t>& certificate,
                                        uint8_t useSlotId)
 {

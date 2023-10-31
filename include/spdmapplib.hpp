@@ -57,6 +57,22 @@ enum class SPDMConfigIdentifier
 std::map<std::string, uint32_t> __attribute__((visibility("default")))
 getSPDMConfigMap(SPDMConfigIdentifier configIdentifier);
 
+struct RedfishGetSignedMeasurementsRequest
+{
+    std::string nonce{};
+    uint8_t slotId{0};
+    std::set<uint8_t> measurementIndices{0xff};
+};
+
+struct RedfishGetSignedMeasurementsResponse
+{
+    std::string version;
+    std::string hashingAlgorithm{};
+    std::string signingAlgorithm{};
+    std::string signedMeasurements{};
+    std::string certificateChain;
+};
+
 /**
  * @brief The responder base class
  *
@@ -135,6 +151,18 @@ class SPDMRequester
      **/
     bool getMeasurements(std::vector<uint8_t>& measurements,
                          uint8_t useSlotId = 0);
+
+    /**
+     * @brief Get signed measurement function for Redfish(DSP0268)
+     *
+     * @param[in]   request      The request
+     * @param[out]  response     The response
+     * @return      true         Indicates Success.
+     * @return      false        Indicates Failure
+     **/
+    bool getSignedMeasurements(
+        const RedfishGetSignedMeasurementsRequest& request,
+        RedfishGetSignedMeasurementsResponse& response);
 
     /**
      * @brief Get certificate function
