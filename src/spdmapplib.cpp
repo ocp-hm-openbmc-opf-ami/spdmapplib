@@ -140,6 +140,24 @@ std::map<std::string, uint32_t> mutAuthPolicyStringTable = {
     {"DIGESTS", SPDM_KEY_EXCHANGE_RESPONSE_MUT_AUTH_REQUESTED_WITH_GET_DIGESTS},
 };
 
+std::map<std::string, uint32_t> measSummaryHashStringTable = {
+    {"NO", SPDM_CHALLENGE_REQUEST_NO_MEASUREMENT_SUMMARY_HASH},
+    {"TCB", SPDM_CHALLENGE_REQUEST_TCB_COMPONENT_MEASUREMENT_HASH},
+    {"ALL", SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH},
+};
+
+std::map<std::string, uint32_t> measOperationStringTable = {
+    {"ONE_BY_ONE",
+     SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_TOTAL_NUMBER_OF_MEASUREMENTS},
+    {"ALL",
+     SPDM_GET_MEASUREMENTS_REQUEST_MEASUREMENT_OPERATION_ALL_MEASUREMENTS},
+};
+
+std::map<std::string, uint32_t> measAttributeStringTable = {
+    {"HASH", 0},
+    {"RAW", SPDM_GET_MEASUREMENTS_REQUEST_ATTRIBUTES_RAW_BIT_STREAM_REQUESTED},
+};
+
 std::map<SPDMConfigIdentifier, std::map<std::string, uint32_t>>
     spdmConfigValues{
         {SPDMConfigIdentifier::version, versionValueStringTable},

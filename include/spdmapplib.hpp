@@ -52,7 +52,10 @@ enum class SPDMConfigIdentifier
     dheValue,
     aeadValue,
     basicMutualSupport,
-    mutualAuthValue
+    mutualAuthValue,
+    measSummaryHash,
+    measOperation,
+    measAttribute
 };
 std::map<std::string, uint32_t> __attribute__((visibility("default")))
 getSPDMConfigMap(SPDMConfigIdentifier configIdentifier);
