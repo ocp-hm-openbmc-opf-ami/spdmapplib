@@ -139,13 +139,6 @@ void SPDMTransportMCTP::initDiscovery(
 
     boost::asio::spawn(*(ioc), [this](boost::asio::yield_context yield) {
         mctpWrapper->detectMctpEndpoints(yield);
-        mctpw::VersionFields specVersion = {0xF1, 0xF0, 0xF1, 0x00};
-        auto rcvStatus = mctpWrapper->registerResponder(specVersion);
-        if (rcvStatus != boost::system::errc::success)
-        {
-            phosphor::logging::log<phosphor::logging::level::ERR>(
-                "SPDMTransportMCTP::initDiscovery registerResponder Failed");
-        }
         mctpw::MCTPWrapper::EndpointMap eidMap = mctpWrapper->getEndpointMap();
         for (auto& item : eidMap)
         {
@@ -162,7 +155,7 @@ std::string SPDMTransportMCTP::getSPDMtransport()
 SPDMTransportMCTP::SPDMTransportMCTP(
     std::shared_ptr<boost::asio::io_service> io,
     std::shared_ptr<sdbusplus::asio::connection> con,
-    mctpw::BindingType tranType) :
+    mctpw::BindingType tranType, bool isResponder) :
     ioc(io),
     conn(con), transType(tranType)
 {
@@ -173,5 +166,15 @@ SPDMTransportMCTP::SPDMTransportMCTP(
         std::bind(&SPDMTransportMCTP::transOnDeviceUpdate, this, _1, _2, _3),
         std::bind(&SPDMTransportMCTP::transMsgRecvCallback, this, _1, _2, _3,
                   _4, _5, _6));
+    if (isResponder)
+    {
+        mctpw::VersionFields specVersion = {0xF1, 0xF0, 0xF1, 0x00};
+        auto rcvStatus = mctpWrapper->registerResponder(specVersion);
+        if (rcvStatus != boost::system::errc::success)
+        {
+            phosphor::logging::log<phosphor::logging::level::ERR>(
+                "SPDMTransportMCTP registerResponder Failed");
+        }
+    }
 }
 } // namespace spdm_transport

@@ -42,7 +42,7 @@ class SPDMTransportMCTP : public SPDMTransport
      **/
     SPDMTransportMCTP(std::shared_ptr<boost::asio::io_service> io,
                       std::shared_ptr<sdbusplus::asio::connection> conn,
-                      mctpw::BindingType tranType);
+                      mctpw::BindingType tranType, bool isResponder = false);
 
     /**
      * @brief Initial function of transport instance
