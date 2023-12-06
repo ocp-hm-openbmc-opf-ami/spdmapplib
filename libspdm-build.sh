@@ -3,7 +3,7 @@ if [ ! -f libspdm/build/lib/libspdm.a ]; then
     echo "libspdm.a not found!!, building..."
     git clone https://github.com/DMTF/libspdm.git
     cd libspdm
-    git checkout -b libspdm_build e0f4e94139f20ccbad5a57c2022878f166d2d5e1
+    git checkout -b libspdm_build 269e520c0bd87c2b82f4455f7c3e9b3f87b8eca5
     git submodule update --init
     mkdir build
     cd build

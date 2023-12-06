@@ -128,17 +128,11 @@ bool SPDMResponderImpl::addNewDevice(
         return false;
     }
 
-    if (!validateSpdmRc(libspdm_register_session_state_callback_func(
-            newItem.spdmContext, spdmServerSessionStateCallback)))
-    {
-        return false;
-    }
+    libspdm_register_session_state_callback_func(
+        newItem.spdmContext, spdmServerSessionStateCallback);
 
-    if (!validateSpdmRc(libspdm_register_connection_state_callback_func(
-            newItem.spdmContext, spdmServerConnectionStateCallback)))
-    {
-        return false;
-    }
+    libspdm_register_connection_state_callback_func(
+            newItem.spdmContext, spdmServerConnectionStateCallback);
     spdmPool.push_back(newItem);
     return true;
 }

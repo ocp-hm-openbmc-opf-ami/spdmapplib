@@ -15,13 +15,18 @@
 #include "library/spdm_crypt_lib.h"
 #include "spdm_crypt_ext_lib/spdm_crypt_ext_lib.h"
 #include "spdm_crypt_ext_lib/cryptlib_ext.h"
-#include "library/spdm_device_secret_lib.h"
+#include "hal/library/responder/asymsignlib.h"
+#include "hal/library/responder/csrlib.h"
+#include "hal/library/responder/measlib.h"
+#include "hal/library/responder/psklib.h"
+#include "hal/library/responder/setcertlib.h"
+#include "hal/library/requester/reqasymsignlib.h"
+#include "hal/library/requester/psklib.h"
 #include "hal/library/debuglib.h"
+#include "hal/library/cryptlib.h"
 
 #define LIBSPDM_MEASUREMENT_BLOCK_HASH_NUMBER 2
-#define LIBSPDM_MEASUREMENT_BLOCK_NUMBER (LIBSPDM_MEASUREMENT_BLOCK_HASH_NUMBER /*Index - 1~4*/ + \
-                                          1 /*SVN - 0x10*/ + \
-                                          1 /*Manifest - 0xFD*/ + 1 /*DEVICE_MODE - 0xFE*/)
+#define LIBSPDM_MEASUREMENT_BLOCK_NUMBER LIBSPDM_MEASUREMENT_BLOCK_HASH_NUMBER
 #define LIBSPDM_MEASUREMENT_RAW_DATA_SIZE 72
 #define LIBSPDM_MEASUREMENT_MANIFEST_SIZE 128
 #define LIBSPDM_MEASUREMENT_INDEX_SVN 0x10
@@ -42,9 +47,17 @@
 #define BMC_FITIMG_MEAS_START_INDEX 0x4b0
 #define BMC_FITIMG_MEAS_END_INDEX 0x4e0
 
+/* Option to change signing algorithm to little endian. Default is big endian. */
+#define LIBSPDM_SECRET_LIB_SIGN_LITTLE_ENDIAN (0)
+
 /* public cert*/
 
 bool libspdm_read_responder_public_certificate_chain(
+    uint32_t base_hash_algo, uint32_t base_asym_algo, void **data,
+    size_t *size, void **hash, size_t *hash_size);
+
+/*This alias cert chain is partial, from root CA to device certificate CA.*/
+bool libspdm_read_responder_public_certificate_chain_alias_cert_till_dev_cert_ca(
     uint32_t base_hash_algo, uint32_t base_asym_algo, void **data,
     size_t *size, void **hash, size_t *hash_size);
 
@@ -85,6 +98,11 @@ bool libspdm_read_responder_root_public_certificate_by_size(
     void **data, size_t *size, void **hash,
     size_t *hash_size);
 
+bool libspdm_read_responder_public_key(
+    uint32_t base_asym_algo, void **data, size_t *size);
+
+bool libspdm_read_requester_public_key(
+    uint16_t req_base_asym_alg, void **data, size_t *size);
 
 /* External*/
 

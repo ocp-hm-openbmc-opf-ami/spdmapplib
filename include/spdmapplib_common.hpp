@@ -30,8 +30,10 @@ extern "C"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_responder_lib.h"
 #include "library/spdm_transport_mctp_lib.h"
-#include "include/spdm_bmc_secret_lib.h"
+#include "library/memlib.h"
+#include "library/debuglib.h"
 #include "library/malloclib.h"
+#include "include/spdm_bmc_secret_lib.h"
 #include "library/spdm_transport_none_lib.h"
 }
 // clang-format on
@@ -255,7 +257,6 @@ void formRecvMessage(size_t* responseSize, void** response,
  *SPDM message to execute.
  **/
 libspdm_return_t spdmDeviceAcquireSenderBuffer(void* context,
-                                               size_t* maxMsgSize,
                                                void** msgBufPtr);
 
 /**
@@ -283,7 +284,6 @@ void spdmDeviceReleaseSenderBuffer(void* context, const void* msgBufPtr);
  *SPDM message to execute.
  **/
 libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* context,
-                                                 size_t* maxMsgSize,
                                                  void** msgBufPtr);
 
 /**

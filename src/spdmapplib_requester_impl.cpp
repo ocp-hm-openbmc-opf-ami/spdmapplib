@@ -203,7 +203,7 @@ bool SPDMRequesterImpl::doAuthentication(uint8_t useSlotId)
     **/
     if (capability & capabilityDigestCert)
     {
-        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext,
+        if (!validateSpdmRc(libspdm_get_digest(spdmResponder.spdmContext, NULL,
                                                &slotMask, &totalDigestBuffer)))
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -220,8 +220,8 @@ bool SPDMRequesterImpl::doAuthentication(uint8_t useSlotId)
         return false;
     }
 
-    if (!validateSpdmRc(libspdm_get_certificate_choose_length(
-            spdmResponder.spdmContext, useSlotId, certificateBufferLength,
+    if (!validateSpdmRc(libspdm_get_certificate(
+            spdmResponder.spdmContext, NULL, useSlotId,
             &certChainSize, &certChain)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
@@ -250,7 +250,7 @@ bool SPDMRequesterImpl::doMeasurement(const uint32_t* session_id,
     if (capability & capabilityChallenge)
     {
         if (!validateSpdmRc(
-                libspdm_challenge(spdmResponder.spdmContext, useSlotId,
+                libspdm_challenge(spdmResponder.spdmContext, NULL, useSlotId,
                                   SPDM_CHALLENGE_REQUEST_ALL_MEASUREMENTS_HASH,
                                   &measurementHash, nullptr)))
         {

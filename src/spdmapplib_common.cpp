@@ -19,11 +19,23 @@ namespace spdm_app_lib
 {
 /* stores the certificate path */
 std::string setCertPath{};
+constexpr uint32_t spdmMctpHeaderSize = 0x1200;
+constexpr uint32_t spdmTransportNoneHeaderSize = 0x1000;
+constexpr uint32_t libspdmTransportHeaderSize = 64;
+constexpr uint32_t libspdmTransportTailSize = 64;
+constexpr uint32_t libspdmTransportAdditionalSize =
+    (libspdmTransportHeaderSize + libspdmTransportTailSize);
+constexpr uint32_t libspdmSenderBufferConst = 0x1100;
+constexpr uint32_t libspdmReceiverBufferConst = 0x1200;
+constexpr uint32_t libspdmSenderBufferSize =
+    (libspdmSenderBufferConst + libspdmTransportAdditionalSize);
+constexpr uint32_t libspdmReceiverBufferSize =
+    (libspdmReceiverBufferConst + libspdmTransportAdditionalSize);
 
 /* Required by libspdm for send/recv payload*/
 bool sendReceiveBufferAcquired = false;
 size_t sendReceiveBufferSize(0);
-std::array<uint8_t, LIBSPDM_SENDER_RECEIVE_BUFFER_SIZE> sendReceiveBuffer;
+std::array<uint8_t, libspdmReceiverBufferSize> sendReceiveBuffer;
 
 std::string getFilePath(const char* fileName)
 {
@@ -44,9 +56,9 @@ void setCertificatePath(std::string& certPath)
 void libspdmRegisterDeviceBuffer(void* spdmContext)
 {
     libspdm_register_device_buffer_func(
-        spdmContext, spdmDeviceAcquireSenderBuffer,
-        spdmDeviceReleaseSenderBuffer, spdmDeviceAcquireReceiverBuffer,
-        spdmDeviceReleaseReceiverBuffer);
+        spdmContext, libspdmSenderBufferSize, libspdmReceiverBufferSize,
+        spdmDeviceAcquireSenderBuffer, spdmDeviceReleaseSenderBuffer,
+        spdmDeviceAcquireReceiverBuffer, spdmDeviceReleaseReceiverBuffer);
 }
 
 void freeSpdmContext(spdmItem& spdm)
@@ -105,13 +117,21 @@ bool spdmSetConfigData(spdmItem& spdm, SPDMConfiguration& spdmConfig)
         return false;
     }
 
+    u8Value = LIBSPDM_SPDM_10_11_VERIFY_SIGNATURE_ENDIAN_BIG_OR_LITTLE;
+    if (!spdmSetData(spdm,
+                     LIBSPDM_DATA_SPDM_VERSION_10_11_VERIFY_SIGNATURE_ENDIAN,
+                     u8Value, parameter))
+    {
+        return false;
+    }
+
     if (!spdmSetData(spdm, LIBSPDM_DATA_CAPABILITY_FLAGS, spdmConfig.capability,
                      parameter))
     {
         return false;
     }
 
-    u8Value = SPDM_MEASUREMENT_BLOCK_HEADER_SPECIFICATION_DMTF;
+    u8Value = SPDM_MEASUREMENT_SPECIFICATION_DMTF;
     if (!spdmSetData(spdm, LIBSPDM_DATA_MEASUREMENT_SPEC, u8Value, parameter))
     {
         return false;
@@ -229,6 +249,21 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
         return false;
     }
 
+    if (transport == "mctp")
+    {
+        libspdm_register_transport_layer_func(
+            spdm.spdmContext, spdmMctpHeaderSize, libspdmTransportHeaderSize,
+            libspdmTransportTailSize, libspdm_transport_mctp_encode_message,
+            libspdm_transport_mctp_decode_message);
+    }
+    else
+    {
+        libspdm_register_transport_layer_func(
+            spdm.spdmContext, spdmTransportNoneHeaderSize, 0, 0,
+            spdm_transport_none_encode_message,
+            spdm_transport_none_decode_message);
+    }
+
     size_t scratchBufferSize =
         libspdm_get_sizeof_required_scratch_buffer(spdm.spdmContext);
     spdm.scratchBuffer = allocate_zero_pool(scratchBufferSize);
@@ -239,20 +274,7 @@ bool spdmInit(spdmItem& spdm, const spdm_transport::TransportEndPoint& transEP,
         return false;
     }
 
-    libspdm_transport_encode_message_func encodeCB =
-        (transport == "mctp") ? libspdm_transport_mctp_encode_message
-                              : spdm_transport_none_encode_message;
-    libspdm_transport_decode_message_func decodeCB =
-        (transport == "mctp") ? libspdm_transport_mctp_decode_message
-                              : spdm_transport_none_decode_message;
-    libspdm_transport_get_header_size_func headerSizeCB =
-        (transport == "mctp") ? libspdm_transport_mctp_get_header_size
-                              : spdm_transport_none_get_header_size;
     libspdm_register_device_io_func(spdm.spdmContext, sendMessage, recvMessage);
-
-    libspdm_register_transport_layer_func(spdm.spdmContext, encodeCB, decodeCB,
-                                          headerSizeCB);
-
     libspdmRegisterDeviceBuffer(spdm.spdmContext);
     libspdm_set_scratch_buffer(spdm.spdmContext, spdm.scratchBuffer,
                                scratchBufferSize);
@@ -281,11 +303,9 @@ void formRecvMessage(size_t* responseSize, void** response,
 }
 
 libspdm_return_t spdmDeviceAcquireSenderBuffer(void* /*context*/,
-                                               size_t* max_msg_size,
                                                void** msg_buf_ptr)
 {
     LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
-    *max_msg_size = sendReceiveBuffer.size();
     *msg_buf_ptr = &sendReceiveBuffer;
     std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
     sendReceiveBufferAcquired = true;
@@ -301,11 +321,9 @@ void spdmDeviceReleaseSenderBuffer(void* /*context*/, const void* msg_buf_ptr)
 }
 
 libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* /*context*/,
-                                                 size_t* max_msg_size,
                                                  void** msg_buf_ptr)
 {
     LIBSPDM_ASSERT(!sendReceiveBufferAcquired);
-    *max_msg_size = sendReceiveBuffer.size();
     *msg_buf_ptr = &sendReceiveBuffer;
     std::fill_n(sendReceiveBuffer.begin(), sendReceiveBuffer.size(), 0);
     sendReceiveBufferAcquired = true;
