@@ -70,6 +70,10 @@ src_files = [
             'src/util.cpp'
             ]
 
+if get_option('has_optee').enabled()
+src_files += ['src/spdm_self_test.cpp']
+endif
+
 deps = [
     libspdm,
     sdbusplus_partial_dep,
