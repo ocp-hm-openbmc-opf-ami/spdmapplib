@@ -256,8 +256,7 @@ void formRecvMessage(size_t* responseSize, void** response,
  * @retval RETURN_TIMEOUT            A timeout occurred while waiting for the
  *SPDM message to execute.
  **/
-libspdm_return_t spdmDeviceAcquireSenderBuffer(void* context,
-                                               void** msgBufPtr);
+libspdm_return_t spdmDeviceAcquireSenderBuffer(void* context, void** msgBufPtr);
 
 /**
  * @brief Release transport layer sender buffer

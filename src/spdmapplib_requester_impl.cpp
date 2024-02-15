@@ -220,9 +220,9 @@ bool SPDMRequesterImpl::doAuthentication(uint8_t useSlotId)
         return false;
     }
 
-    if (!validateSpdmRc(libspdm_get_certificate(
-            spdmResponder.spdmContext, NULL, useSlotId,
-            &certChainSize, &certChain)))
+    if (!validateSpdmRc(libspdm_get_certificate(spdmResponder.spdmContext, NULL,
+                                                useSlotId, &certChainSize,
+                                                &certChain)))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "SPDMRequesterImpl::doAuthentication libspdm_get_certificate_choose_length Failed");

@@ -132,7 +132,7 @@ bool SPDMResponderImpl::addNewDevice(
         newItem.spdmContext, spdmServerSessionStateCallback);
 
     libspdm_register_connection_state_callback_func(
-            newItem.spdmContext, spdmServerConnectionStateCallback);
+        newItem.spdmContext, spdmServerConnectionStateCallback);
     spdmPool.push_back(newItem);
     return true;
 }
