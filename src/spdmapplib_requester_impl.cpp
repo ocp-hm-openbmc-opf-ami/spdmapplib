@@ -23,10 +23,9 @@ namespace spdm_app_lib
 {
 /*Callback functions for libspdm */
 
-libspdm_return_t requesterDeviceSendMessage(void* spdmContext,
-                                            size_t requestSize,
-                                            const void* request,
-                                            uint64_t timeout)
+libspdm_return_t SPDMRequesterImpl::requesterDeviceSendMessage(
+    void* spdmContext, size_t requestSize, const void* request,
+    uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 
@@ -44,10 +43,8 @@ libspdm_return_t requesterDeviceSendMessage(void* spdmContext,
     return spdm_app_lib::error_codes::returnSuccess;
 }
 
-libspdm_return_t requesterDeviceReceiveMessage(void* spdmContext,
-                                               size_t* responseSize,
-                                               void** response,
-                                               uint64_t timeout)
+libspdm_return_t SPDMRequesterImpl::requesterDeviceReceiveMessage(
+    void* spdmContext, size_t* responseSize, void** response, uint64_t timeout)
 {
     void* spdmAppContext = nullptr;
 

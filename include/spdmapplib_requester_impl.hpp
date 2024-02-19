@@ -95,6 +95,34 @@ class SPDMRequesterImpl
     bool deviceReceiveMessage(void* spdmContext, std::vector<uint8_t>& response,
                               uint64_t timeout);
 
+    /**
+     * @brief Send callback registered with libspdm
+     *
+     * @param  spdmContext      The pointer of the spdmcontext.
+     * @param  requestSize      The size of request payload.
+     * @param  request          The pointer to request.
+     * @return LIBSPDM_SUCCESS  when payload is sent successfully
+     * @return LIBSPDM_FAILURE  failure when send fails
+     */
+    static libspdm_return_t requesterDeviceSendMessage(void* spdmContext,
+                                                       size_t requestSize,
+                                                       const void* request,
+                                                       uint64_t timeout);
+
+    /**
+     * @brief Receive callback registered with libspdm
+     *
+     * @param  spdmContext      The pointer of the spdmcontext.
+     * @param  responseSize     The size of response payload.
+     * @param  response         The pointer to response.
+     * @return LIBSPDM_SUCCESS  when response is receive successfully
+     * @return LIBSPDM_FAILURE  failure when receive fails
+     */
+    static libspdm_return_t requesterDeviceReceiveMessage(void* spdmContext,
+                                                          size_t* responseSize,
+                                                          void** response,
+                                                          uint64_t timeout);
+
   private:
     /**
      * @brief Function to get capabilities from SPDM responder
