@@ -36,8 +36,10 @@ static std::shared_ptr<boost::asio::io_context> ioc =
     std::make_shared<boost::asio::io_context>();
 static std::shared_ptr<sdbusplus::asio::connection> conn =
     std::make_shared<sdbusplus::asio::connection>(*ioc);
-static auto trans = std::make_shared<spdm_transport::SPDMTransportMCTP>(
+static auto transSmBus = std::make_shared<spdm_transport::SPDMTransportMCTP>(
     ioc, conn, mctpw::BindingType::mctpOverSmBus);
+static auto transI3C = std::make_shared<spdm_transport::SPDMTransportMCTP>(
+    ioc, conn, mctpw::BindingType::mctpOverI3C);
 
 static spdm_app_lib::SPDMConfiguration spdmRequesterCfg{};
 
@@ -99,14 +101,103 @@ static void startSPDMRequester()
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "Staring SPDM requester!!");
 
-    trans->initDiscovery([&](spdm_transport::TransportEndPoint eidPoint,
-                             spdm_transport::Event event) {
+    transSmBus->initDiscovery([&](spdm_transport::TransportEndPoint eidPoint,
+                                  spdm_transport::Event event) {
         if (event == spdm_transport::Event::added)
         {
             std::cerr << "Added eid: " << std::to_string(eidPoint.devIdentifier)
                       << "\n";
             auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
-                ioc, conn, trans, eidPoint, spdmRequesterCfg);
+                ioc, conn, transSmBus, eidPoint, spdmRequesterCfg);
+            std::vector<uint8_t> data = {};
+
+            constexpr uint8_t slot0 = 0;
+            constexpr uint8_t slot1 = 1;
+            constexpr uint8_t allMeasurementsOperation = 0xff;
+
+            /** Test case 1 get certificate from slot 0 */
+            if (spdmRequester->getCertificate(data, slot0))
+            {
+                std::cout << "Dump certificate raw data from slot 0."
+                          << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr << "Failed to get certificate from slot 0 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
+                return;
+            }
+            data.clear();
+
+            /** Test case 2 get certificate from slot 1 */
+            if (spdmRequester->getCertificate(data, slot1))
+            {
+                std::cout << "Dump certificate raw data from slot 1."
+                          << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr << "Failed to get certificate from slot 1 for EID: "
+                          << std::to_string(eidPoint.devIdentifier)
+                          << std::endl;
+                return;
+            }
+            data.clear();
+
+            /** Test case 3 get measurement with certificate in slot 0 */
+            if (spdmRequester->getMeasurements(data, allMeasurementsOperation,
+                                               slot0))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 0."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 0 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
+            }
+            data.clear();
+
+            /** Test case 4 get measurement with certificate in slot 1 */
+            if (spdmRequester->getMeasurements(data, allMeasurementsOperation,
+                                               slot1))
+            {
+                std::cout
+                    << "Dump measurement raw data with certificate in slot 1."
+                    << std::endl;
+                dumpVector(data);
+            }
+            else
+            {
+                std::cerr
+                    << "Failed to get measurement raw data with certificate in slot 1 for EID: "
+                    << std::to_string(eidPoint.devIdentifier) << std::endl;
+                return;
+            }
+            data.clear();
+        }
+        else if (event == spdm_transport::Event::removed)
+        {
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                "Remove the device from the inventory");
+        }
+    });
+
+    transI3C->initDiscovery([&](spdm_transport::TransportEndPoint eidPoint,
+                                spdm_transport::Event event) {
+        if (event == spdm_transport::Event::added)
+        {
+            std::cerr << "Added eid: " << std::to_string(eidPoint.devIdentifier)
+                      << "\n";
+            auto spdmRequester = std::make_shared<spdm_app_lib::SPDMRequester>(
+                ioc, conn, transI3C, eidPoint, spdmRequesterCfg);
             std::vector<uint8_t> data = {};
 
             constexpr uint8_t slot0 = 0;
