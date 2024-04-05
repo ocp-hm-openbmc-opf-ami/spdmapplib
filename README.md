@@ -70,7 +70,7 @@ implement their own transport layer.
 
 The MCTP trasport layer is based on the mctpwplus which is maintained in
 
-<https://github.com/intel-collab/firmware.bmc.openbmc.libraries.mctpwplus>
+[firmware.bmc.openbmc.libraries.mctpwplus](../../../firmware.bmc.openbmc.libraries.mctpwplus).
 
 The EntityManager configurations should be maintained for responder and 
 requester applications.
@@ -342,10 +342,10 @@ Example configurations.
 ```
 
 ## Requester Application Example
-<https://github.com/intel-collab/firmware.bmc.openbmc.libraries.spdmapplib/tree/main/sample_spdm_requester>
+[sample_spdm_requester](./sample_spdm_requester).
 
 ## Responder daemon Example
-<https://github.com/intel-collab/firmware.bmc.openbmc.applications.spdmd>
+[firmware.bmc.openbmc.applications.spdmd](../../../firmware.bmc.openbmc.applications.spdmd).
 
 ## Standalone Build
 This library uses meson as build system. The build is tested only on Ubuntu 20.04 with meson version newer than 0.61.
