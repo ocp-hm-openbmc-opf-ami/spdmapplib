@@ -178,11 +178,21 @@ class SPDMResponderImpl
     bool msgRecvCallback(spdm_transport::TransportEndPoint& transEP,
                          const std::vector<uint8_t>& data);
 
+    /**
+     * @brief Set BMC certificate
+     *
+     * @param spdm         Data structure having spdmContext
+     */
+    bool setCertificate(spdmItem& spdm);
     std::shared_ptr<boost::asio::io_context> ioc;
     std::shared_ptr<sdbusplus::asio::connection> conn;
     std::shared_ptr<spdm_transport::SPDMTransport> spdmTrans;
     SPDMConfiguration spdmResponderCfg{};
     std::vector<spdmItem> spdmPool{};
+    void* rootCertificate = nullptr;
+    void* certChain = nullptr;
+    size_t certChainSize = 0;
+    size_t rootCertSize = 0;
 };
 
 } // namespace spdm_app_lib

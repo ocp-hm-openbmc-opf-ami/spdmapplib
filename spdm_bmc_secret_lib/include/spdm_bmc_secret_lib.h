@@ -40,12 +40,6 @@
 #define LIBSPDM_TEST_CERT_SMALL 4
 
 #define SHA384_SIZE 48
-#define BMC_UBOOT_MEAS_INDEX 1
-#define BMC_FITIMG_MEAS_INDEX 2
-#define BMC_UBOOT_MEAS_START_INDEX 0x430
-#define BMC_UBOOT_MEAS_END_INDEX 0x460
-#define BMC_FITIMG_MEAS_START_INDEX 0x4b0
-#define BMC_FITIMG_MEAS_END_INDEX 0x4e0
 
 /* Option to change signing algorithm to little endian. Default is big endian. */
 #define LIBSPDM_SECRET_LIB_SIGN_LITTLE_ENDIAN (0)
@@ -104,6 +98,8 @@ bool libspdm_read_responder_public_key(
 bool libspdm_read_requester_public_key(
     uint16_t req_base_asym_alg, void **data, size_t *size);
 
+bool libspdm_read_responder_private_key(uint32_t base_asym_algo,
+                                        void **data, size_t *size);
 /* External*/
 
 bool libspdm_read_input_file(const char *file_name, void **file_data,
@@ -114,4 +110,9 @@ bool libspdm_write_output_file(const char *file_name, const void *file_data,
 
 void libspdm_dump_hex_str(const uint8_t *buffer, size_t buffer_size);
 
+bool libspdm_get_bmc_measurement_by_index(uint8_t *measurement, 
+                                            const uint8_t measurement_index);
+
+bool libspdm_get_responder_private_key(void **private_key_data,
+                             size_t *private_key_size);
 #endif

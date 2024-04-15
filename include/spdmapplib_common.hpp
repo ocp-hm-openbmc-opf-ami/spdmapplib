@@ -293,4 +293,43 @@ libspdm_return_t spdmDeviceAcquireReceiverBuffer(void* context,
  **/
 void spdmDeviceReleaseReceiverBuffer(void* context, const void* msgBufPtr);
 
+/**
+ * Fetches BMC measurement from "/dev/mtd/pfm" and stores
+ *
+ * @retval true       when reading and storing meas is successful
+ * @retval false      when reading and storing meas fails
+ */
+bool fillBMCMeasurements();
+
+/**
+ * Assigns the measurement for the given index
+ *
+ * @param measurement  pointer to an array storing measurements
+ * @param measurementIndex  measurement index of the required measurement
+ *
+ * @retval true       when measurement is passed successfully
+ * @retval false      when measurement does not exists
+ */
+bool getMeasforIndex(uint8_t* measurement, const uint8_t measurementIndex);
+
+/**
+ * Fetches the Private Key from FileSystem
+ */
+bool fetchResponderPrivateKey();
+
+/**
+ * Assigns the Private Key for signing signature
+ *
+ * @param  privateKey   pointer to buffer which holds Private key
+ * @param  privateKeySize Size of the Private key
+ *
+ * @retval true when private key is fetched and assigned
+ * @retval false when private key does not exists
+ */
+bool assignResponderPrivateKey(void** privateKey, size_t* privateKeySize);
+
+/**
+ * Destroyes the Stored Private Key
+ */
+void destroyPrivateKey();
 } // namespace spdm_app_lib

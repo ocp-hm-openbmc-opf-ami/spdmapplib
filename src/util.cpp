@@ -89,4 +89,17 @@ extern "C"
     {
         return true;
     }
+
+    bool libspdm_get_bmc_measurement_by_index(uint8_t* measurement,
+                                              const uint8_t measurement_index)
+    {
+        return spdm_app_lib::getMeasforIndex(measurement, measurement_index);
+    }
+
+    bool libspdm_get_responder_private_key(void** private_key_data,
+                                           size_t* private_key_size)
+    {
+        return spdm_app_lib::assignResponderPrivateKey(private_key_data,
+                                                       private_key_size);
+    }
 }

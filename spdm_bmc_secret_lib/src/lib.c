@@ -149,20 +149,6 @@ bool libspdm_gen_csr(uint32_t base_hash_algo, uint32_t base_asym_algo, bool *nee
 }
 #endif /* LIBSPDM_ENABLE_CAPABILITY_CSR_CAP */
 
-/**
- * Fill image hash measurement block.
- *
- * @return measurement block size.
- **/
-void libspdm_fill_measurement(size_t start_index, size_t end_index, uint8_t *meas,
-                      uint8_t *meas_data) {
-    size_t fill = 0;
-    size_t index = start_index;
-    for (; index < end_index; index++, fill++) {
-        meas_data[fill] = meas[index];
-    }
-}
-
 #if LIBSPDM_ENABLE_CAPABILITY_MEAS_CAP
 /**
  * Fill BMC measurement block.
@@ -176,9 +162,6 @@ size_t libspdm_fill_bmc_fw_measurement_hash(bool use_bit_stream,
 {
     size_t hash_size;
     bool result;
-    const char *file = "/dev/mtd/pfm";
-    uint8_t *data;
-    size_t size;
     uint8_t measurement_hash_data[SHA384_SIZE];
 
     hash_size = libspdm_get_measurement_hash_size(measurement_hash_algo);
@@ -200,25 +183,13 @@ size_t libspdm_fill_bmc_fw_measurement_hash(bool use_bit_stream,
             (uint16_t)(sizeof(spdm_measurement_block_dmtf_header_t) +
                        (uint16_t)hash_size);
 
-        result = libspdm_read_input_file(file, (void **)&data, &size);
+        result = libspdm_get_bmc_measurement_by_index(measurement_hash_data, measurements_index);
         if (!result) {
           return false;
-        }
-        if (measurements_index == BMC_UBOOT_MEAS_INDEX) {
-            libspdm_fill_measurement(BMC_UBOOT_MEAS_START_INDEX, BMC_UBOOT_MEAS_END_INDEX,
-                           data, measurement_hash_data);
-        } else if (measurements_index == BMC_FITIMG_MEAS_INDEX) {
-            libspdm_fill_measurement(BMC_FITIMG_MEAS_START_INDEX, BMC_FITIMG_MEAS_END_INDEX,
-                           data, measurement_hash_data);
-        } else {
-            free(data);
-            data = NULL;
-            return false;
         }
         uint8_t *hash_value = (uint8_t *)(measurement_block + 1);
         libspdm_copy_mem(hash_value, sizeof(measurement_hash_data),
                    measurement_hash_data, sizeof(measurement_hash_data));
-        free(data);
 
         return sizeof(spdm_measurement_block_dmtf_t) + hash_size;
     } else {
@@ -579,39 +550,32 @@ bool libspdm_responder_data_sign(
 {
     void *context = NULL;
     bool result = false;
+    void *private_pem;
+    size_t private_pem_size;
 
-    if (g_private_key_mode) {
-        void *private_pem;
-        size_t private_pem_size;
-
-        result = libspdm_read_responder_private_key(
-            base_asym_algo, &private_pem, &private_pem_size);
-        if (!result) {
-            return false;
-        }
-
-        result = libspdm_asym_get_private_key_from_pem(
+    result = libspdm_get_responder_private_key(&private_pem, &private_pem_size);
+    if (!result)
+    {
+        return false;
+    }
+    result = libspdm_asym_get_private_key_from_pem(
             base_asym_algo, private_pem, private_pem_size, NULL, &context);
-        if (!result) {
-            libspdm_zero_mem(private_pem, private_pem_size);
-            free(private_pem);
-            return false;
-        }
-
-        if (is_data_hash) {
-            result = libspdm_asym_sign_hash(spdm_version, op_code, base_asym_algo, base_hash_algo,
-                                            context,
-                                            message, message_size, signature, sig_size);
-        } else {
-            result = libspdm_asym_sign(spdm_version, op_code, base_asym_algo,
-                                       base_hash_algo, context,
-                                       message, message_size,
-                                       signature, sig_size);
-        }
-        libspdm_asym_free(base_asym_algo, context);
+    if (!result) {
         libspdm_zero_mem(private_pem, private_pem_size);
         free(private_pem);
+        return false;
     }
+    if (is_data_hash) {
+        result = libspdm_asym_sign_hash(spdm_version, op_code, base_asym_algo, base_hash_algo,
+                                        context,
+                                        message, message_size, signature, sig_size);
+    } else {
+        result = libspdm_asym_sign(spdm_version, op_code, base_asym_algo,
+                                   base_hash_algo, context,
+                                   message, message_size,
+                                   signature, sig_size);
+    }
+    libspdm_asym_free(base_asym_algo, context);
     return result;
 }
 

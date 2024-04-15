@@ -90,6 +90,9 @@ void spdmServerSessionStateCallback(void* spdmContext, uint32_t sessionID,
 
 SPDMResponderImpl::~SPDMResponderImpl()
 {
+    free_pool(rootCertificate);
+    free_pool(certChain);
+    destroyPrivateKey();
     for (auto& item : spdmPool)
     {
         freeSpdmContext(item);
@@ -197,6 +200,10 @@ bool SPDMResponderImpl::msgRecvCallback(
         {
             return false;
         }
+        if (!setCertificate(spdmPool.back()))
+        {
+            return false;
+        }
     }
     if (!addData(transEP, data))
     {
@@ -242,9 +249,6 @@ bool SPDMResponderImpl::deviceSendMessage(void* spdmContext,
 void SPDMResponderImpl::processConnectionState(
     void* spdmContext, libspdm_connection_state_t connectionState)
 {
-    constexpr uint8_t rootCertSlotID = 1;
-    size_t certChainSize = 0;
-    size_t rootCertSize = 0;
     spdm_version_number_t spdmVersion;
     libspdm_data_parameter_t parameter;
 
@@ -263,8 +267,6 @@ void SPDMResponderImpl::processConnectionState(
             break;
 
         case LIBSPDM_CONNECTION_STATE_NEGOTIATED:
-            freeAllocatedMemory(it->certChain);
-            freeAllocatedMemory(it->rootCert);
             if (it->useVersion == 0)
             {
                 initGetSetParameter(parameter, operationGet);
@@ -280,49 +282,6 @@ void SPDMResponderImpl::processConnectionState(
                              it->useHashAlgo, it->useReqAsymAlgo))
             {
                 break;
-            }
-            if (!libspdm_read_responder_public_certificate_chain(
-                    it->useHashAlgo, it->useAsymAlgo, &it->certChain,
-                    &certChainSize, nullptr, nullptr))
-            {
-                break;
-            }
-            if (!libspdm_read_responder_public_certificate_chain_per_slot(
-                    rootCertSlotID, it->useHashAlgo, it->useAsymAlgo,
-                    &it->rootCert, &rootCertSize, NULL, NULL))
-            {
-                break;
-            }
-            initGetSetParameter(parameter, operationSet);
-            for (uint8_t index = 0;
-                 index < static_cast<uint8_t>(spdmResponderCfg.slotcount);
-                 index++)
-            {
-                parameter.additional_data[0] = index;
-                if (index == rootCertSlotID)
-                {
-                    if (!validateSpdmRc(libspdm_set_data(
-                            it->spdmContext,
-                            LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                            it->rootCert, rootCertSize)))
-                    {
-                        phosphor::logging::log<phosphor::logging::level::ERR>(
-                            "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
-                        break;
-                    }
-                }
-                else
-                {
-                    if (!validateSpdmRc(libspdm_set_data(
-                            it->spdmContext,
-                            LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN, &parameter,
-                            it->certChain, certChainSize)))
-                    {
-                        phosphor::logging::log<phosphor::logging::level::ERR>(
-                            "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
-                        break;
-                    }
-                }
             }
             break;
 
@@ -375,6 +334,42 @@ void SPDMResponderImpl::processSessionState(
     }
 }
 
+bool SPDMResponderImpl::setCertificate(spdmItem& spdm)
+{
+    constexpr uint8_t rootCertSlotID = 1;
+    libspdm_data_parameter_t parameter;
+    initGetSetParameter(parameter, operationSet);
+
+    for (uint8_t index = 0;
+         index < static_cast<uint8_t>(spdmResponderCfg.slotcount); index++)
+    {
+        parameter.additional_data[0] = index;
+        if (index == rootCertSlotID)
+        {
+            if (!validateSpdmRc(libspdm_set_data(
+                    spdm.spdmContext, LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                    &parameter, rootCertificate, rootCertSize)))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    "SPDMResponderImpl::processConnectionState set Certificate 1 FAILED!!");
+                return false;
+            }
+        }
+        else
+        {
+            if (!validateSpdmRc(libspdm_set_data(
+                    spdm.spdmContext, LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN,
+                    &parameter, certChain, certChainSize)))
+            {
+                phosphor::logging::log<phosphor::logging::level::ERR>(
+                    "SPDMResponderImpl::processConnectionState set Certificate FAILED!!");
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 SPDMResponderImpl::SPDMResponderImpl(
     std::shared_ptr<boost::asio::io_context> io,
     std::shared_ptr<sdbusplus::asio::connection> con,
@@ -384,9 +379,32 @@ SPDMResponderImpl::SPDMResponderImpl(
     conn(con), spdmTrans(trans), spdmResponderCfg(spdmConfig)
 {
     using namespace std::placeholders;
+    constexpr uint8_t rootCertSlotID = 1;
     setCertificatePath(spdmResponderCfg.certPath);
     spdmTrans->setListener(
         std::bind(&SPDMResponderImpl::msgRecvCallback, this, _1, _2));
+    if (!libspdm_read_responder_public_certificate_chain(
+            SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384,
+            SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384,
+            &certChain, &certChainSize, nullptr, nullptr))
+    {
+        return;
+    }
+    if (!libspdm_read_responder_public_certificate_chain_per_slot(
+            rootCertSlotID, SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384,
+            SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384,
+            &rootCertificate, &rootCertSize, nullptr, nullptr))
+    {
+        return;
+    }
+    if (!fillBMCMeasurements())
+    {
+        return;
+    }
+    if (!fetchResponderPrivateKey())
+    {
+        return;
+    }
 }
 
 } // namespace spdm_app_lib

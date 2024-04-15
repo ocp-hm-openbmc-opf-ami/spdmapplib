@@ -19,6 +19,13 @@ namespace spdm_app_lib
 {
 /* stores the certificate path */
 std::string setCertPath{};
+void* responderPrivateKeyData = nullptr;
+size_t responderPrivateKeySize = 0;
+constexpr uint8_t measSize = 48;
+constexpr uint16_t ubootMeasStartIndex = 0x430;
+constexpr uint16_t ubootMeasEndIndex = 0x460;
+constexpr uint16_t fitImgMeasStartIndex = 0x4b0;
+constexpr uint16_t fitImgMeasEndIndex = 0x4e0;
 constexpr uint32_t spdmMctpHeaderSize = 0x1200;
 constexpr uint32_t spdmTransportNoneHeaderSize = 0x1000;
 constexpr uint32_t libspdmTransportHeaderSize = 64;
@@ -31,6 +38,8 @@ constexpr uint32_t libspdmSenderBufferSize =
     (libspdmSenderBufferConst + libspdmTransportAdditionalSize);
 constexpr uint32_t libspdmReceiverBufferSize =
     (libspdmReceiverBufferConst + libspdmTransportAdditionalSize);
+std::array<uint8_t, measSize> ubootMeas;
+std::array<uint8_t, measSize> fitImgMeas;
 
 /* Required by libspdm for send/recv payload*/
 bool sendReceiveBufferAcquired = false;
@@ -110,7 +119,14 @@ bool spdmSetConfigData(spdmItem& spdm, SPDMConfiguration& spdmConfig)
     uint16_t u16Value = 0;
     libspdm_data_parameter_t parameter;
     initGetSetParameter(parameter, operationSet);
+    spdm_version_number_t spdmVersion;
 
+    spdmVersion = static_cast<uint8_t>(spdmConfig.version)
+                  << SPDM_VERSION_NUMBER_SHIFT_BIT;
+    if (!spdmSetData(spdm, LIBSPDM_DATA_SPDM_VERSION, spdmVersion, parameter))
+    {
+        return false;
+    }
     if (!spdmSetData(spdm, LIBSPDM_DATA_CAPABILITY_CT_EXPONENT, u8Value,
                      parameter))
     {
@@ -338,4 +354,88 @@ void spdmDeviceReleaseReceiverBuffer(void* /*context*/, const void* msg_buf_ptr)
     return;
 }
 
+bool fillBMCMeasurements()
+{
+    void* data = nullptr;
+    size_t fileSize = 0;
+    bool result = false;
+    static std::string pfmLocation = "/dev/mtd/pfm";
+    result = libspdm_read_input_file(pfmLocation.c_str(), &data, &fileSize);
+    if (!result)
+    {
+        free(data);
+        return result;
+    }
+    std::copy(std::next(reinterpret_cast<uint8_t*>(data), ubootMeasStartIndex),
+              std::next(reinterpret_cast<uint8_t*>(data), ubootMeasEndIndex),
+              ubootMeas.begin());
+    std::copy(std::next(reinterpret_cast<uint8_t*>(data), fitImgMeasStartIndex),
+              std::next(reinterpret_cast<uint8_t*>(data), fitImgMeasEndIndex),
+              fitImgMeas.begin());
+    free(data);
+    return result;
+}
+
+bool getMeasforIndex(uint8_t* measurement, const uint8_t measurementIndex)
+{
+    constexpr uint32_t ubootMeasIndex = 0x01;
+    constexpr uint32_t fitImgMeasIndex = 0x02;
+    if (measurementIndex == ubootMeasIndex)
+    {
+        if (ubootMeas.empty())
+        {
+            return false;
+        }
+        std::copy(ubootMeas.begin(), ubootMeas.end(), measurement);
+        return true;
+    }
+    else if (measurementIndex == fitImgMeasIndex)
+    {
+        if (fitImgMeas.empty())
+        {
+            return false;
+        }
+        std::copy(fitImgMeas.begin(), fitImgMeas.end(), measurement);
+        return true;
+    }
+    return false;
+}
+
+bool fetchResponderPrivateKey()
+{
+    if (!libspdm_read_responder_private_key(
+            SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384,
+            &responderPrivateKeyData, &responderPrivateKeySize))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool assignPresponderPrivateKey(void** privateKey, size_t* privateKeySize)
+{
+    if (responderPrivateKeyData == nullptr || responderPrivateKeySize == 0)
+    {
+        return false;
+    }
+    *privateKeySize = responderPrivateKeySize;
+    *privateKey = reinterpret_cast<void*>(malloc(*privateKeySize));
+    if (nullptr == *privateKey)
+    {
+        return false;
+    }
+    std::memcpy(*privateKey, responderPrivateKeyData, *privateKeySize);
+    return true;
+}
+
+void destroyPrivateKey()
+{
+    if (responderPrivateKeyData == nullptr || responderPrivateKeySize == 0)
+    {
+        return;
+    }
+    libspdm_zero_mem(responderPrivateKeyData, responderPrivateKeySize);
+    free_pool(responderPrivateKeyData);
+    responderPrivateKeySize = 0;
+}
 } // namespace spdm_app_lib
