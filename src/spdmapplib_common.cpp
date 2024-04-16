@@ -412,7 +412,7 @@ bool fetchResponderPrivateKey()
     return true;
 }
 
-bool assignPresponderPrivateKey(void** privateKey, size_t* privateKeySize)
+bool assignResponderPrivateKey(void** privateKey, size_t* privateKeySize)
 {
     if (responderPrivateKeyData == nullptr || responderPrivateKeySize == 0)
     {
